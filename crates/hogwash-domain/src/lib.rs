@@ -7,3 +7,9 @@
 //! `003 §6.2` gives the test for admission — *if the implementation were
 //! rebuilt from scratch tomorrow with entirely different technology, would
 //! this concept still exist?* A `Pitch` survives that. A buffer does not.
+
+mod measure;
+mod pitch;
+
+pub use measure::MeasureNumber;
+pub use pitch::{Pitch, PitchSpelling, Step};
