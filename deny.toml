@@ -1,0 +1,49 @@
+# cargo-deny configuration.
+#
+# SCOPE — read this before trusting the gate.
+# cargo-deny evaluates *normal* dependencies. It does NOT evaluate
+# dev-dependencies. A copyleft crate added under [dev-dependencies] will
+# pass this check. Verify the gate against a normal dependency, never a
+# dev one, or the verification proves nothing.
+
+[graph]
+all-features = true
+
+[licenses]
+# Permissive only, for now. This list is expected to be amended by the
+# engraving ADR (S1): Verovio is LGPL-3.0, and if it is adopted, that
+# obligation is accepted deliberately and recorded — not admitted by
+# loosening this list quietly.
+allow = [
+    "MIT",
+    "MIT-0",
+    "Apache-2.0",
+    "Apache-2.0 WITH LLVM-exception",
+    "BSD-2-Clause",
+    "BSD-3-Clause",
+    "ISC",
+    "Zlib",
+    "CC0-1.0",
+    "Unicode-3.0",
+    "Unlicense",
+    "BSL-1.0",
+]
+unused-allowed-license = "allow"
+confidence-threshold = 0.93
+
+# Our own workspace crates carry no `license` field, because Hogwash's
+# licence is not chosen yet (see Cargo.toml). They are `publish = false`,
+# so they are exempt: this allow-list exists to police third-party code,
+# not to make us declare a licence before we have decided on one.
+private = { ignore = true }
+
+[bans]
+multiple-versions = "warn"
+wildcards = "deny"
+
+[advisories]
+yanked = "deny"
+
+[sources]
+unknown-registry = "deny"
+unknown-git = "deny"

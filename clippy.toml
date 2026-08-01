@@ -1,0 +1,10 @@
+# The workspace denies unwrap/expect/panic/indexing in library code. In tests,
+# panicking on a bad fixture is the correct behaviour, so they are allowed there.
+#
+# These settings are used instead of per-module `#[expect(...)]` attributes,
+# which produce "unfulfilled expectation" errors in any module that happens not
+# to use every listed lint.
+allow-unwrap-in-tests = true
+allow-expect-in-tests = true
+allow-panic-in-tests = true
+allow-indexing-slicing-in-tests = true

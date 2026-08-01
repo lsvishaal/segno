@@ -1,0 +1,15 @@
+/target
+
+# `docs/` is an independent git repository (remote: hogwash-docs).
+# It is deliberately not tracked here — see the plan and 004 §15.
+/docs
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Editor
+*.swp
+*~
+.idea/
+.vscode/
