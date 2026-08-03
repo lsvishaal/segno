@@ -19,9 +19,18 @@
 //! crates. A frontend that composed its own sentences would route around all
 //! of them, and nothing would notice.
 
-mod startup;
+use tauri::Manager as _;
 
-pub use startup::{Engine, Startup};
+// Public so integration tests can drive them. The window is the only part of
+// this crate that cannot be exercised headlessly, and everything else being
+// reachable is what keeps that part small.
+pub mod commands;
+pub mod engraving;
+pub mod provided;
+pub mod startup;
+pub mod state;
+
+pub use startup::{Startup, Unavailable};
 
 /// Starts the application, and runs until the window closes.
 ///
@@ -36,5 +45,32 @@ pub use startup::{Engine, Startup};
 pub fn run() -> Result<(), tauri::Error> {
     tauri::Builder::default()
         .plugin(tauri_plugin_dialog::init())
+        .setup(|app| {
+            // Startup can fail in ways a performer can act on — a missing
+            // engraving library, above all — and `004 §8.2` wants those
+            // explained rather than fatal. So the failure becomes state the
+            // interface can render as a screen, and the window opens either
+            // way. A program that exited here would have nowhere to say why.
+            let started = engraving::Engraving::start().and_then(|engraving| {
+                let records = hogwash_records::Records::under(&Startup::data_directory(app.path()));
+
+                state::Hogwash::start(engraving, records)
+            });
+
+            match started {
+                Ok(hogwash) => {
+                    app.manage(state::Shared(std::sync::Mutex::new(hogwash)));
+                }
+                Err(unavailable) => {
+                    app.manage(state::Failed(unavailable));
+                }
+            }
+
+            Ok(())
+        })
+        .invoke_handler(tauri::generate_handler![
+            commands::library,
+            commands::startup_failure,
+        ])
         .run(tauri::generate_context!())
 }

@@ -2,7 +2,7 @@
 
 default: ci
 
-ci: fmt-check lint test deny arch native-licences determinism
+ci: fmt-check lint test deny arch native-licences determinism ui
 
 check:
     cargo check --workspace --all-targets
@@ -53,6 +53,14 @@ native-licences:
 engraving-test:
     cargo test --package hogwash-engraving-verovio -- --ignored
 
+# The provided practice material, against a real engine. Separate from
+# `engraving-test` because it guards a different thing: that the music
+# shipping with Hogwash actually loads. A provided piece that fails to
+# engrave is skipped rather than fatal, so the symptom is a missing piece
+# and no error at all.
+provided-test:
+    cargo test --package hogwash-app -- --ignored
+
 # FR-406 for the engraving: the same score must place its notes identically
 # across separate processes, which S0 found is false unless the identifier
 # generator is seeded before every load.
@@ -75,6 +83,26 @@ verovio-build clone output=".verovio-build":
 # evaluate dev-dependencies — see the note at the top of deny.toml.
 verify-licence-gate:
     ./scripts/verify-licence-gate.sh
+
+# --- the interface -----------------------------------------------------------
+#
+# The frontend is typechecked, linted and tested by its own toolchain, and
+# joins `just ci` so a broken interface fails the same gate a broken crate
+# does. It needs `npm install` in `app/` once.
+
+ui: ui-check ui-test
+
+ui-check:
+    cd app && npx tsc --noEmit
+
+ui-test:
+    cd app && npx vitest run --passWithNoTests
+
+# Runs the application with the frontend served by Vite, so edits reload.
+# Needs HOGWASH_VEROVIO_LIB and HOGWASH_VEROVIO_DATA, or a libverovio beside
+# the executable.
+dev:
+    cd app && npx tauri dev
 
 clean:
     cargo clean

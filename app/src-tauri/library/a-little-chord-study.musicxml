@@ -1,10 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!--
-  A Little Chord Study — three triads and a scale fragment, written for
-  Hogwash so that a first session exercises chords as well as single notes.
-
-  PROVENANCE. Original, written for this project, Apache-2.0. It is an
-  exercise rather than a work: nobody's edition, nobody's arrangement.
+  A Little Chord Study. Original, written for Hogwash, Apache-2.0.
+  See PROVENANCE.md.
 -->
 <score-partwise version="3.1">
   <work><work-title>A Little Chord Study</work-title></work>

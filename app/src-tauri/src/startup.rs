@@ -15,19 +15,6 @@ use std::path::PathBuf;
 use hogwash_engraving_verovio::VerovioEngraver;
 use serde::Serialize;
 
-/// The engraving engine, found and started.
-#[derive(Debug)]
-pub struct Engine {
-    engraver: VerovioEngraver,
-}
-
-impl Engine {
-    /// The engraver, for whoever needs to engrave something.
-    pub const fn engraver(&mut self) -> &mut VerovioEngraver {
-        &mut self.engraver
-    }
-}
-
 /// Why the application cannot do its job, in terms a performer can act on.
 ///
 /// Serialised straight to the interface, which renders it as a screen rather
@@ -65,7 +52,7 @@ impl Startup {
     /// [`Unavailable`], naming every path that was tried. "Could not find the
     /// engraving library" is not actionable; "could not find it in these two
     /// places" is.
-    pub fn engine() -> Result<Engine, Unavailable> {
+    pub fn engine() -> Result<VerovioEngraver, Unavailable> {
         let mut looked_in = Vec::new();
 
         for (library, resources) in Self::candidates() {
@@ -75,13 +62,11 @@ impl Startup {
                 continue;
             }
 
-            return VerovioEngraver::open(&library, &resources)
-                .map(|engraver| Engine { engraver })
-                .map_err(|failure| Unavailable {
-                    summary: "The music engraving engine could not be started.".to_owned(),
-                    detail: format!("{failure:?}"),
-                    looked_in,
-                });
+            return VerovioEngraver::open(&library, &resources).map_err(|failure| Unavailable {
+                summary: "The music engraving engine could not be started.".to_owned(),
+                detail: format!("{failure:?}"),
+                looked_in,
+            });
         }
 
         Err(Unavailable {

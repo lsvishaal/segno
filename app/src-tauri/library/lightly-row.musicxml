@@ -1,12 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!--
-  Lightly Row — a German folk melody ("Hänschen klein" family), traditional,
-  no known author, long in the public domain. A standard first-book piece.
-
-  PROVENANCE. Traditional melody; this MusicXML encoding was written by hand
-  for Hogwash and is released under the project's licence (Apache-2.0).
-  See ode-to-joy.musicxml for why the encodings are written rather than
-  downloaded.
+  Lightly Row, a traditional German melody. Public domain; this encoding was
+  written for Hogwash and is Apache-2.0. See PROVENANCE.md.
 -->
 <score-partwise version="3.1">
   <work><work-title>Lightly Row</work-title></work>

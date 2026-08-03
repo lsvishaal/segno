@@ -1,17 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!--
-  Ode to Joy — the theme from the fourth movement of Beethoven's Ninth
-  Symphony, arranged as a single-line melody for one hand.
-
-  PROVENANCE. Beethoven died in 1827; the music is in the public domain
-  worldwide. This MusicXML encoding was written by hand for Hogwash and is
-  released under the same licence as the rest of the project (Apache-2.0),
-  so nothing here depends on a third party's engraving, edition or typeset.
-
-  That is the point of hand-encoding it. C-200 requires every provided piece
-  to be verifiably redistributable, and a downloaded file — even of
-  public-domain music — carries whatever licence its *encoder* attached.
-  A file we wrote has no such question attached to it.
+  Ode to Joy, from Beethoven's Ninth. Public domain; this encoding was
+  written for Hogwash and is Apache-2.0. See PROVENANCE.md.
 -->
 <score-partwise version="3.1">
   <work><work-title>Ode to Joy</work-title></work>

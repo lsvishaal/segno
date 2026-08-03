@@ -1,0 +1,160 @@
+//! The practice material that ships with the application (`MVP §6.1`).
+//!
+//! Compiled in rather than read from disk. FR-206 requires material to be
+//! available "without any import having been performed", and FR-207 requires
+//! the Library never to be empty — both of which a file on disk cannot
+//! guarantee, because a file on disk can be missing.
+//!
+//! `Library::opened_with` takes its first Piece **by value**, so emptiness is
+//! not a state the type has. This module is the one place that could fail to
+//! supply that first Piece, and it cannot: the bytes are in the binary.
+
+use std::fmt::Write as _;
+
+use hogwash_domain::PieceId;
+use sha2::{Digest, Sha256};
+
+/// One piece that ships with Hogwash.
+#[derive(Debug, Clone, Copy)]
+pub struct Provided {
+    /// What the file is called, for diagnostics.
+    pub name: &'static str,
+    /// The `MusicXML` itself.
+    pub source: &'static [u8],
+}
+
+/// Everything in `library/`, in the order a first-time performer meets it.
+///
+/// Ordered deliberately: the shortest and simplest first, the chord study
+/// last. `library/PROVENANCE.md` records what each one exercises, and why all
+/// three were encoded by hand rather than downloaded.
+pub const PROVIDED: [Provided; 3] = [
+    Provided {
+        name: "lightly-row.musicxml",
+        source: include_bytes!("../library/lightly-row.musicxml"),
+    },
+    Provided {
+        name: "ode-to-joy.musicxml",
+        source: include_bytes!("../library/ode-to-joy.musicxml"),
+    },
+    Provided {
+        name: "a-little-chord-study.musicxml",
+        source: include_bytes!("../library/a-little-chord-study.musicxml"),
+    },
+];
+
+/// The durable name for a piece with these bytes.
+///
+/// # Why the content, and not the title or a counter
+///
+/// `ADR-0010` left what a [`PieceId`] is made of to storage, and this is
+/// storage's answer. Hashing the source gives three properties that matter
+/// and are hard to get otherwise:
+///
+/// - **Idempotent.** Importing the same file twice yields the same Piece
+///   rather than a duplicate.
+/// - **Stable across machines and restarts**, so a Practice Record written on
+///   one still names the right piece on another.
+/// - **Independent of metadata.** A retitled score is the same score; two
+///   different arrangements sharing a title are not the same piece.
+///
+/// Truncated to 16 hex characters. That is 64 bits — far more than enough
+/// when the population is one person's sheet music, and short enough to read
+/// in a filename.
+#[must_use]
+pub fn identify(source: &[u8]) -> PieceId {
+    let digest = Sha256::digest(source);
+
+    let name = digest.iter().take(8).fold(String::new(), |mut name, byte| {
+        // `write!` into a String cannot fail. Ignored rather than unwrapped
+        // so this stays panic-free without pretending the Result matters.
+        let _ = write!(name, "{byte:02x}");
+        name
+    });
+
+    // `PieceId::new` refuses anything that is not letters, digits and dashes,
+    // which hexadecimal always is. The fallback exists so this function is
+    // total rather than because it can happen.
+    PieceId::new(&name).unwrap_or_else(|| {
+        PieceId::new("unnamed").unwrap_or_else(|| unreachable!("`unnamed` is a usable name"))
+    })
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::provided::{PROVIDED, identify};
+
+    // FR-206 / MVP §6.1 — a first session requires no externally obtained
+    // file. Compiled in, so this cannot become false by someone moving a
+    // directory.
+    #[test]
+    fn practice_material_ships_with_the_application() {
+        assert!(!PROVIDED.is_empty());
+
+        for piece in PROVIDED {
+            assert!(!piece.source.is_empty(), "{} is empty", piece.name);
+        }
+    }
+
+    // Every provided file must actually be MusicXML, or the Library would be
+    // empty at the first run despite FR-207 — and the failure would appear on
+    // a performer's screen rather than in a test.
+    #[test]
+    fn every_provided_piece_is_musicxml() {
+        for piece in PROVIDED {
+            let text = std::str::from_utf8(piece.source).expect("provided pieces are text");
+
+            assert!(
+                text.contains("score-partwise"),
+                "{} is not MusicXML",
+                piece.name
+            );
+        }
+    }
+
+    // ADR-0010 — the same file is the same piece, so re-importing one does
+    // not accumulate duplicates.
+    #[test]
+    fn the_same_bytes_always_name_the_same_piece() {
+        assert_eq!(
+            identify(b"<score-partwise/>"),
+            identify(b"<score-partwise/>")
+        );
+    }
+
+    #[test]
+    fn different_music_is_a_different_piece() {
+        assert_ne!(
+            identify(b"<score-partwise/>"),
+            identify(b"<score-timewise/>")
+        );
+    }
+
+    // The identifier becomes a filename, and PieceId refuses anything
+    // path-shaped. Hexadecimal always satisfies that; the test is here so a
+    // future change of encoding has to notice.
+    #[test]
+    fn an_identifier_is_usable_as_a_name() {
+        for piece in PROVIDED {
+            let id = identify(piece.source);
+
+            assert_eq!(id.as_str().len(), 16);
+            assert!(id.as_str().chars().all(|c| c.is_ascii_hexdigit()));
+        }
+    }
+
+    // Three distinct pieces, three distinct names. A collision here would
+    // silently merge two pieces in the Library.
+    #[test]
+    fn the_provided_pieces_are_all_distinct() {
+        let mut names: Vec<String> = PROVIDED
+            .iter()
+            .map(|piece| identify(piece.source).as_str().to_owned())
+            .collect();
+
+        names.sort();
+        names.dedup();
+
+        assert_eq!(names.len(), PROVIDED.len());
+    }
+}
