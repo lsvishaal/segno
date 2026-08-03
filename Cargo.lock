@@ -5,3 +5,10 @@ version = 4
 [[package]]
 name = "hogwash-domain"
 version = "0.0.0"
+
+[[package]]
+name = "hogwash-notation"
+version = "0.0.0"
+dependencies = [
+ "hogwash-domain",
+]

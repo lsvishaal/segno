@@ -41,6 +41,13 @@ private = { ignore = true }
 multiple-versions = "warn"
 wildcards = "deny"
 
+# A path dependency carries no version requirement, so cargo-deny counts it
+# as a wildcard. The ban is aimed at `foo = "*"` from a registry, where an
+# unpinned range means a future release can change under us without warning.
+# A sibling crate in this workspace has no such range — it is whatever is on
+# disk at this commit. Registry wildcards remain denied.
+allow-wildcard-paths = true
+
 [advisories]
 yanked = "deny"
 
