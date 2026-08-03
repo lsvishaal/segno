@@ -19,18 +19,22 @@
 //! crates. A frontend that composed its own sentences would route around all
 //! of them, and nothing would notice.
 
-use tauri::Manager as _;
+use tauri::{Emitter as _, Manager as _};
 
 // Public so integration tests can drive them. The window is the only part of
 // this crate that cannot be exercised headlessly, and everything else being
 // reachable is what keeps that part small.
 pub mod commands;
 pub mod engraving;
+pub mod practice;
 pub mod provided;
 pub mod startup;
 pub mod state;
 
 pub use startup::{Startup, Unavailable};
+
+/// The Tauri channel every [`practice::PracticeEvent`] is emitted on.
+const PRACTICE_CHANNEL: &str = "practice";
 
 /// Starts the application, and runs until the window closes.
 ///
@@ -46,6 +50,8 @@ pub fn run() -> Result<(), tauri::Error> {
     tauri::Builder::default()
         .plugin(tauri_plugin_dialog::init())
         .setup(|app| {
+            let handle = app.handle().clone();
+
             // Startup can fail in ways a performer can act on — a missing
             // engraving library, above all — and `004 §8.2` wants those
             // explained rather than fatal. So the failure becomes state the
@@ -53,8 +59,11 @@ pub fn run() -> Result<(), tauri::Error> {
             // way. A program that exited here would have nowhere to say why.
             let started = engraving::Engraving::start().and_then(|engraving| {
                 let records = hogwash_records::Records::under(&Startup::data_directory(app.path()));
+                let practice = practice::Practice::start(records.clone(), move |event| {
+                    drop(handle.emit(PRACTICE_CHANNEL, event));
+                })?;
 
-                state::Hogwash::start(engraving, records)
+                state::Hogwash::start(engraving, records, practice)
             });
 
             match started {
@@ -72,6 +81,9 @@ pub fn run() -> Result<(), tauri::Error> {
             commands::library,
             commands::open_piece,
             commands::startup_failure,
+            commands::instruments,
+            commands::start_attempt,
+            commands::end_attempt,
         ])
         .run(tauri::generate_context!())
 }

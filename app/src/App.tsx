@@ -1,8 +1,7 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 
 import { library, openPiece, startupFailure } from "./bridge";
 import type { OpenedPiece, PieceSummary, Unavailable } from "./bridge";
-import type { Marked } from "./components/Score";
 import { LibraryScreen } from "./screens/Library";
 import { PracticeScreen } from "./screens/Practice";
 import { UnavailableScreen } from "./screens/Unavailable";
@@ -80,13 +79,6 @@ export function App() {
     );
   }, []);
 
-  // Until the keyboard is wired up, the cursor rests on the first expected
-  // position — which is where `003 §7.16` says a Cursor begins.
-  const marked = useMemo<Marked>(
-    () => (screen.kind === "practice" ? new Map([[0, "cursor" as const]]) : new Map()),
-    [screen.kind],
-  );
-
   switch (screen.kind) {
     case "starting":
       // Deliberately blank. Startup is milliseconds, and a spinner that
@@ -100,9 +92,7 @@ export function App() {
       return <LibraryScreen pieces={screen.pieces} onOpen={open} />;
 
     case "practice":
-      return (
-        <PracticeScreen piece={screen.piece} marked={marked} onLeave={leave} />
-      );
+      return <PracticeScreen piece={screen.piece} onLeave={leave} />;
   }
 }
 

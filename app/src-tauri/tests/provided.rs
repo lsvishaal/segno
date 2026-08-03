@@ -142,8 +142,10 @@ fn starting_puts_every_provided_piece_on_the_shelf() {
 
     let engraving = hogwash_app_lib::engraving::Engraving::start().expect("the engine starts");
     let records = hogwash_records::Records::under(&temporary);
+    let practice = hogwash_app_lib::practice::Practice::start(records.clone(), |_| {})
+        .expect("the practice thread starts");
 
-    let hogwash = hogwash_app_lib::state::Hogwash::start(engraving, records)
+    let hogwash = hogwash_app_lib::state::Hogwash::start(engraving, records, practice)
         .expect("the provided material prepares");
 
     let titles: Vec<&str> = hogwash
@@ -168,11 +170,12 @@ fn every_piece_on_the_shelf_can_be_named_and_played() {
     let temporary = std::env::temp_dir().join("hogwash-provided-test");
 
     let engraving = hogwash_app_lib::engraving::Engraving::start().expect("the engine starts");
-    let hogwash = hogwash_app_lib::state::Hogwash::start(
-        engraving,
-        hogwash_records::Records::under(&temporary),
-    )
-    .expect("prepares");
+    let records = hogwash_records::Records::under(&temporary);
+    let practice = hogwash_app_lib::practice::Practice::start(records.clone(), |_| {})
+        .expect("the practice thread starts");
+
+    let hogwash =
+        hogwash_app_lib::state::Hogwash::start(engraving, records, practice).expect("prepares");
 
     assert!(hogwash.library().count() >= 1);
 

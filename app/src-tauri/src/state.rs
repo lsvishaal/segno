@@ -20,6 +20,7 @@ use hogwash_library::{Library, Piece};
 use hogwash_records::Records;
 
 use crate::engraving::Engraving;
+use crate::practice::Practice;
 use crate::provided::{PROVIDED, identify};
 use crate::startup::Unavailable;
 
@@ -29,6 +30,7 @@ pub struct Hogwash {
     engraving: Engraving,
     library: Library,
     records: Records,
+    practice: Practice,
 }
 
 impl Hogwash {
@@ -46,7 +48,11 @@ impl Hogwash {
     /// fails is skipped and reported, because losing a piece is a smaller
     /// harm than refusing to start; losing all of them means the engraver is
     /// not working, and FR-207 cannot be satisfied by pretending otherwise.
-    pub fn start(engraving: Engraving, records: Records) -> Result<Self, Unavailable> {
+    pub fn start(
+        engraving: Engraving,
+        records: Records,
+        practice: Practice,
+    ) -> Result<Self, Unavailable> {
         let mut pieces = Vec::new();
         let mut refused = Vec::new();
 
@@ -85,6 +91,7 @@ impl Hogwash {
             engraving,
             library: Library::opened_with(first, pieces.collect()),
             records,
+            practice,
         })
     }
 
@@ -119,6 +126,12 @@ impl Hogwash {
     #[must_use]
     pub const fn records(&self) -> &Records {
         &self.records
+    }
+
+    /// The practice loop: MIDI in, the Cursor advanced, an attempt ended.
+    #[must_use]
+    pub const fn practice(&self) -> &Practice {
+        &self.practice
     }
 }
 

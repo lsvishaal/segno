@@ -82,7 +82,7 @@ Tailwind v4, Motion (installed, not yet used).
 | A | Purge egui, restructure to `app/` + `src-tauri` | **done** |
 | B | Window, startup, library screen | **done — seen working** |
 | C | Score in the DOM, CSS highlighting | **done — 8 tests** |
-| D | The practice loop: MIDI → cursor → live marks | **not started** |
+| D | The practice loop: MIDI → cursor → live marks | **done — see below** |
 | E | Summary, history, import screens | **not started** |
 | F | Animation and visual polish | **not started** |
 | G | ADR-0012, IF-6, release-gate walk-through | **not started** |
@@ -92,16 +92,74 @@ pieces, their composers read from the MusicXML, and bar/note counts computed
 from the real engraved Score. The whole chain works — Verovio → Score →
 Piece → Library → Tauri command → React.
 
+### Stage D, what actually exists now
+
+- `app/src-tauri/src/practice.rs` — the practice loop on its own thread
+  (`Practice`), matching `engraving.rs`'s "one channel, one owner" shape.
+  Owns `MidiInstruments`, at most one open `PracticeSession` (per piece,
+  many attempts inside it — your call), and the in-progress `Attempt` plus
+  its `Keyboard`. Deliberately knows nothing of Tauri: events leave through
+  a plain `Sink` callback (`Box<dyn Fn(&PracticeEvent) + Send>`), and
+  `lib.rs` is the one place that turns that callback into `app.emit(...)`.
+  That seam is also what let the two `#[ignore]`d integration tests in
+  `tests/provided.rs` drive a real `Hogwash::start` (with a real `Practice`
+  thread) with no window at all — pass `|_| {}` as the sink.
+- The live correctness signal (`MVP §6.6` / Amendment A's FR-802) is
+  computed the way `003 §7.16` requires: `Cursor::expecting()` is checked
+  *before* the pitch is given to `Attempt::play`, exactly the rule
+  `Analysis::of` replays afterwards. Never derived from `CursorMovement`,
+  which only ever says `Advanced`/`Held`.
+- **The disconnect hybrid you asked for**: loss is reported immediately: an
+  `InstrumentLost` event with a 60s countdown. Every 2s the same named
+  instrument is retried; if it comes back, `InstrumentRestored` and nothing
+  about the `Attempt`/`ObservedPerformance` was touched. If the 60s runs out
+  first, the attempt ends itself — same path as an explicit `end_attempt`,
+  with `reason: "The instrument did not reconnect."` — and the captured
+  performance is analysed and kept regardless.
+- Every ending (explicit, reaching the end, or the disconnect timeout) funnels
+  through one function (`finish`, in `practice.rs`): `Attempt::end` →
+  `Analysis::of` → `Feedback::of` → a `SessionRecord`/`AttemptRecord`
+  snapshot → `Records::keep` (after **every** attempt, not just on leaving
+  the piece) → an `AttemptSummary` DTO.
+- Three new commands: `instruments`, `start_attempt(pieceId, instrument)`,
+  `end_attempt`. New frontend: `app/src/screens/Practice.tsx` now owns an
+  instrument picker, a live `Marked` map driven by `listenToPractice`, an
+  instrument-lost banner, and an inline (Stage-E-will-polish-this) summary
+  panel showing `Feedback::lines()` verbatim plus "Practice again"/"Choose a
+  different instrument". `app/src/screens/practiceMarks.ts` is the pure
+  `PracticeEvent → Marked` reducer, tested in isolation
+  (`practiceMarks.test.ts`, 4 tests) the same way Stage C tested `Score.tsx`'s
+  mechanism.
+- **Verified two ways**: `just provided-test` runs `every_piece_on_the_shelf_can_be_named_and_played`
+  and `starting_puts_every_provided_piece_on_the_shelf` against the real
+  Verovio engine — both now go through a real `Practice` thread, not a stub.
+  `just ci` (fmt, clippy `-D warnings`, all workspace tests, deny, arch,
+  native-licences, determinism, frontend typecheck + 12 tests) is green.
+  The window was also run live (`just dev`) and screenshotted; the library
+  screen renders correctly. Clicking through to a live MIDI session was
+  **not** exercised by hand this session — there is no MIDI hardware and no
+  window-automation tool (`xdotool` etc.) available in this environment, so
+  the picker/banner/summary UI is verified by the unit tests and by reading
+  the code against `Score.tsx`'s existing contract, not by a human click.
+- **Not built, on purpose, and worth reconsidering later rather than now**:
+  `PracticeSession::close`/`ClosedSession` are unused — nothing in this scope
+  needed the "never accepts another attempt" guarantee, so the session for a
+  piece just stays open (in memory) until a different piece is started or
+  the app quits. Flag this as a scoping call, not an oversight, when writing
+  ADR-0012.
+
 ---
 
 ## 3. What does NOT exist yet
 
 Stated plainly so nothing is assumed working.
 
-- **You cannot practise.** No MIDI is wired to the interface. Opening a piece
-  shows the score with a cursor resting on the first note, and it never moves.
-- **No summary, no history screen, no import button.** The Rust behind all
-  three is finished and tested; none of it is reachable from the window.
+- **You can now practise** (Stage D, done this session) — MIDI is wired end
+  to end. What's still missing: no history/import screens, and the summary
+  shown at the end of an attempt is a plain list of lines, not a designed
+  screen (Stage E's job).
+- **No history screen, no import button.** The Rust behind both is finished
+  and tested; neither is reachable from the window yet.
 - **No animation beyond the cursor pulse and card hover.** Motion is installed
   and unused.
 - **The visual design is a first pass.** Correct and plain, not finished.

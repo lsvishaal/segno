@@ -11,10 +11,28 @@
  *    `004 §8.8` says Presentation originates no finding of its own.
  */
 import { invoke } from "@tauri-apps/api/core";
+import { listen } from "@tauri-apps/api/event";
+import type { UnlistenFn } from "@tauri-apps/api/event";
 
-import type { Mark, OpenedPiece, PieceSummary, Unavailable } from "./types";
+import type {
+  AttemptSummary,
+  InstrumentSummary,
+  Mark,
+  OpenedPiece,
+  PieceSummary,
+  PracticeEvent,
+  Unavailable,
+} from "./types";
 
-export type { Mark, OpenedPiece, PieceSummary, Unavailable };
+export type {
+  AttemptSummary,
+  InstrumentSummary,
+  Mark,
+  OpenedPiece,
+  PieceSummary,
+  PracticeEvent,
+  Unavailable,
+};
 
 /** The Pieces available to practise. Never empty (FR-207). */
 export function library(): Promise<PieceSummary[]> {
@@ -29,4 +47,32 @@ export function openPiece(id: string): Promise<OpenedPiece> {
 /** Why the application cannot work, or `null` if it can. */
 export function startupFailure(): Promise<Unavailable | null> {
   return invoke<Unavailable | null>("startup_failure");
+}
+
+/** The MIDI instruments currently connected (FR-307). */
+export function instruments(): Promise<InstrumentSummary[]> {
+  return invoke<InstrumentSummary[]>("instruments");
+}
+
+/** Begins an attempt at `pieceId`, on `instrument` (FR-801). */
+export function startAttempt(pieceId: string, instrument: string): Promise<void> {
+  return invoke<void>("start_attempt", { pieceId, instrument });
+}
+
+/** Ends whatever attempt is running, and returns its summary (FR-408). */
+export function endAttempt(): Promise<AttemptSummary> {
+  return invoke<AttemptSummary>("end_attempt");
+}
+
+/**
+ * Listens for the practice loop's events, until the returned function is
+ * called.
+ *
+ * The one place `@tauri-apps/api/event` is imported — same reason every
+ * other command has exactly one wrapper here.
+ */
+export function listenToPractice(
+  onEvent: (event: PracticeEvent) => void,
+): Promise<UnlistenFn> {
+  return listen<PracticeEvent>("practice", (message) => onEvent(message.payload));
 }

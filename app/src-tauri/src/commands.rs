@@ -29,6 +29,7 @@
 use serde::Serialize;
 use tauri::{Manager as _, State};
 
+use crate::practice::AttemptSummary;
 use crate::startup::Unavailable;
 use crate::state::{Failed, Shared};
 
@@ -182,6 +183,87 @@ pub fn startup_failure(app: tauri::AppHandle) -> Option<Unavailable> {
     // `try_state` rather than `state`: not finding it is the ordinary case,
     // meaning everything started. `state` would panic on the happy path.
     app.try_state::<Failed>().map(|failed| failed.0.clone())
+}
+
+/// A MIDI instrument, as the picker needs it.
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct InstrumentSummary {
+    /// What to show the performer, and what `start_attempt` names it by.
+    pub name: String,
+}
+
+/// The MIDI instruments currently connected (FR-307).
+///
+/// # Errors
+///
+/// If none are connected, or the practice thread has gone — either way, in
+/// words a performer can read (`NoInstrument::describe`).
+#[tauri::command]
+pub fn instruments(state: State<'_, Shared>) -> Result<Vec<InstrumentSummary>, Refused> {
+    let hogwash = state.inner().0.lock().map_err(|_| POISONED.to_owned())?;
+
+    hogwash
+        .practice()
+        .instruments()
+        .map(|found| {
+            found
+                .into_iter()
+                .map(|instrument| InstrumentSummary {
+                    name: instrument.name().to_owned(),
+                })
+                .collect()
+        })
+        .map_err(|absent| absent.describe())
+}
+
+/// Begins an attempt at `piece_id`, on `instrument` (FR-801).
+///
+/// # Errors
+///
+/// If the piece is not in the library, or the instrument could not be
+/// opened.
+#[tauri::command]
+pub fn start_attempt(
+    piece_id: String,
+    instrument: String,
+    state: State<'_, Shared>,
+) -> Result<(), Refused> {
+    let hogwash = state.inner().0.lock().map_err(|_| POISONED.to_owned())?;
+
+    let id = hogwash_domain::PieceId::new(&piece_id)
+        .ok_or_else(|| format!("`{piece_id}` is not a usable piece name."))?;
+
+    let piece = hogwash
+        .library()
+        .pieces()
+        .into_iter()
+        .find(|piece| *piece.id() == id)
+        .ok_or_else(|| format!("There is no piece called `{piece_id}` in the library."))?;
+
+    let reference = std::sync::Arc::new(piece.reference().clone());
+    let named = hogwash_capture::Instrument::new(instrument);
+
+    hogwash
+        .practice()
+        .start_attempt(id, reference, named)
+        .map_err(|absent| absent.describe())
+}
+
+/// Ends whatever attempt is running, analyses it, and keeps the record
+/// (FR-408, ADR-0010).
+///
+/// # Errors
+///
+/// If no attempt is running.
+#[tauri::command]
+pub fn end_attempt(state: State<'_, Shared>) -> Result<AttemptSummary, Refused> {
+    let hogwash = state.inner().0.lock().map_err(|_| POISONED.to_owned())?;
+
+    hogwash
+        .practice()
+        .end_attempt()
+        .map_err(|_| "No attempt is in progress.".to_owned())
 }
 
 /// What to say when the state cannot be read.
