@@ -90,6 +90,20 @@ impl<'a> Cursor<'a> {
         self.position >= self.reference.len()
     }
 
+    /// Whether `pitch` has already been played **at the current position**.
+    ///
+    /// A chord is satisfied one note at a time, and two components need to
+    /// know which of them are down: Presentation, to show the performer what
+    /// the chord still wants (`MVP §6.6`), and Analysis, so that a note which
+    /// *was* played is not reported as one that never arrived (FR-402).
+    ///
+    /// Scoped to the current position. Progress belongs to the position being
+    /// played, not to the piece, and is forgotten on advancing.
+    #[must_use]
+    pub fn has_been_played(&self, pitch: Pitch) -> bool {
+        self.satisfied.contains(&pitch)
+    }
+
     /// Observes that the performer played `pitch`, and reports whether the
     /// Cursor moved.
     ///
@@ -359,6 +373,36 @@ mod tests {
         let mut cursor = Cursor::at_the_beginning(&reference);
 
         assert_eq!(cursor.observe(unison_pitch()), CursorMovement::Advanced);
+    }
+
+    // A chord is satisfied one note at a time, and both Presentation and
+    // Analysis need to know which of them are already down: Presentation to
+    // show the performer (MVP §6.6), Analysis so it does not report a note
+    // that was played as one that never arrived (FR-402).
+    #[test]
+    fn the_cursor_knows_which_of_the_expected_notes_are_already_played() {
+        let reference = one_chord(&[Step::C, Step::E, Step::G]);
+        let mut cursor = Cursor::at_the_beginning(&reference);
+
+        assert!(!cursor.has_been_played(pitch(Step::C)));
+
+        cursor.observe(pitch(Step::C));
+
+        assert!(cursor.has_been_played(pitch(Step::C)));
+        assert!(!cursor.has_been_played(pitch(Step::E)));
+    }
+
+    // Progress belongs to the position being played, not to the piece. Once
+    // the Cursor moves on, the previous position's notes are history and the
+    // new position starts from nothing.
+    #[test]
+    fn advancing_forgets_which_notes_satisfied_the_previous_position() {
+        let reference = one_bar(&[Step::C, Step::D]);
+        let mut cursor = Cursor::at_the_beginning(&reference);
+
+        cursor.observe(pitch(Step::C));
+
+        assert!(!cursor.has_been_played(pitch(Step::C)));
     }
 
     // 003 §7.16 -- "It occupies a position within a Measure, which is how a

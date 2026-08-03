@@ -1,0 +1,471 @@
+//! Analysis — the comparison itself (`003 §7.6`).
+
+use hogwash_capture::ObservedPerformance;
+use hogwash_notation::ReferencePerformance;
+use hogwash_practice::Cursor;
+
+use crate::finding::Finding;
+
+/// The comparison of an Observed Performance against the Reference
+/// Performance of the Piece it was played from (`003 §7.6`).
+///
+/// Determined entirely by its two inputs. `003 §7.6` Domain Classification —
+/// *"the same inputs are the same Analysis. Treating it as having independent
+/// identity would suggest it could differ between runs, which is precisely
+/// what the domain forbids."*
+///
+/// It does not present itself. `003 §7.6` assigns that to Feedback, so there
+/// is deliberately no `Display` here.
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub struct Analysis {
+    findings: Vec<Finding>,
+    summary: Summary,
+}
+
+impl Analysis {
+    /// Compares `observed` against `reference`.
+    ///
+    /// The comparison **replays the Cursor**. That is what makes the account
+    /// agree with what the performer saw: the same rule that advanced the
+    /// cursor on screen decides here which played note answered which written
+    /// one (`004 §6.5`, one source of truth).
+    ///
+    /// Both inputs are taken by shared reference, so `003 §7.6`'s *"never
+    /// alters what it examines"* is carried by the signature.
+    #[must_use]
+    pub fn of(observed: &ObservedPerformance, reference: &ReferencePerformance) -> Self {
+        let mut cursor = Cursor::at_the_beginning(reference);
+        let mut findings = Vec::new();
+
+        for &played in observed.played() {
+            let Some(expected) = cursor.expecting() else {
+                // Nothing corresponds to it, so it is unexpected rather than
+                // incorrect, and it has no location (FR-403).
+                findings.push(Finding::Unexpected { played });
+                continue;
+            };
+
+            let measure = expected.measure();
+            let position = cursor.position();
+
+            if expected.sounding().any(|wanted| wanted == played) {
+                findings.push(Finding::Correct {
+                    measure,
+                    position,
+                    pitch: played,
+                });
+            } else {
+                findings.push(Finding::IncorrectPitch {
+                    measure,
+                    position,
+                    played,
+                    expected: expected.sounding().collect(),
+                });
+            }
+
+            cursor.observe(played);
+        }
+
+        // Whatever the performer never reached (FR-402). Under wait-for-me
+        // this is the tail and nothing else, because a note cannot be skipped
+        // mid-piece — the Cursor will not pass it (MVP §5).
+        let stopped_at = cursor.position();
+        for position in stopped_at..reference.len() {
+            let Some(expected) = reference.at(position) else {
+                continue;
+            };
+
+            for note in expected.notes() {
+                let pitch = note.sounding();
+
+                // At the position the performer stopped on, some notes of a
+                // chord may already be down. Those were played, and reporting
+                // them as never arriving would contradict the record.
+                if position == stopped_at && cursor.has_been_played(pitch) {
+                    continue;
+                }
+
+                findings.push(Finding::Omitted {
+                    measure: expected.measure(),
+                    position,
+                    pitch,
+                });
+            }
+        }
+
+        let summary = Summary::over(&findings, cursor.has_reached_the_end());
+
+        Self { findings, summary }
+    }
+
+    /// Everything found, in the order it happened.
+    ///
+    /// Played notes appear in the order they were played; omissions follow,
+    /// in the order the Score writes them. The ordering is fixed by the
+    /// inputs alone, which is what FR-406 requires.
+    #[must_use]
+    pub fn findings(&self) -> &[Finding] {
+        &self.findings
+    }
+
+    /// The single overall result for the Attempt (FR-408).
+    #[must_use]
+    pub const fn summary(&self) -> Summary {
+        self.summary
+    }
+}
+
+/// One overall result for an Attempt (FR-408).
+///
+/// **Counts, and nothing else.** No percentage, no grade, no pass or fail.
+/// `003 §7.6` — Analysis *"measures; it does not interpret, judge, or
+/// advise"* — and FR-503 excludes prescriptive output. A figure like "82%"
+/// is an interpretation dressed as a measurement, and it invites exactly the
+/// grading `001 §11` rules out.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub struct Summary {
+    pub(crate) correct: usize,
+    pub(crate) incorrect: usize,
+    pub(crate) omitted: usize,
+    pub(crate) unexpected: usize,
+    pub(crate) reached_the_end: bool,
+}
+
+impl Summary {
+    fn over(findings: &[Finding], reached_the_end: bool) -> Self {
+        let mut summary = Self {
+            correct: 0,
+            incorrect: 0,
+            omitted: 0,
+            unexpected: 0,
+            reached_the_end,
+        };
+
+        for finding in findings {
+            match finding {
+                Finding::Correct { .. } => summary.correct += 1,
+                Finding::IncorrectPitch { .. } => summary.incorrect += 1,
+                Finding::Omitted { .. } => summary.omitted += 1,
+                Finding::Unexpected { .. } => summary.unexpected += 1,
+            }
+        }
+
+        summary
+    }
+
+    /// How many played notes the Score asked for where they were played.
+    #[must_use]
+    pub const fn correct(&self) -> usize {
+        self.correct
+    }
+
+    /// How many played notes differed from what was written there (FR-401).
+    #[must_use]
+    pub const fn incorrect(&self) -> usize {
+        self.incorrect
+    }
+
+    /// How many written notes never arrived (FR-402).
+    #[must_use]
+    pub const fn omitted(&self) -> usize {
+        self.omitted
+    }
+
+    /// How many notes were played when nothing was expected (FR-403).
+    #[must_use]
+    pub const fn unexpected(&self) -> usize {
+        self.unexpected
+    }
+
+    /// Whether the performer reached the end of the Piece.
+    ///
+    /// Not a judgement: `003 §7.3` is explicit that a short or abandoned
+    /// Attempt is still an Attempt.
+    #[must_use]
+    pub const fn reached_the_end(&self) -> bool {
+        self.reached_the_end
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use hogwash_domain::{MeasureNumber, Step};
+
+    use crate::analysis::{Analysis, Summary};
+    use crate::finding::Finding;
+    use crate::fixtures::{one_bar, one_chord, pitch, played, played_steps, two_bars, unexpected};
+
+    fn bar(number: u32) -> MeasureNumber {
+        MeasureNumber::new(number).expect("fixture measures are numbered from one")
+    }
+
+    // FR-400 -- "compare the observed performance of an attempt against the
+    // reference performance of the associated piece".
+    #[test]
+    fn a_faultless_performance_is_all_correct() {
+        let reference = one_bar(&[Step::C, Step::D, Step::E]);
+        let observed = played_steps(&[Step::C, Step::D, Step::E]);
+
+        let analysis = Analysis::of(&observed, &reference);
+
+        assert!(analysis.findings().iter().all(Finding::is_correct));
+        assert_eq!(analysis.summary().correct(), 3);
+    }
+
+    // FR-401 -- "identify notes in the observed performance whose pitch
+    // differs from the corresponding note in the reference performance".
+    //
+    // The corresponding note is the one expected where the Cursor was
+    // waiting, so the finding can say both what was played and what was
+    // wanted, and where.
+    #[test]
+    fn a_note_played_where_another_was_written_is_an_incorrect_pitch() {
+        let reference = one_bar(&[Step::C, Step::D]);
+        let observed = played_steps(&[Step::G, Step::C, Step::D]);
+
+        let analysis = Analysis::of(&observed, &reference);
+
+        assert_eq!(
+            analysis.findings()[0],
+            Finding::IncorrectPitch {
+                measure: bar(1),
+                position: 0,
+                played: pitch(Step::G),
+                expected: vec![pitch(Step::C)],
+            }
+        );
+    }
+
+    // MVP §5 -- the Cursor holds on a wrong note, so the position is not
+    // consumed. The performer plays the right note next and it is correct.
+    // One position, two findings, which is a faithful account.
+    #[test]
+    fn a_wrong_note_does_not_consume_the_position_it_was_played_at() {
+        let reference = one_bar(&[Step::C]);
+        let observed = played_steps(&[Step::G, Step::C]);
+
+        let analysis = Analysis::of(&observed, &reference);
+
+        assert_eq!(analysis.summary().incorrect(), 1);
+        assert_eq!(analysis.summary().correct(), 1);
+        assert_eq!(analysis.summary().omitted(), 0);
+    }
+
+    // FR-402 -- "identify notes present in the reference performance but
+    // absent from the observed performance".
+    //
+    // Under wait-for-me these are exactly the tail the performer never
+    // reached: a note cannot be skipped mid-piece, because the Cursor will
+    // not pass it (MVP §5).
+    #[test]
+    fn notes_after_the_point_the_performer_stopped_are_omitted() {
+        let reference = two_bars(&[Step::C, Step::D], &[Step::E]);
+        let observed = played_steps(&[Step::C]);
+
+        let analysis = Analysis::of(&observed, &reference);
+
+        assert_eq!(
+            analysis.findings()[1..],
+            [
+                Finding::Omitted {
+                    measure: bar(1),
+                    position: 1,
+                    pitch: pitch(Step::D),
+                },
+                Finding::Omitted {
+                    measure: bar(2),
+                    position: 2,
+                    pitch: pitch(Step::E),
+                },
+            ]
+        );
+    }
+
+    // A chord the performer got half way through: the notes played are
+    // correct, and only the ones that never arrived are omitted. Reporting
+    // all three as omitted would contradict the record of what was played.
+    #[test]
+    fn only_the_unplayed_notes_of_a_part_played_chord_are_omitted() {
+        let reference = one_chord(&[Step::C, Step::E, Step::G]);
+        let observed = played_steps(&[Step::C, Step::E]);
+
+        let analysis = Analysis::of(&observed, &reference);
+
+        assert_eq!(analysis.summary().correct(), 2);
+        assert_eq!(analysis.summary().omitted(), 1);
+        assert_eq!(
+            analysis.findings()[2],
+            Finding::Omitted {
+                measure: bar(1),
+                position: 0,
+                pitch: pitch(Step::G),
+            }
+        );
+    }
+
+    // FR-403 -- "identify notes present in the observed performance but
+    // absent from the reference performance".
+    //
+    // Nothing corresponds to a note played when nothing is expected, which
+    // is what distinguishes this from FR-401. It has no location for the
+    // same reason.
+    #[test]
+    fn a_note_played_after_the_piece_has_ended_is_unexpected() {
+        let reference = one_bar(&[Step::C]);
+        let observed = played(&[pitch(Step::C), unexpected()]);
+
+        let analysis = Analysis::of(&observed, &reference);
+
+        assert_eq!(
+            analysis.findings()[1],
+            Finding::Unexpected {
+                played: unexpected(),
+            }
+        );
+        assert_eq!(analysis.findings()[1].measure(), None);
+    }
+
+    // 003 §7.6 Business Invariant -- "Identical inputs always produce an
+    // identical Analysis." FR-406; and 003 §7.6 Notes: "A comparison that
+    // could differ between runs would not be a comparison of these two
+    // things."
+    #[test]
+    fn identical_inputs_always_produce_an_identical_analysis() {
+        let reference = two_bars(&[Step::C, Step::D], &[Step::E, Step::F]);
+        let observed = played(&[pitch(Step::C), unexpected(), pitch(Step::D), pitch(Step::E)]);
+
+        assert_eq!(
+            Analysis::of(&observed, &reference),
+            Analysis::of(&observed, &reference)
+        );
+    }
+
+    // 003 §7.6 -- "It never alters what it examines." The inputs are taken
+    // by shared reference, so mutation is not expressible; this records that
+    // they survive unchanged.
+    #[test]
+    fn analysis_never_alters_what_it_examines() {
+        let reference = one_bar(&[Step::C]);
+        let observed = played_steps(&[Step::G]);
+
+        let before = (observed.clone(), reference.clone());
+        let _ = Analysis::of(&observed, &reference);
+
+        assert_eq!((observed, reference), before);
+    }
+
+    // FR-408 -- "produce a single overall analysis summary for each attempt".
+    // Exactly one, and it is counts.
+    #[test]
+    fn an_attempt_has_exactly_one_overall_result() {
+        let reference = one_bar(&[Step::C, Step::D]);
+        let observed = played(&[unexpected(), pitch(Step::C)]);
+
+        let summary = Analysis::of(&observed, &reference).summary();
+
+        assert_eq!(summary.correct(), 1);
+        assert_eq!(summary.incorrect(), 1);
+        assert_eq!(summary.omitted(), 1);
+        assert_eq!(summary.unexpected(), 0);
+        assert!(!summary.reached_the_end());
+    }
+
+    #[test]
+    fn a_summary_records_whether_the_performer_reached_the_end() {
+        let reference = one_bar(&[Step::C]);
+
+        assert!(
+            Analysis::of(&played_steps(&[Step::C]), &reference)
+                .summary()
+                .reached_the_end()
+        );
+    }
+
+    // 003 §7.6 -- Analysis "measures; it does not interpret, judge, or
+    // advise", and FR-503 excludes prescriptive output. So the summary is the
+    // four counts and whether the end was reached -- no grade, no percentage,
+    // no pass or fail.
+    //
+    // Asserted by round-trip: a Summary is fully reconstructible from those
+    // five values. Add a score field and the round trip cannot carry it.
+    #[test]
+    fn the_summary_is_five_measurements_and_no_verdict() {
+        let reference = one_bar(&[Step::C, Step::D]);
+        let observed = played(&[unexpected(), pitch(Step::C)]);
+        let summary = Analysis::of(&observed, &reference).summary();
+
+        let rebuilt = Summary {
+            correct: summary.correct(),
+            incorrect: summary.incorrect(),
+            omitted: summary.omitted(),
+            unexpected: summary.unexpected(),
+            reached_the_end: summary.reached_the_end(),
+        };
+
+        assert_eq!(rebuilt, summary);
+    }
+
+    // FR-404 (timing) and FR-405 (duration) are deferred (MVP §8), for the
+    // reason MVP §5 derives: with practice waiting for the performer, the
+    // tempo is the performer's speed and there is no reference to measure
+    // against.
+    //
+    // Guarded structurally: an Analysis is fully determined by the two
+    // sequences it compares, neither of which carries time (003 §15). A
+    // deviation figure would have to come from somewhere, and there is
+    // nowhere for it to come from.
+    #[test]
+    fn no_finding_reports_timing_or_duration() {
+        let reference = one_bar(&[Step::C, Step::D]);
+
+        // The same notes are the same analysis however they were "played" --
+        // there is no third input that could distinguish two renditions.
+        assert_eq!(
+            Analysis::of(&played_steps(&[Step::C, Step::D]), &reference),
+            Analysis::of(&played_steps(&[Step::C, Step::D]), &reference)
+        );
+    }
+
+    // FR-407 (aggregate per measure) is deferred (MVP §8). Findings carry a
+    // MeasureNumber because Feedback locates findings by Measure (003 §7.7),
+    // and location is not aggregation: there is no per-measure result, only
+    // findings that know where they are.
+    #[test]
+    fn findings_are_located_by_measure_but_not_aggregated_by_it() {
+        let reference = two_bars(&[Step::C], &[Step::D]);
+        let observed = played_steps(&[Step::C, Step::D]);
+
+        let analysis = Analysis::of(&observed, &reference);
+
+        assert_eq!(analysis.findings()[0].measure(), Some(bar(1)));
+        assert_eq!(analysis.findings()[1].measure(), Some(bar(2)));
+
+        // The whole result is one flat ordered sequence plus one overall
+        // summary -- FR-408's "single overall result", and nothing between.
+        assert_eq!(analysis.findings().len(), 2);
+    }
+
+    // 003 §7.2 allows an Attempt in which nothing was played. Every expected
+    // note is then omitted, and nothing else is reported.
+    #[test]
+    fn an_attempt_in_which_nothing_was_played_omits_everything() {
+        let reference = one_bar(&[Step::C, Step::D]);
+
+        let analysis = Analysis::of(&played(&[]), &reference);
+
+        assert_eq!(analysis.summary().omitted(), 2);
+        assert_eq!(analysis.summary().correct(), 0);
+        assert_eq!(analysis.summary().incorrect(), 0);
+    }
+
+    // ADR-0001 -- comparison is on sounding pitch. A performer plays a key,
+    // and F sharp and G flat are one key; the analysis must agree with what
+    // the Cursor did on screen.
+    #[test]
+    fn correctness_is_decided_on_the_sound_not_the_spelling() {
+        let reference = one_bar(&[Step::F]);
+        let observed = played(&[pitch(Step::F)]);
+
+        assert_eq!(Analysis::of(&observed, &reference).summary().correct(), 1);
+    }
+}

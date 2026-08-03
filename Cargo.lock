@@ -3,10 +3,30 @@
 version = 4
 
 [[package]]
+name = "hogwash-analysis"
+version = "0.0.0"
+dependencies = [
+ "hogwash-capture",
+ "hogwash-domain",
+ "hogwash-notation",
+ "hogwash-practice",
+]
+
+[[package]]
 name = "hogwash-capture"
 version = "0.0.0"
 dependencies = [
  "hogwash-domain",
+]
+
+[[package]]
+name = "hogwash-cli"
+version = "0.0.0"
+dependencies = [
+ "hogwash-analysis",
+ "hogwash-capture",
+ "hogwash-domain",
+ "hogwash-notation",
 ]
 
 [[package]]

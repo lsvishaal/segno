@@ -1,0 +1,17 @@
+[package]
+name = "hogwash-analysis"
+version = "0.0.0"
+edition.workspace = true
+rust-version.workspace = true
+authors.workspace = true
+publish = false
+description = "Comparison of what was played against what was expected. Pure, and reproducible by definition."
+
+[dependencies]
+hogwash-capture = { path = "../hogwash-capture" }
+hogwash-domain = { path = "../hogwash-domain" }
+hogwash-notation = { path = "../hogwash-notation" }
+hogwash-practice = { path = "../hogwash-practice" }
+
+[lints]
+workspace = true

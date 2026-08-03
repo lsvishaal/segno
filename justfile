@@ -2,7 +2,7 @@
 
 default: ci
 
-ci: fmt-check lint test deny arch
+ci: fmt-check lint test deny arch determinism
 
 check:
     cargo check --workspace --all-targets
@@ -24,6 +24,13 @@ deny:
 
 arch:
     ./scripts/check-arch.sh
+
+# FR-406 / NFR-300 / NFR-301, which MVP §9.2 makes release-blocking.
+# Runs the harness twice in SEPARATE PROCESSES and diffs the bytes: the
+# failures this catches (hash iteration order, anything address-derived) are
+# invisible inside a single run.
+determinism:
+    ./scripts/check-determinism.sh
 
 # Proves the licence gate actually fails on a forbidden licence.
 # A gate nobody has seen fail is not a gate. The canary is added as a

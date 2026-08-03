@@ -34,6 +34,7 @@ cd "$(dirname "$0")/.."
 
 # Crates that must remain free of the world outside the domain.
 PURE_CRATES=(
+    hogwash-domain
     hogwash-notation
     hogwash-capture
     hogwash-practice
@@ -101,6 +102,32 @@ for crate in "${PURE_CRATES[@]}"; do
         failed=1
     else
         echo "ok  $crate is pure"
+    fi
+done
+
+# --- 3. nothing in a pure crate is ordered by a hash -------------------------
+#
+# FR-406, NFR-300 and NFR-301 require identical results across separate
+# executions, and MVP §9.2 makes that release-blocking. Rust's HashMap and
+# HashSet seed their hasher randomly *per process*, so iterating one yields a
+# different order on every run. That is the classic way a comparison which
+# looks deterministic silently is not, and it fails only sometimes, which is
+# worse than failing always.
+#
+# BTreeMap and BTreeSet order by the key and are safe. So is a Vec.
+for crate in "${PURE_CRATES[@]}"; do
+    src="crates/$crate/src"
+    [ -d "$src" ] || continue
+
+    # Comment lines are excluded: naming the hazard in a doc comment is how
+    # it stays understood, and must not itself trip the guard.
+    hashed=$(grep -rn 'HashMap\|HashSet' "$src" | grep -vE ':[0-9]+:[[:space:]]*//' || true)
+    if [ -n "$hashed" ]; then
+        echo "DETERMINISM VIOLATION: $crate uses a hash-ordered container."
+        echo "$hashed" | sed 's/^/    /'
+        echo "    Use BTreeMap/BTreeSet: hash iteration order is randomised"
+        echo "    per process, which breaks FR-406 and NFR-301."
+        failed=1
     fi
 done
 
