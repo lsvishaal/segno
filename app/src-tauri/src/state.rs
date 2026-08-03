@@ -15,6 +15,7 @@
 
 use std::sync::Mutex;
 
+use hogwash_domain::PieceId;
 use hogwash_library::{Library, Piece};
 use hogwash_records::Records;
 
@@ -97,6 +98,21 @@ impl Hogwash {
     #[must_use]
     pub const fn engraving(&self) -> &Engraving {
         &self.engraving
+    }
+
+    /// The music a Piece was read from.
+    ///
+    /// Provided pieces are compiled in; imported ones are on disk. Looking in
+    /// both here means nothing above has to know which kind it is holding —
+    /// FR-200 says a Piece behaves the same whatever it came from, and this
+    /// is where that stays true.
+    #[must_use]
+    pub fn source_of(&self, id: &PieceId) -> Option<Vec<u8>> {
+        PROVIDED
+            .iter()
+            .find(|provided| identify(provided.source) == *id)
+            .map(|provided| provided.source.to_vec())
+            .or_else(|| self.records.source_of(id))
     }
 
     /// Where practice history is kept.

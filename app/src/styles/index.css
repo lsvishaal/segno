@@ -1,4 +1,5 @@
 @import "tailwindcss";
+@import "./score.css";
 
 /* The editorial palette. Warm off-white, ink rather than pure black, and one
    accent that the cursor owns — everything else is greyscale so the score and

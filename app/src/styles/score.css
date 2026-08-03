@@ -1,0 +1,115 @@
+/*
+  The score panel.
+
+  This is where ADR-0012 pays for itself. Marking a note is one class and one
+  rule; the previous approach had to compute a rectangle in the SVG's
+  coordinate system, convert it to the screen's, and draw it — and got the
+  first step wrong for every notehead.
+
+  Everything here targets Verovio's own markup: `g.note` for a note, and the
+  three `hw-` classes the interface adds.
+*/
+
+.hw-score {
+  --hw-ink: var(--color-ink);
+  --hw-paper: #ffffff;
+  --hw-cursor: var(--color-accent);
+  --hw-correct: #2f6f4e;
+  --hw-wrong: #a8321f;
+
+  overflow-y: auto;
+  scroll-padding-block: 25%;
+}
+
+.hw-page {
+  background: var(--hw-paper);
+  color: var(--hw-ink);
+}
+
+.hw-page svg {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+/*
+  Paper is the default because it is what printed music looks like, and a
+  performer is reading. The dark variant inverts the engraving rather than
+  recolouring it: Verovio draws with `currentColor` and fills, so setting the
+  colour is enough for the staves and stems, and the noteheads follow.
+*/
+.hw-score[data-surface="dark"] {
+  --hw-ink: #e8e4dc;
+  --hw-paper: #17161a;
+  --hw-correct: #5fb98a;
+  --hw-wrong: #e2705c;
+}
+
+/*
+  A marked note. The transition is on `fill` and `stroke` only — animating
+  `all` on a few thousand SVG elements is how a score view becomes slow.
+*/
+.hw-page g.note {
+  transition:
+    fill 140ms ease-out,
+    stroke 140ms ease-out;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hw-page g.note {
+    transition: none;
+  }
+}
+
+/*
+  Verovio nests the notehead, stem and accidental inside the note's group, so
+  each rule reaches the descendants that actually draw something. `stroke` as
+  well as `fill` because stems are stroked paths and noteheads are filled.
+*/
+.hw-page g.hw-correct :is(path, ellipse, rect, use, polygon) {
+  fill: var(--hw-correct);
+  stroke: var(--hw-correct);
+}
+
+.hw-page g.hw-wrong :is(path, ellipse, rect, use, polygon) {
+  fill: var(--hw-wrong);
+  stroke: var(--hw-wrong);
+}
+
+/*
+  The cursor. Coloured like the accent and given a slow pulse, so that the
+  place the score is waiting at is findable without hunting — MVP §5 makes
+  waiting the whole shape of the product, and a cursor that has to be looked
+  for undermines it.
+*/
+.hw-page g.hw-cursor :is(path, ellipse, rect, use, polygon) {
+  fill: var(--hw-cursor);
+  stroke: var(--hw-cursor);
+}
+
+.hw-page g.hw-cursor {
+  animation: hw-waiting 1.8s ease-in-out infinite;
+  transform-box: fill-box;
+  transform-origin: center;
+}
+
+@keyframes hw-waiting {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.45;
+  }
+}
+
+/*
+  A pulse is motion, and someone who has asked for less of it should not have
+  a note breathing at them for the length of a practice session. The colour
+  still marks the place.
+*/
+@media (prefers-reduced-motion: reduce) {
+  .hw-page g.hw-cursor {
+    animation: none;
+  }
+}

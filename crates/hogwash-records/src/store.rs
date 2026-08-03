@@ -283,6 +283,16 @@ impl Records {
         Ok(record)
     }
 
+    /// The score a Piece was imported from, if it is here (FR-701).
+    ///
+    /// Returns the bytes rather than the path, so a caller cannot be tempted
+    /// to hold a path across a restart — `ADR-0010` copies imported material
+    /// into the library precisely so that the performer's own file may move.
+    #[must_use]
+    pub fn source_of(&self, id: &PieceId) -> Option<Vec<u8>> {
+        fs::read(self.scores().join(format!("{}.musicxml", id.as_str()))).ok()
+    }
+
     fn session_path(&self, id: &str) -> PathBuf {
         self.history().join(format!("{id}.json"))
     }

@@ -27,6 +27,35 @@ export interface PieceSummary {
 }
 
 /**
+ * One place in the music, and the elements drawn for it.
+ *
+ * This is the whole mechanism behind showing correctness on the score
+ * (`MVP §6.6`): Verovio writes the same identifier into its own document and
+ * into the SVG, so a position in the piece names elements in the DOM.
+ */
+export interface Mark {
+  /** Which bar, as a performer counts them (from one). */
+  readonly measure: number;
+  /** Which position in the piece, counting from zero across the whole score. */
+  readonly position: number;
+  /** Which page it was drawn on, counting from zero. */
+  readonly page: number;
+  /** The identifiers Verovio gave the notes here. Several for a chord. */
+  readonly elementIds: readonly string[];
+}
+
+/** A Piece, engraved and ready to practise from. */
+export interface OpenedPiece {
+  readonly id: string;
+  readonly title: string;
+  readonly composer: string | null;
+  /** The engraved pages, as SVG markup. */
+  readonly pages: readonly string[];
+  /** Where every expected note was drawn, in reading order. */
+  readonly marks: readonly Mark[];
+}
+
+/**
  * Why the application cannot do its job.
  *
  * Rendered as a whole screen rather than a toast: this is not a transient

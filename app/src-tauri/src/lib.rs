@@ -70,6 +70,7 @@ pub fn run() -> Result<(), tauri::Error> {
         })
         .invoke_handler(tauri::generate_handler![
             commands::library,
+            commands::open_piece,
             commands::startup_failure,
         ])
         .run(tauri::generate_context!())

@@ -49,6 +49,45 @@ pub struct PieceSummary {
     pub notes: usize,
 }
 
+/// A Piece, engraved and ready to practise from.
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct OpenedPiece {
+    /// Which piece this is.
+    pub id: String,
+    /// What to call it.
+    pub title: String,
+    /// Who wrote it.
+    pub composer: Option<String>,
+    /// The engraved pages, as SVG.
+    ///
+    /// Sent as markup rather than as an image. That is the whole of
+    /// `ADR-0012`: in a webview the score is real elements, so marking a note
+    /// is a class on one of them rather than a rectangle computed from a
+    /// bounding box.
+    pub pages: Vec<String>,
+    /// Where every expected note was drawn, in reading order.
+    pub marks: Vec<Mark>,
+}
+
+/// One place in the music, and the elements drawn for it.
+///
+/// `Location` flattened into three numbers, because a nested object buys
+/// nothing on this side of the boundary and every consumer wants the parts.
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct Mark {
+    /// Which bar, as a performer counts them (from one).
+    pub measure: u32,
+    /// Which position in the piece, counting from zero across the whole
+    /// score rather than restarting each bar.
+    pub position: usize,
+    /// Which page it was drawn on, counting from zero.
+    pub page: usize,
+    /// The identifiers Verovio gave the notes here. Several for a chord.
+    pub element_ids: Vec<String>,
+}
+
 /// Something a command could not do, in words.
 ///
 /// A `String` rather than a type, because everything reaching here has
@@ -80,6 +119,56 @@ pub fn library(state: State<'_, Shared>) -> Result<Vec<PieceSummary>, Refused> {
             notes: piece.reference().len(),
         })
         .collect())
+}
+
+/// Engraves a Piece and hands over everything needed to draw it (FR-800).
+///
+/// # Errors
+///
+/// If the piece is not in the library, or the engraver refused it. Both are
+/// reported in words the interface can show.
+#[tauri::command]
+pub fn open_piece(id: String, state: State<'_, Shared>) -> Result<OpenedPiece, Refused> {
+    let hogwash = state.inner().0.lock().map_err(|_| POISONED.to_owned())?;
+
+    let piece = hogwash
+        .library()
+        .pieces()
+        .into_iter()
+        .find(|piece| piece.id().as_str() == id)
+        .ok_or_else(|| format!("There is no piece called `{id}` in the library."))?;
+
+    // Engraved on demand rather than kept from startup. A score's SVG is
+    // large and only one is ever on screen; holding every page of every piece
+    // for the life of the process would be paying for a piece nobody opened.
+    let source = hogwash.source_of(piece.id()).ok_or_else(|| {
+        "The music for this piece could not be found, so it cannot be shown.".to_owned()
+    })?;
+
+    let engraved = hogwash
+        .engraving()
+        .engrave(&source)
+        .map_err(|failure| format!("{failure:?}"))?;
+
+    Ok(OpenedPiece {
+        id,
+        title: piece.title().to_owned(),
+        composer: piece.composer().map(str::to_owned),
+        pages: engraved.pages().to_vec(),
+        marks: engraved
+            .placements()
+            .map(|(at, placement)| Mark {
+                measure: at.measure().get(),
+                position: at.position(),
+                page: placement.page().get(),
+                element_ids: placement
+                    .elements()
+                    .iter()
+                    .map(|element| element.as_str().to_owned())
+                    .collect(),
+            })
+            .collect(),
+    })
 }
 
 /// Why the application cannot work, if it cannot.
