@@ -230,3 +230,52 @@ fn every_piece_on_the_shelf_can_be_named_and_played() {
         );
     }
 }
+
+// The pairing `commands::open_piece` relies on to build `Mark.notes`: each
+// drawn element, zipped against the same position's expected notes in
+// order. Checked against the chord study because a chord is where a
+// misalignment between the two sequences would actually show up — a
+// melody's positions are all length one, so a shift there would be
+// invisible.
+#[test]
+#[ignore = "needs a real libverovio; run `just provided-test`"]
+fn drawn_elements_pair_with_the_notes_written_at_the_same_position() {
+    let mut engraver = engraver();
+    let source = std::fs::read(
+        PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("library/a-little-chord-study.musicxml"),
+    )
+    .expect("a-little-chord-study.musicxml ships with the application");
+
+    let drawn = engraver.engrave(&source).expect("engraves");
+    let reference = hogwash_notation::ReferencePerformance::derived_from(drawn.score());
+
+    // Bar two's chord (`003 §7.4`, `PROVENANCE.md`): C4, E4, G4 together.
+    let chord = drawn
+        .placements()
+        .find(|(at, _)| at.position() == 4)
+        .map(|(_, placement)| placement)
+        .expect("the first chord was drawn");
+
+    let expected = reference.at(4).expect("position 4 is within the piece");
+
+    let spelled: Vec<(String, i8)> = chord
+        .elements()
+        .iter()
+        .zip(expected.notes())
+        .map(|(_, note)| {
+            (
+                format!("{:?}", note.spelling().step()),
+                note.spelling().octave(),
+            )
+        })
+        .collect();
+
+    assert_eq!(
+        spelled,
+        vec![
+            ("C".to_owned(), 4),
+            ("E".to_owned(), 4),
+            ("G".to_owned(), 4),
+        ]
+    );
+}

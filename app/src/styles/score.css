@@ -1,13 +1,10 @@
 /*
   The score panel.
 
-  This is where ADR-0012 pays for itself. Marking a note is one class and one
-  rule; the previous approach had to compute a rectangle in the SVG's
-  coordinate system, convert it to the screen's, and draw it — and got the
-  first step wrong for every notehead.
-
-  Everything here targets Verovio's own markup: `g.note` for a note, and the
-  three `hw-` classes the interface adds.
+  Everything here targets Verovio's own markup (`g.note`) for the ink itself,
+  and an overlay layer — a cursor bar and two kinds of dot, positioned by
+  `Score.tsx` from real measurements — for the Cursor and correctness. Notes
+  never change colour; that is the point (see `Score.tsx`'s module doc).
 */
 
 .hw-score {
@@ -18,10 +15,8 @@
   --hw-correct: #2f6f4e;
   /*
     A true red, not a shade of the cursor's warm orange (`--color-accent`,
-    an amber/orange hue). The two were close enough in hue that a wrong
-    note could read as "the cursor, slightly different" rather than as an
-    unmistakably different signal — deliberately corrected, not a
-    coincidence of the palette.
+    an amber/orange hue) — the two need to read as different signals, not
+    as the same one at different brightness.
   */
   --hw-wrong: #dc2626;
 
@@ -53,9 +48,9 @@
 
 /*
   Paper is the default because it is what printed music looks like, and a
-  performer is reading. The dark variant inverts the engraving rather than
-  recolouring it: Verovio draws with `currentColor` and fills, so setting the
-  colour is enough for the staves and stems, and the noteheads follow.
+  performer is reading. The dark variant only touches the overlay's own
+  colours and the sheet's — Verovio draws with `currentColor`, so `--hw-ink`
+  alone still recolours every stave and stem.
 */
 .hw-score[data-surface="dark"] {
   --hw-ink: #e8e4dc;
@@ -66,102 +61,42 @@
 }
 
 /*
-  A marked note. The transition is on `fill` and `stroke` only — animating
-  `all` on a few thousand SVG elements is how a score view becomes slow.
+  The cursor: a thin bar, not a highlight on a notehead — there is no
+  notehead to highlight once a wrong note can appear anywhere. Centred on
+  its target by `transform`, so `Score.tsx` only ever has to animate a
+  single point (`left`) rather than a width that would fight the transform.
 */
-.hw-page g.note {
-  transition:
-    fill 140ms ease-out,
-    stroke 140ms ease-out;
+.hw-cursor-bar {
+  position: absolute;
+  width: 3px;
+  border-radius: 2px;
+  background: var(--hw-cursor);
+  transform: translateX(-50%);
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .hw-page g.note {
+  .hw-cursor-bar {
     transition: none;
   }
 }
 
 /*
-  Verovio nests the notehead, stem and accidental inside the note's group, so
-  each rule reaches the descendants that actually draw something. `stroke` as
-  well as `fill` because stems are stroked paths and noteheads are filled.
+  A dot: correct or wrong, centred on its computed point the same way the
+  cursor is. Sizing and colour are the only difference between the two —
+  the motion (fade and scale in, then out) is identical, on the Motion side.
 */
-.hw-page g.hw-correct :is(path, ellipse, rect, use, polygon) {
-  fill: var(--hw-correct);
-  stroke: var(--hw-correct);
+.hw-dot {
+  position: absolute;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
 }
 
-.hw-page g.hw-wrong :is(path, ellipse, rect, use, polygon) {
-  fill: var(--hw-wrong);
-  stroke: var(--hw-wrong);
+.hw-dot-correct {
+  background: var(--hw-correct);
 }
 
-/*
-  A wrong note gets its own brief motion, distinct from the cursor's slow
-  breathing pulse — the cursor means "waiting", this means "not that one",
-  and the moment it happens should be unmistakable even before the colour
-  is consciously registered. Two short cycles and it settles; nothing about
-  ADR-0002 changes, the Cursor still does not move.
-*/
-.hw-page g.hw-wrong {
-  animation: hw-mistaken 240ms ease-in-out 2;
-  transform-box: fill-box;
-  transform-origin: center;
-}
-
-@keyframes hw-mistaken {
-  0%,
-  100% {
-    transform: translateX(0);
-  }
-  25% {
-    transform: translateX(-3px);
-  }
-  75% {
-    transform: translateX(3px);
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .hw-page g.hw-wrong {
-    animation: none;
-  }
-}
-
-/*
-  The cursor. Coloured like the accent and given a slow pulse, so that the
-  place the score is waiting at is findable without hunting — MVP §5 makes
-  waiting the whole shape of the product, and a cursor that has to be looked
-  for undermines it.
-*/
-.hw-page g.hw-cursor :is(path, ellipse, rect, use, polygon) {
-  fill: var(--hw-cursor);
-  stroke: var(--hw-cursor);
-}
-
-.hw-page g.hw-cursor {
-  animation: hw-waiting 1.8s ease-in-out infinite;
-  transform-box: fill-box;
-  transform-origin: center;
-}
-
-@keyframes hw-waiting {
-  0%,
-  100% {
-    opacity: 1;
-  }
-  50% {
-    opacity: 0.45;
-  }
-}
-
-/*
-  A pulse is motion, and someone who has asked for less of it should not have
-  a note breathing at them for the length of a practice session. The colour
-  still marks the place.
-*/
-@media (prefers-reduced-motion: reduce) {
-  .hw-page g.hw-cursor {
-    animation: none;
-  }
+.hw-dot-wrong {
+  background: var(--hw-wrong);
 }

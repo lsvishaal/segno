@@ -16,21 +16,27 @@ import type { UnlistenFn } from "@tauri-apps/api/event";
 
 import type {
   AttemptSummary,
+  DrawnNote,
   InstrumentSummary,
   Mark,
   OpenedPiece,
   PieceSummary,
   PracticeEvent,
+  StaffPosition,
+  Step,
   Unavailable,
 } from "./types";
 
 export type {
   AttemptSummary,
+  DrawnNote,
   InstrumentSummary,
   Mark,
   OpenedPiece,
   PieceSummary,
   PracticeEvent,
+  StaffPosition,
+  Step,
   Unavailable,
 };
 

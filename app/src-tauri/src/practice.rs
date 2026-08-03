@@ -88,7 +88,17 @@ const RECONNECT_WINDOW: Duration = Duration::from_mins(1);
 pub enum PracticeEvent {
     /// A note was played at the position named. `correct` is the boolean
     /// this module exists to compute — never derived from `CursorMovement`.
-    Played { position: usize, correct: bool },
+    ///
+    /// `pitch` is the bare chromatic (MIDI) number a keyboard reports,
+    /// nothing more — `ADR-0001` never attaches a spelling to a played
+    /// note, and this event does not either. It exists only so a wrong
+    /// note can be shown *somewhere* sensible; any spelling the interface
+    /// invents for that is its own display concern, not this event's.
+    Played {
+        position: usize,
+        correct: bool,
+        pitch: u8,
+    },
     /// The Cursor moved on to `position`.
     Advanced { position: usize },
     /// The Cursor has nothing left to expect.
@@ -432,7 +442,14 @@ fn drain(active: &mut Ongoing, sink: &Sink) {
         let position = active.attempt.cursor().position();
         let movement = active.attempt.play(pitch);
 
-        emit(sink, &PracticeEvent::Played { position, correct });
+        emit(
+            sink,
+            &PracticeEvent::Played {
+                position,
+                correct,
+                pitch: u8::from(pitch),
+            },
+        );
 
         if movement == CursorMovement::Advanced {
             emit(

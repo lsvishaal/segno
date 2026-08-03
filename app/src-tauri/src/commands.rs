@@ -26,6 +26,7 @@
     reason = "tauri commands receive State and AppHandle by value; both are handles"
 )]
 
+use hogwash_notation::ReferencePerformance;
 use serde::Serialize;
 use tauri::{Manager as _, State};
 
@@ -85,8 +86,32 @@ pub struct Mark {
     pub position: usize,
     /// Which page it was drawn on, counting from zero.
     pub page: usize,
-    /// The identifiers Verovio gave the notes here. Several for a chord.
-    pub element_ids: Vec<String>,
+    /// Every note drawn here, paired with what was written. Several for a
+    /// chord.
+    ///
+    /// Carrying the written spelling — not just the element id — is what
+    /// lets the interface measure real staff geometry from real points: a
+    /// wrong note has no position of its own to draw at (a keyboard reports
+    /// a sound, never a spelling, `ADR-0001`), so placing anything for it
+    /// has to be computed from where notes that *were* written actually
+    /// ended up on screen.
+    pub notes: Vec<DrawnNote>,
+}
+
+/// One drawn notehead, and the spelling Verovio drew it from.
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct DrawnNote {
+    /// The identifier Verovio gave this notehead.
+    pub element_id: String,
+    /// The written letter name — `"C"` through `"B"`.
+    ///
+    /// Not the accidental: `alter` only draws a glyph beside the note, it
+    /// does not move it vertically on the staff, which is the only thing
+    /// this field exists to let the interface reconstruct.
+    pub step: String,
+    /// Scientific pitch notation, where middle C is octave 4.
+    pub octave: i8,
 }
 
 /// Something a command could not do, in words.
@@ -151,6 +176,12 @@ pub fn open_piece(id: String, state: State<'_, Shared>) -> Result<OpenedPiece, R
         .engrave(&source)
         .map_err(|failure| format!("{failure:?}"))?;
 
+    // Derived again here rather than reused from `Piece::reference()`: the
+    // one just engraved is what these element ids actually correspond to,
+    // and `003 §7.4` makes the derivation deterministic, so the two are the
+    // same performance either way.
+    let reference = ReferencePerformance::derived_from(engraved.score());
+
     Ok(OpenedPiece {
         id,
         title: piece.title().to_owned(),
@@ -158,15 +189,30 @@ pub fn open_piece(id: String, state: State<'_, Shared>) -> Result<OpenedPiece, R
         pages: engraved.pages().to_vec(),
         marks: engraved
             .placements()
-            .map(|(at, placement)| Mark {
-                measure: at.measure().get(),
-                position: at.position(),
-                page: placement.page().get(),
-                element_ids: placement
+            .map(|(at, placement)| {
+                let expected = reference.at(at.position());
+
+                let notes = placement
                     .elements()
                     .iter()
-                    .map(|element| element.as_str().to_owned())
-                    .collect(),
+                    .zip(
+                        expected
+                            .map(hogwash_notation::ExpectedNotes::notes)
+                            .unwrap_or_default(),
+                    )
+                    .map(|(element, note)| DrawnNote {
+                        element_id: element.as_str().to_owned(),
+                        step: format!("{:?}", note.spelling().step()),
+                        octave: note.spelling().octave(),
+                    })
+                    .collect();
+
+                Mark {
+                    measure: at.measure().get(),
+                    position: at.position(),
+                    page: placement.page().get(),
+                    notes,
+                }
             })
             .collect(),
     })

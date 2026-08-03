@@ -1,15 +1,20 @@
 @import "tailwindcss";
 @import "./score.css";
 
-/* The editorial palette. Warm off-white, ink rather than pure black, and one
-   accent that the cursor owns — everything else is greyscale so the score and
-   the highlights are the only colour on the page. */
+/*
+  A cool neutral canvas, not the warm paper this project started on — a
+  deliberate pivot, made after seeing the reference screenshots this pass is
+  built from, not an accident of touching the file. Floating glass panels
+  read as glass against a cool grey; they read as fog against a warm one.
+  The accent stays warm on purpose — one point of warmth against a cool
+  field is a choice, not a leftover.
+*/
 @theme {
-  --color-paper: #faf9f6;
+  --color-paper: #eef0f3;
   --color-paper-raised: #ffffff;
-  --color-ink: #1c1a17;
-  --color-ink-muted: #6b6660;
-  --color-rule: #e4e0d8;
+  --color-ink: #191a1e;
+  --color-ink-muted: #6b6d76;
+  --color-rule: #dde1e7;
 
   --color-accent: #b4551f;
 
@@ -40,4 +45,18 @@ body {
   background: var(--color-paper);
   color: var(--color-ink);
   -webkit-font-smoothing: antialiased;
+}
+
+/*
+  A floating glass panel: translucent, blurred, lifted off the canvas by a
+  soft shadow rather than a hard border. Applied to the practice screen's
+  instrument picker, appearance toggle, and summary panel — the surfaces
+  the reference renders as frosted cards rather than flat, bordered ones.
+*/
+.glass {
+  background: rgb(255 255 255 / 65%);
+  border: 1px solid rgb(255 255 255 / 60%);
+  box-shadow: 0 8px 32px -12px rgb(20 20 30 / 20%);
+  backdrop-filter: blur(20px) saturate(1.4);
+  -webkit-backdrop-filter: blur(20px) saturate(1.4);
 }

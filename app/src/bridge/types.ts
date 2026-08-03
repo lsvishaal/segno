@@ -26,12 +26,37 @@ export interface PieceSummary {
   readonly notes: number;
 }
 
+/** The written letter name of a note — `"C"` through `"B"`. */
+export type Step = "C" | "D" | "E" | "F" | "G" | "A" | "B";
+
+/**
+ * A written pitch, for placing things on the staff.
+ *
+ * Not the domain's spelling — no `alter` — because this exists for exactly
+ * one purpose: computing a vertical position. An accidental draws a glyph
+ * beside a note, it never moves the note up or down.
+ */
+export interface StaffPosition {
+  readonly step: Step;
+  /** Scientific pitch notation, where middle C is octave 4. */
+  readonly octave: number;
+}
+
+/** One notehead Verovio drew, and the spelling it was drawn from. */
+export interface DrawnNote extends StaffPosition {
+  /** The identifier Verovio gave this notehead. */
+  readonly elementId: string;
+}
+
 /**
  * One place in the music, and the elements drawn for it.
  *
  * This is the whole mechanism behind showing correctness on the score
  * (`MVP §6.6`): Verovio writes the same identifier into its own document and
- * into the SVG, so a position in the piece names elements in the DOM.
+ * into the SVG, so a position in the piece names elements in the DOM. The
+ * spelling on each `DrawnNote` is what lets a wrong note — which has no
+ * position of its own, `ADR-0001` — be placed relative to notes that really
+ * were written.
  */
 export interface Mark {
   /** Which bar, as a performer counts them (from one). */
@@ -40,8 +65,8 @@ export interface Mark {
   readonly position: number;
   /** Which page it was drawn on, counting from zero. */
   readonly page: number;
-  /** The identifiers Verovio gave the notes here. Several for a chord. */
-  readonly elementIds: readonly string[];
+  /** Every note drawn here. Several for a chord. */
+  readonly notes: readonly DrawnNote[];
 }
 
 /** A Piece, engraved and ready to practise from. */
@@ -105,7 +130,13 @@ export interface AttemptSummary {
  * so the whole practice loop is one `switch` on `kind` here too.
  */
 export type PracticeEvent =
-  | { readonly kind: "played"; readonly position: number; readonly correct: boolean }
+  | {
+      readonly kind: "played";
+      readonly position: number;
+      readonly correct: boolean;
+      /** The bare chromatic (MIDI) pitch a keyboard reported — no spelling. */
+      readonly pitch: number;
+    }
   | { readonly kind: "advanced"; readonly position: number }
   | { readonly kind: "reachedEnd" }
   | {
