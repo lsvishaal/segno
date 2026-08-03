@@ -13,6 +13,20 @@
 
   --color-accent: #b4551f;
 
+  /*
+    Two more, alongside the accent — for decorative variety on the shelf
+    (a per-piece motif stripe, never a difficulty signal, `001 §11`), not
+    for anything the cursor or a judgement uses. The accent stays the one
+    colour with meaning; these are texture.
+  */
+  --color-motif-sage: #3f6656;
+  --color-motif-plum: #5b5d8f;
+
+  /* Mirrors the score panel's `--hw-correct`/`--hw-wrong` (paper variant),
+     for the summary screen's stat tiles — one palette, not two. */
+  --color-correct: #2f6f4e;
+  --color-wrong: #dc2626;
+
   --font-serif: "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, serif;
 }
 

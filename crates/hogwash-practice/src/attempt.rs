@@ -197,6 +197,37 @@ mod tests {
         assert_eq!(ended.reached(), 0);
     }
 
+    // The exact computation a live interface performs for on-screen
+    // correctness (`app/src-tauri/src/practice.rs`'s `drain`, `MVP §6.6`):
+    // since `CursorMovement` gives no verdict (`003 §7.16`), "was that note
+    // right" is answered by checking membership in `cursor().expecting()`
+    // *before* calling `play`, which may advance the Cursor or clear its
+    // progress. Pinned here because nothing exercised this boolean before —
+    // `play`'s return value was tested, but not the read that has to happen
+    // ahead of it.
+    #[test]
+    fn whether_a_note_is_expected_is_readable_before_playing_it() {
+        // A plain function rather than a closure: a closure capturing
+        // `attempt` would still borrow it immutably at the `attempt.play`
+        // call below, which needs `&mut`.
+        fn expects(attempt: &Attempt, pitch: hogwash_domain::Pitch) -> bool {
+            attempt
+                .cursor()
+                .expecting()
+                .is_some_and(|expected| expected.sounding().any(|note| note == pitch))
+        }
+
+        let reference = one_bar(&[Step::C, Step::D]);
+        let mut attempt = Attempt::begin(reference);
+
+        assert!(expects(&attempt, pitch(Step::C)));
+        assert!(!expects(&attempt, unexpected()));
+
+        // The read is unaffected by whether the note is then actually played.
+        attempt.play(unexpected());
+        assert!(expects(&attempt, pitch(Step::C)));
+    }
+
     // 003 §7.3 -- "Once ended, an Attempt does not change." Carried by the
     // type: `end` consumes the Attempt and returns a value with no mutating
     // method at all, so this is a compile-time fact. The test records what

@@ -1,10 +1,35 @@
 import { useCallback, useEffect, useState } from "react";
+import type { ReactNode } from "react";
+
+import { AnimatePresence, motion, MotionConfig } from "motion/react";
 
 import { library, openPiece, startupFailure } from "./bridge";
 import type { OpenedPiece, PieceSummary, Unavailable } from "./bridge";
 import { LibraryScreen } from "./screens/Library";
 import { PracticeScreen } from "./screens/Practice";
 import { UnavailableScreen } from "./screens/Unavailable";
+
+/**
+ * A cross-fade between screens, never a hard cut.
+ *
+ * The `key` that makes `AnimatePresence` treat one screen as leaving and the
+ * next as entering belongs on this component itself at each call site, not
+ * on the `motion.div` inside it — `AnimatePresence` only tracks the identity
+ * of its direct children.
+ */
+function Transitioned({ children }: { readonly children: ReactNode }) {
+  return (
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      transition={{ duration: 0.18, ease: "easeOut" }}
+      className="h-full"
+    >
+      {children}
+    </motion.div>
+  );
+}
 
 /**
  * What the window is showing.
@@ -79,21 +104,44 @@ export function App() {
     );
   }, []);
 
-  switch (screen.kind) {
-    case "starting":
-      // Deliberately blank. Startup is milliseconds, and a spinner that
-      // flashes for one frame is worse than nothing.
-      return <main className="min-h-full" />;
+  // `reducedMotion="user"` makes every `motion.*` component below honour
+  // `prefers-reduced-motion` automatically, in one place, rather than each
+  // component checking it independently.
+  return (
+    <MotionConfig reducedMotion="user">
+      <AnimatePresence mode="wait">
+        {(() => {
+          switch (screen.kind) {
+            case "starting":
+              // Deliberately blank. Startup is milliseconds, and a spinner
+              // that flashes for one frame is worse than nothing.
+              return <main key="starting" className="min-h-full" />;
 
-    case "unavailable":
-      return <UnavailableScreen failure={screen.failure} />;
+            case "unavailable":
+              return (
+                <Transitioned key="unavailable">
+                  <UnavailableScreen failure={screen.failure} />
+                </Transitioned>
+              );
 
-    case "library":
-      return <LibraryScreen pieces={screen.pieces} onOpen={open} />;
+            case "library":
+              return (
+                <Transitioned key="library">
+                  <LibraryScreen pieces={screen.pieces} onOpen={open} />
+                </Transitioned>
+              );
 
-    case "practice":
-      return <PracticeScreen piece={screen.piece} onLeave={leave} />;
-  }
+            case "practice":
+              return (
+                <Transitioned key={`practice-${screen.piece.id}`}>
+                  <PracticeScreen piece={screen.piece} onLeave={leave} />
+                </Transitioned>
+              );
+          }
+        })()}
+      </AnimatePresence>
+    </MotionConfig>
+  );
 }
 
 /**

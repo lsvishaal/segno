@@ -127,7 +127,12 @@ export function Score({
     }
   }, [marked, elementsAt, followCursor]);
 
-  return <div ref={container} className="mx-auto max-w-4xl" />;
+  return (
+    <div
+      ref={container}
+      className="hw-sheet mx-auto max-w-6xl rounded-xl p-8 shadow-[0_20px_60px_-32px_rgb(28_26_23/0.35)]"
+    />
+  );
 }
 
 /** Puts `state` on every element drawn for one position, or clears them. */

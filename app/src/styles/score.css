@@ -13,9 +13,17 @@
 .hw-score {
   --hw-ink: var(--color-ink);
   --hw-paper: #ffffff;
+  --hw-rule: var(--color-rule);
   --hw-cursor: var(--color-accent);
   --hw-correct: #2f6f4e;
-  --hw-wrong: #a8321f;
+  /*
+    A true red, not a shade of the cursor's warm orange (`--color-accent`,
+    an amber/orange hue). The two were close enough in hue that a wrong
+    note could read as "the cursor, slightly different" rather than as an
+    unmistakably different signal — deliberately corrected, not a
+    coincidence of the palette.
+  */
+  --hw-wrong: #dc2626;
 
   overflow-y: auto;
   scroll-padding-block: 25%;
@@ -33,6 +41,17 @@
 }
 
 /*
+  The frame around the pages, so the score reads as a physical sheet sitting
+  on the panel rather than a flat SVG on a flat background. One frame around
+  every page, not one per page: today's provided pieces are all one page, and
+  a multi-page frame is a Stage E/F question, not this pass's.
+*/
+.hw-sheet {
+  background: var(--hw-paper);
+  border: 1px solid var(--hw-rule);
+}
+
+/*
   Paper is the default because it is what printed music looks like, and a
   performer is reading. The dark variant inverts the engraving rather than
   recolouring it: Verovio draws with `currentColor` and fills, so setting the
@@ -41,8 +60,9 @@
 .hw-score[data-surface="dark"] {
   --hw-ink: #e8e4dc;
   --hw-paper: #17161a;
+  --hw-rule: #2c2a30;
   --hw-correct: #5fb98a;
-  --hw-wrong: #e2705c;
+  --hw-wrong: #f87171;
 }
 
 /*
@@ -74,6 +94,38 @@
 .hw-page g.hw-wrong :is(path, ellipse, rect, use, polygon) {
   fill: var(--hw-wrong);
   stroke: var(--hw-wrong);
+}
+
+/*
+  A wrong note gets its own brief motion, distinct from the cursor's slow
+  breathing pulse — the cursor means "waiting", this means "not that one",
+  and the moment it happens should be unmistakable even before the colour
+  is consciously registered. Two short cycles and it settles; nothing about
+  ADR-0002 changes, the Cursor still does not move.
+*/
+.hw-page g.hw-wrong {
+  animation: hw-mistaken 240ms ease-in-out 2;
+  transform-box: fill-box;
+  transform-origin: center;
+}
+
+@keyframes hw-mistaken {
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+  25% {
+    transform: translateX(-3px);
+  }
+  75% {
+    transform: translateX(3px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hw-page g.hw-wrong {
+    animation: none;
+  }
 }
 
 /*

@@ -1,4 +1,6 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
+
+import { AnimatePresence, motion } from "motion/react";
 
 import {
   endAttempt,
@@ -19,6 +21,12 @@ type Phase =
   | { readonly kind: "choosing"; readonly refusal: string | null }
   | { readonly kind: "practicing"; readonly instrument: string; readonly reachedEnd: boolean }
   | { readonly kind: "ended"; readonly instrument: string; readonly summary: AttemptSummary };
+
+/** A panel appearing or leaving, above the score. */
+const PANEL = {
+  hidden: { opacity: 0, y: -6, height: 0 },
+  shown: { opacity: 1, y: 0, height: "auto" },
+};
 
 /**
  * The practice surface.
@@ -194,33 +202,56 @@ export function PracticeScreen({
         </fieldset>
       </header>
 
-      {phase.kind === "choosing" && (
-        <InstrumentPicker
-          available={available}
-          refusal={phase.refusal}
-          onChoose={begin}
-        />
-      )}
+      <AnimatePresence initial={false}>
+        {phase.kind === "choosing" && (
+          <motion.div
+            key="picker"
+            variants={PANEL}
+            initial="hidden"
+            animate="shown"
+            exit="hidden"
+            transition={{ duration: 0.16, ease: "easeOut" }}
+            className="overflow-hidden"
+          >
+            <InstrumentPicker available={available} refusal={phase.refusal} onChoose={begin} />
+          </motion.div>
+        )}
 
-      {lost && phase.kind === "practicing" && (
-        <p className="shrink-0 border-b border-rule bg-paper-raised px-8 py-2 text-sm text-ink-muted">
-          {lost.instrument} stopped reporting. Waiting {lost.secondsRemaining}s for it to
-          reconnect before ending the attempt — what you have played is kept either way.
-        </p>
-      )}
+        {lost && phase.kind === "practicing" && (
+          <motion.p
+            key="lost"
+            variants={PANEL}
+            initial="hidden"
+            animate="shown"
+            exit="hidden"
+            transition={{ duration: 0.16, ease: "easeOut" }}
+            className="shrink-0 overflow-hidden border-b border-rule bg-paper-raised px-8 py-2 text-sm text-ink-muted"
+          >
+            {lost.instrument} stopped reporting. Waiting {lost.secondsRemaining}s for it to
+            reconnect before ending the attempt — what you have played is kept either way.
+          </motion.p>
+        )}
 
-      {phase.kind === "ended" && (
-        <SummaryPanel
-          summary={phase.summary}
-          onAgain={() => again(phase.instrument)}
-          onChooseAnother={chooseAnother}
-        />
-      )}
+        {phase.kind === "ended" && (
+          <motion.div
+            key="summary"
+            variants={PANEL}
+            initial="hidden"
+            animate="shown"
+            exit="hidden"
+            transition={{ duration: 0.2, ease: "easeOut" }}
+            className="overflow-hidden"
+          >
+            <SummaryPanel
+              summary={phase.summary}
+              onAgain={() => again(phase.instrument)}
+              onChooseAnother={chooseAnother}
+            />
+          </motion.div>
+        )}
+      </AnimatePresence>
 
-      <div
-        className="hw-score min-h-0 flex-1 px-8 py-6"
-        data-surface={surface}
-      >
+      <div className="hw-score min-h-0 flex-1 px-8 py-6" data-surface={surface}>
         <Score pages={piece.pages} marks={piece.marks} marked={marked} />
       </div>
     </div>
@@ -237,11 +268,17 @@ function InstrumentPicker({
   readonly refusal: string | null;
   readonly onChoose: (instrument: string) => void;
 }) {
-  const chosen = useRef<string | null>(available[0]?.name ?? null);
+  const [chosen, setChosen] = useState<string | null>(available[0]?.name ?? null);
 
-  const options = useMemo(() => available, [available]);
+  useEffect(() => {
+    setChosen((current) =>
+      current && available.some((instrument) => instrument.name === current)
+        ? current
+        : (available[0]?.name ?? null),
+    );
+  }, [available]);
 
-  if (options.length === 0) {
+  if (available.length === 0) {
     return (
       <div className="shrink-0 border-b border-rule px-8 py-4 text-sm text-ink-muted">
         No MIDI keyboard is connected. Plug one in — Hogwash will notice once you try
@@ -252,46 +289,67 @@ function InstrumentPicker({
   }
 
   return (
-    <form
-      className="flex shrink-0 flex-wrap items-center gap-3 border-b border-rule px-8 py-4"
-      onSubmit={(event) => {
-        event.preventDefault();
-        if (chosen.current) onChoose(chosen.current);
-      }}
-    >
-      <label className="text-sm text-ink-muted" htmlFor="instrument">
-        Play on
-      </label>
-      <select
-        id="instrument"
-        defaultValue={options[0]?.name}
-        onChange={(event) => {
-          chosen.current = event.currentTarget.value;
-        }}
-        className="rounded-md border border-rule bg-paper px-2 py-1 text-sm"
+    <div className="flex shrink-0 flex-wrap items-center gap-3 border-b border-rule px-8 py-4">
+      <span className="text-sm text-ink-muted">Play on</span>
+
+      <div
+        role="radiogroup"
+        aria-label="Instrument"
+        className="flex flex-wrap items-center gap-1 rounded-md border border-rule p-0.5"
       >
-        {options.map((instrument) => (
-          <option key={instrument.name} value={instrument.name}>
+        {available.map((instrument) => (
+          <button
+            key={instrument.name}
+            type="button"
+            role="radio"
+            aria-checked={chosen === instrument.name}
+            onClick={() => setChosen(instrument.name)}
+            className={`cursor-pointer rounded px-2.5 py-1 text-xs transition-colors focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-accent ${
+              chosen === instrument.name
+                ? "bg-ink text-paper"
+                : "text-ink-muted hover:text-ink"
+            }`}
+          >
             {instrument.name}
-          </option>
+          </button>
         ))}
-      </select>
+      </div>
+
       <button
-        type="submit"
-        className="cursor-pointer rounded-md bg-ink px-3 py-1 text-sm font-medium text-paper transition-opacity hover:opacity-90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
+        type="button"
+        disabled={!chosen}
+        onClick={() => chosen && onChoose(chosen)}
+        className="cursor-pointer rounded-md bg-ink px-3 py-1 text-sm font-medium text-paper transition-opacity hover:opacity-90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent disabled:cursor-not-allowed disabled:opacity-40"
       >
         Start
       </button>
       {refusal && <p className="text-sm text-ink-muted">{refusal}</p>}
-    </form>
+    </div>
+  );
+}
+
+/** One count, in its own tile. */
+function Stat({ label, value, tone }: { readonly label: string; readonly value: number; readonly tone?: "correct" | "wrong" }) {
+  return (
+    <div className="rounded-lg border border-rule bg-paper px-4 py-3">
+      <p
+        className={`font-mono text-2xl tabular-nums ${
+          tone === "correct" ? "text-correct" : tone === "wrong" ? "text-wrong" : "text-ink"
+        }`}
+      >
+        {value}
+      </p>
+      <p className="mt-0.5 text-xs tracking-wide text-ink-muted uppercase">{label}</p>
+    </div>
   );
 }
 
 /**
  * What an ended attempt has to say.
  *
- * Every line comes from `Feedback::lines()`, verbatim (`004 §8.8`). This is
- * Stage D's minimum to close the loop — the finished screen is Stage E's.
+ * The four counts and the lines both come straight from Rust — `Feedback`'s
+ * `Summary` and `lines()` (`004 §8.8`); this only lays them out. Full design
+ * of a history-worthy summary screen is Stage E's job, not this pass's.
  */
 function SummaryPanel({
   summary,
@@ -305,16 +363,24 @@ function SummaryPanel({
   return (
     <div className="shrink-0 border-b border-rule bg-paper-raised px-8 py-5">
       {summary.autoEnded && summary.reason && (
-        <p className="mb-2 text-sm text-ink-muted">{summary.reason}</p>
+        <p className="mb-3 text-sm text-ink-muted">{summary.reason}</p>
       )}
-      <ul className="space-y-1 text-sm">
+
+      <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+        <Stat label="Correct" value={summary.correct} tone="correct" />
+        <Stat label="Not as written" value={summary.incorrect} tone="wrong" />
+        <Stat label="Never played" value={summary.omitted} />
+        <Stat label="Unexpected" value={summary.unexpected} />
+      </div>
+
+      <ul className="mt-4 space-y-1 text-sm text-ink-muted">
         {summary.lines.map((line, index) => (
-          // The lines are an ordered, fixed-shape report from Rust, not a
-          // list a key could meaningfully be drawn from.
-          // eslint-disable-next-line react/no-array-index-key
-          <li key={index}>{line}</li>
+          // An ordered, fixed-shape report from Rust, not a list a key could
+          // be drawn from on its own — two lines could coincide in text.
+          <li key={`${index}-${line}`}>{line}</li>
         ))}
       </ul>
+
       <div className="mt-4 flex gap-3">
         <button
           type="button"

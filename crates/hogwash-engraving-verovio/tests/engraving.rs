@@ -203,11 +203,28 @@ fn a_file_that_is_not_music_is_refused() {
 }
 
 /// The pixel height a rendered page declares.
+///
+/// Read from `viewBox` rather than a `height="...px"` attribute: `Layout`
+/// asks for `svgViewBox: true` (so the score scales responsively in the DOM
+/// — `.hw-page svg { width: 100%; height: auto }`), and Verovio answers with
+/// a `viewBox` instead of fixed pixel dimensions. This test's own parsing
+/// silently stopped matching anything when that option was added; found
+/// while re-checking these tests rather than assumed still correct.
 fn height_of(svg: &str) -> u32 {
-    svg.split_once("height=\"")
-        .and_then(|(_, rest)| rest.split_once("px\""))
-        .and_then(|(number, _)| number.parse::<u32>().ok())
-        .expect("a page states a height in pixels")
+    let view_box = svg
+        .split_once("viewBox=\"")
+        .map(|(_, rest)| {
+            rest.split_once('"')
+                .expect("viewBox is a quoted attribute")
+                .0
+        })
+        .expect("a page states a viewBox");
+
+    view_box
+        .split_whitespace()
+        .nth(3)
+        .and_then(|number| number.parse::<u32>().ok())
+        .expect("a viewBox has four numbers: min-x, min-y, width, height")
 }
 
 // ADR-0011 / MVP §6.4 — a practice score is scrolled, not turned, so a short

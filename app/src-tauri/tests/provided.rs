@@ -159,6 +159,48 @@ fn starting_puts_every_provided_piece_on_the_shelf() {
     assert!(titles.contains(&"Ode to Joy"), "got {titles:?}");
     assert!(titles.contains(&"Lightly Row"), "got {titles:?}");
     assert!(titles.contains(&"A Little Chord Study"), "got {titles:?}");
+    assert!(
+        titles.contains(&"Für Elise (opening, simplified)"),
+        "got {titles:?}"
+    );
+}
+
+// `PROVENANCE.md` says Für Elise is the only provided piece with a second
+// staff, and the whole point of adding it was to exercise the claim in
+// `translate.rs` that a right-hand and left-hand note sounding together are
+// one Position regardless of which staff wrote them. This is that claim,
+// checked against the real engine rather than trusted from the doc comment.
+#[test]
+#[ignore = "needs a real libverovio; run `just provided-test`"]
+fn a_two_hand_piece_merges_notes_that_sound_together() {
+    let mut engraver = engraver();
+
+    let source =
+        std::fs::read(PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("library/fur-elise.musicxml"))
+            .expect("fur-elise.musicxml ships with the application");
+
+    let drawn = engraver.engrave(&source).expect("engraves");
+
+    // Every bar's first and third beats put a right-hand note over a
+    // left-hand one starting at the same instant, so each should be a
+    // two-note Position rather than two separate ones.
+    let first_bar = &drawn.score().measures()[0];
+    let chords: usize = first_bar
+        .positions()
+        .iter()
+        .filter(|position| position.notes().len() == 2)
+        .count();
+
+    assert_eq!(
+        chords,
+        2,
+        "expected two two-note chords in the first bar (beats one and three), got {:?}",
+        first_bar
+            .positions()
+            .iter()
+            .map(|position| position.notes().len())
+            .collect::<Vec<_>>()
+    );
 }
 
 // FR-201 — a title is always available, and FR-207 — the shelf is never

@@ -25,10 +25,11 @@ pub struct Provided {
 
 /// Everything in `library/`, in the order a first-time performer meets it.
 ///
-/// Ordered deliberately: the shortest and simplest first, the chord study
-/// last. `library/PROVENANCE.md` records what each one exercises, and why all
-/// three were encoded by hand rather than downloaded.
-pub const PROVIDED: [Provided; 3] = [
+/// Ordered deliberately: the shortest and simplest first, building up to the
+/// first piece with a second staff. `library/PROVENANCE.md` records what
+/// each one exercises, and why all four were encoded by hand rather than
+/// downloaded.
+pub const PROVIDED: [Provided; 4] = [
     Provided {
         name: "lightly-row.musicxml",
         source: include_bytes!("../library/lightly-row.musicxml"),
@@ -40,6 +41,10 @@ pub const PROVIDED: [Provided; 3] = [
     Provided {
         name: "a-little-chord-study.musicxml",
         source: include_bytes!("../library/a-little-chord-study.musicxml"),
+    },
+    Provided {
+        name: "fur-elise.musicxml",
+        source: include_bytes!("../library/fur-elise.musicxml"),
     },
 ];
 

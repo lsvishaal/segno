@@ -1,4 +1,13 @@
+import { motion } from "motion/react";
+
 import type { PieceSummary } from "../bridge";
+import { motifFor } from "./motif";
+
+/** Entrance only — the parent `motion.ul` staggers when each of these plays. */
+const VARIANTS = {
+  hidden: { opacity: 0, y: 10 },
+  shown: { opacity: 1, y: 0 },
+};
 
 /**
  * One piece, on the library shelf.
@@ -7,6 +16,9 @@ import type { PieceSummary } from "../bridge";
  * a title, a composer where the file gave one, and how much music there is.
  * No difficulty, no rating, no progress score — `001 §11` rules grading out,
  * and a "difficulty" badge would be exactly that, invented by the interface.
+ * The motif stripe is the same kind of thing `PieceId` is: decorative and
+ * derived only from identity, never from anything that could read as a
+ * grade.
  */
 export function PieceCard({
   piece,
@@ -16,11 +28,12 @@ export function PieceCard({
   readonly onOpen: (id: string) => void;
 }) {
   return (
-    <li>
+    <motion.li variants={VARIANTS} style={{ listStyle: "none" }}>
       <button
         type="button"
         onClick={() => onOpen(piece.id)}
-        className="group w-full cursor-pointer rounded-lg border border-rule bg-paper-raised px-6 py-5 text-left transition duration-200 ease-out hover:-translate-y-0.5 hover:border-ink/20 hover:shadow-[0_8px_24px_-12px_rgb(28_26_23/0.18)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent motion-reduce:transition-none motion-reduce:hover:translate-y-0"
+        style={{ borderInlineStartColor: motifFor(piece.id) }}
+        className="group w-full cursor-pointer rounded-lg border border-rule border-l-4 bg-paper-raised px-6 py-5 text-left transition duration-200 ease-out hover:-translate-y-0.5 hover:border-ink/20 hover:shadow-[0_8px_24px_-12px_rgb(28_26_23/0.18)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent motion-reduce:transition-none motion-reduce:hover:translate-y-0"
       >
         <h3 className="font-serif text-xl leading-snug tracking-tight text-pretty">
           {piece.title}
@@ -36,6 +49,6 @@ export function PieceCard({
           {piece.notes} {piece.notes === 1 ? "note" : "notes"}
         </p>
       </button>
-    </li>
+    </motion.li>
   );
 }

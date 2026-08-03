@@ -29,8 +29,10 @@ use crate::{mei, timemap, translate};
 ///
 /// The width is **not** the window's width. Re-engraving on every resize
 /// would mean re-parsing the file to answer a question about a window, and
-/// `MVP §6.4` only asks that all of the music be reachable. Pages are
-/// rasterised to fit the window instead, at whatever size the view wants.
+/// `MVP §6.4` only asks that all of the music be reachable. `svgViewBox`
+/// makes the SVG's own `viewBox` carry its dimensions instead of a fixed
+/// pixel size, so the interface can size it responsively in the DOM with
+/// plain CSS (`ADR-0012`) rather than re-engraving for every window size.
 ///
 /// [`EngravedScore`]: hogwash_engraving::EngravedScore
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -45,12 +47,15 @@ pub struct Layout {
 impl Default for Layout {
     fn default() -> Self {
         // 2100 is A4's width in Verovio's units, and is wide enough to hold
-        // several bars per system without crowding. 110% because the
-        // performer is at arm's length from the screen rather than holding
-        // the page.
+        // several bars per system without crowding. 150% rather than
+        // Verovio's own default of 100%, and above this crate's earlier
+        // 110%: a performer reading a screen at arm's length, on a score
+        // that may well be the only thing on that screen, benefits from
+        // noteheads and staff lines closer to what a beginner's method book
+        // prints than what a page of dense orchestral engraving does.
         Self {
             width: 2100,
-            scale: 110,
+            scale: 150,
         }
     }
 }

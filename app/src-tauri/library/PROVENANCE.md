@@ -34,9 +34,22 @@ work on someone else's file.
 | `ode-to-joy.musicxml` | Ode to Joy (theme, Symphony No. 9) | Ludwig van Beethoven (d. 1827) | Public domain worldwide | Written for Hogwash, Apache-2.0 |
 | `lightly-row.musicxml` | Lightly Row | Traditional (German folk melody) | Public domain; no known author | Written for Hogwash, Apache-2.0 |
 | `a-little-chord-study.musicxml` | A Little Chord Study | Hogwash | Original exercise | Apache-2.0 |
+| `fur-elise.musicxml` | Für Elise (opening, simplified) | Ludwig van Beethoven (d. 1827) | Public domain worldwide | Written for Hogwash, Apache-2.0 |
 
 **Attribution obligations: none.** No piece here derives from a third party's
 edition, engraving, arrangement or typesetting.
+
+**`fur-elise.musicxml` is explicitly a simplified arrangement, not a
+transcription of a published edition.** Its first two bars set the melody's
+famous opening motif (E D♯ E D♯ E B D C) over a plain alternating A3/E3
+bass, which is this project's own reduction of the harmony rather than a copy
+of any edition's engraving; bars three and four are an original continuation
+written for this exercise, not the rest of Beethoven's piece. Naming it after
+the real work rather than disguising the source, while being explicit that
+the arrangement and its rhythmic simplification (no eighth-note figuration,
+straight quarters and halves rather than the original's compound metre) are
+Hogwash's own — the same standard `a-little-chord-study.musicxml` is held to
+for being original.
 
 ## What each is for
 
@@ -50,6 +63,11 @@ Not decoration — each exercises something the practice loop has to get right.
 - **A Little Chord Study** — three triads. A chord is one Position with
   several Notes (`003 §7.4`), and it is the shape most likely to be got wrong
   by an implementation that only ever saw single notes.
+- **Für Elise** — the first piece with a second staff. A grand staff's right-
+  and left-hand notes that sound together are still one Position (`003 §7.4`)
+  even though they come from different staves in the written score; every
+  other provided piece is single-staff, so this is the only one that
+  exercises that merge at all.
 
 ## Adding a piece
 
