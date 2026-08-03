@@ -151,36 +151,27 @@ fn report(analysis: &Analysis, reference: &ReferencePerformance) -> String {
 
 fn describe(finding: &Finding) -> String {
     match finding {
-        Finding::Correct {
-            measure,
-            position,
-            pitch,
-        } => format!(
+        Finding::Correct { at, pitch } => format!(
             "correct     bar {:<3} position {:<3} played {}",
-            measure.get(),
-            position,
+            at.measure().get(),
+            at.position(),
             u8::from(*pitch)
         ),
         Finding::IncorrectPitch {
-            measure,
-            position,
+            at,
             played,
             expected,
         } => format!(
             "incorrect   bar {:<3} position {:<3} played {}  expected {}",
-            measure.get(),
-            position,
+            at.measure().get(),
+            at.position(),
             u8::from(*played),
             numbers(expected)
         ),
-        Finding::Omitted {
-            measure,
-            position,
-            written,
-        } => format!(
+        Finding::Omitted { at, written } => format!(
             "omitted     bar {:<3} position {:<3} wanted {}",
-            measure.get(),
-            position,
+            at.measure().get(),
+            at.position(),
             u8::from(written.sounding())
         ),
         Finding::Unexpected { played } => {

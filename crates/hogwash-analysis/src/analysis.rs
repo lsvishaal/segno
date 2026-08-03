@@ -1,6 +1,7 @@
 //! Analysis — the comparison itself (`003 §7.6`).
 
 use hogwash_capture::ObservedPerformance;
+use hogwash_domain::Location;
 use hogwash_notation::ReferencePerformance;
 use hogwash_practice::Cursor;
 
@@ -45,19 +46,13 @@ impl Analysis {
                 continue;
             };
 
-            let measure = expected.measure();
-            let position = cursor.position();
+            let at = Location::new(expected.measure(), cursor.position());
 
             if expected.sounding().any(|wanted| wanted == played) {
-                findings.push(Finding::Correct {
-                    measure,
-                    position,
-                    pitch: played,
-                });
+                findings.push(Finding::Correct { at, pitch: played });
             } else {
                 findings.push(Finding::IncorrectPitch {
-                    measure,
-                    position,
+                    at,
                     played,
                     expected: expected.notes().to_vec(),
                 });
@@ -84,8 +79,7 @@ impl Analysis {
                 }
 
                 findings.push(Finding::Omitted {
-                    measure: expected.measure(),
-                    position,
+                    at: Location::new(expected.measure(), position),
                     written: *note,
                 });
             }
@@ -187,7 +181,7 @@ impl Summary {
 
 #[cfg(test)]
 mod tests {
-    use hogwash_domain::{MeasureNumber, Step};
+    use hogwash_domain::{Location, MeasureNumber, Step};
 
     use crate::analysis::{Analysis, Summary};
     use crate::finding::Finding;
@@ -228,8 +222,7 @@ mod tests {
         assert_eq!(
             analysis.findings()[0],
             Finding::IncorrectPitch {
-                measure: bar(1),
-                position: 0,
+                at: Location::new(bar(1), 0),
                 played: pitch(Step::G),
                 expected: vec![note(Step::C)],
             }
@@ -268,13 +261,11 @@ mod tests {
             analysis.findings()[1..],
             [
                 Finding::Omitted {
-                    measure: bar(1),
-                    position: 1,
+                    at: Location::new(bar(1), 1),
                     written: note(Step::D),
                 },
                 Finding::Omitted {
-                    measure: bar(2),
-                    position: 2,
+                    at: Location::new(bar(2), 2),
                     written: note(Step::E),
                 },
             ]
@@ -296,8 +287,7 @@ mod tests {
         assert_eq!(
             analysis.findings()[2],
             Finding::Omitted {
-                measure: bar(1),
-                position: 0,
+                at: Location::new(bar(1), 0),
                 written: note(Step::G),
             }
         );

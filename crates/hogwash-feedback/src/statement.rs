@@ -1,6 +1,6 @@
 //! One thing Feedback says (`003 §7.7`).
 
-use hogwash_domain::{MeasureNumber, PitchSpelling, Step};
+use hogwash_domain::{Location, MeasureNumber, PitchSpelling, Step};
 use hogwash_notation::Note;
 
 /// One statement about an Attempt, located in the Piece.
@@ -23,16 +23,16 @@ pub enum Statement {
     /// the consequence: Feedback names what was written and reports that a
     /// different note was played, without inventing a name for it.
     NotPlayedAsWritten {
-        /// Which bar to look at.
-        measure: MeasureNumber,
+        /// Where in the music to look.
+        at: Location,
         /// The note the Score wrote, as written.
         written: Note,
     },
 
     /// The Score wrote this note and it never arrived.
     NeverPlayed {
-        /// Which bar to look at.
-        measure: MeasureNumber,
+        /// Where in the music to look.
+        at: Location,
         /// The note the Score wrote, as written.
         written: Note,
     },
@@ -49,17 +49,31 @@ pub enum Statement {
 }
 
 impl Statement {
-    /// Which bar this statement concerns, if it concerns one.
+    /// Where in the music this statement concerns, if it concerns anywhere.
     ///
     /// `None` only for [`PlayedAfterTheEnd`](Statement::PlayedAfterTheEnd),
     /// which belongs to no place in the music.
+    ///
+    /// A full [`Location`] rather than a bar number, because `003 §7.7` locates
+    /// Feedback *"by reference to the Piece — to the Notes and Measures
+    /// concerned"*, and `MVP §6.6` shows a deviation **on the score**, which
+    /// needs the note and not only the bar. This does not reopen ADR-0004: the
+    /// words still say only the bar, because a position index is not something
+    /// a performer says aloud.
+    #[must_use]
+    pub const fn location(&self) -> Option<Location> {
+        match self {
+            Self::NotPlayedAsWritten { at, .. } | Self::NeverPlayed { at, .. } => Some(*at),
+            Self::PlayedAfterTheEnd { .. } => None,
+        }
+    }
+
+    /// Which bar this statement concerns, if it concerns one.
     #[must_use]
     pub const fn measure(&self) -> Option<MeasureNumber> {
-        match self {
-            Self::NotPlayedAsWritten { measure, .. } | Self::NeverPlayed { measure, .. } => {
-                Some(*measure)
-            }
-            Self::PlayedAfterTheEnd { .. } => None,
+        match self.location() {
+            Some(at) => Some(at.measure()),
+            None => None,
         }
     }
 
@@ -71,14 +85,14 @@ impl Statement {
     #[must_use]
     pub fn describe(&self) -> String {
         match self {
-            Self::NotPlayedAsWritten { measure, written } => format!(
+            Self::NotPlayedAsWritten { at, written } => format!(
                 "Bar {}: {} was written, and a different note was played.",
-                measure.get(),
+                at.measure().get(),
                 name_of(written.spelling())
             ),
-            Self::NeverPlayed { measure, written } => format!(
+            Self::NeverPlayed { at, written } => format!(
                 "Bar {}: {} was written, and was never played.",
-                measure.get(),
+                at.measure().get(),
                 name_of(written.spelling())
             ),
             Self::PlayedAfterTheEnd { count } => {
@@ -130,7 +144,7 @@ fn name_of(spelling: PitchSpelling) -> String {
 
 #[cfg(test)]
 mod tests {
-    use hogwash_domain::{MeasureNumber, Step};
+    use hogwash_domain::{Location, MeasureNumber, Step};
 
     use crate::fixtures::{note, note_letters_in};
     use crate::statement::Statement;
@@ -144,7 +158,7 @@ mod tests {
     #[test]
     fn a_written_note_is_named_by_its_letter() {
         let statement = Statement::NotPlayedAsWritten {
-            measure: bar(1),
+            at: Location::new(bar(1), 0),
             written: note(Step::F, 0),
         };
 
@@ -157,11 +171,11 @@ mod tests {
     #[test]
     fn accidentals_are_named_in_words() {
         let sharp = Statement::NotPlayedAsWritten {
-            measure: bar(1),
+            at: Location::new(bar(1), 0),
             written: note(Step::F, 1),
         };
         let flat = Statement::NotPlayedAsWritten {
-            measure: bar(1),
+            at: Location::new(bar(1), 0),
             written: note(Step::B, -1),
         };
 
@@ -172,7 +186,7 @@ mod tests {
     #[test]
     fn double_accidentals_are_named_too() {
         let statement = Statement::NotPlayedAsWritten {
-            measure: bar(1),
+            at: Location::new(bar(1), 0),
             written: note(Step::C, 2),
         };
 
@@ -188,7 +202,7 @@ mod tests {
     #[test]
     fn a_statement_names_only_the_note_that_was_written() {
         let statement = Statement::NotPlayedAsWritten {
-            measure: bar(4),
+            at: Location::new(bar(4), 0),
             written: note(Step::F, 0),
         };
 
@@ -200,7 +214,7 @@ mod tests {
     #[test]
     fn a_statement_says_which_bar_it_concerns() {
         let statement = Statement::NeverPlayed {
-            measure: bar(7),
+            at: Location::new(bar(7), 0),
             written: note(Step::D, 0),
         };
 

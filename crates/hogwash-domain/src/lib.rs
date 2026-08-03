@@ -11,5 +11,5 @@
 mod measure;
 mod pitch;
 
-pub use measure::MeasureNumber;
+pub use measure::{Location, MeasureNumber};
 pub use pitch::{Pitch, PitchSpelling, Step};

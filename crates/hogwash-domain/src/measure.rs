@@ -32,6 +32,55 @@ impl MeasureNumber {
     }
 }
 
+/// A place in the written music: a Measure, and which position within it.
+///
+/// `003 §7.7` requires Feedback to locate a finding *"by Measure and Note"*,
+/// and this is that pair given a name. It introduces no concept — a Measure
+/// (`003 §7.8`) and the ordered positions within it (`003 §7.4`) both already
+/// exist; what was missing was a single value carrying them together.
+///
+/// It is also the project's **only durable anchor into a score**. The Verovio
+/// spike (`S0` Q3) found that engraving identifiers are regenerated on every
+/// render and may be renumbered by an upgrade, so nothing outside the
+/// engraving adapter may hold one. A bar number and a position survive both.
+///
+/// `position` is the index of the Position within the Piece's **Reference
+/// Performance** — it counts from zero and runs across the whole piece rather
+/// than restarting each bar, because that is the sequence the Cursor walks
+/// (`003 §7.4`). Carrying the Measure alongside it means a finding can say
+/// which bar to look at without consulting the Reference Performance again.
+///
+/// It is an index into a sequence, not something a performer says aloud, so
+/// it carries no from-one convention the way `MeasureNumber` does.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub struct Location {
+    // Field order is the ordering: `PartialOrd` derives lexicographically, so
+    // declaring `measure` first is what makes bar 2 sort before bar 10.
+    // Reordering these fields would silently change how findings are listed.
+    measure: MeasureNumber,
+    position: usize,
+}
+
+impl Location {
+    /// The `position`-th position of `measure`.
+    #[must_use]
+    pub const fn new(measure: MeasureNumber, position: usize) -> Self {
+        Self { measure, position }
+    }
+
+    /// The bar this is in.
+    #[must_use]
+    pub const fn measure(self) -> MeasureNumber {
+        self.measure
+    }
+
+    /// Which position within that bar, counting from zero.
+    #[must_use]
+    pub const fn position(self) -> usize {
+        self.position
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -55,5 +104,43 @@ mod tests {
         let fourth = MeasureNumber::new(4).unwrap();
 
         assert!(first < fourth);
+    }
+
+    fn bar(number: u32) -> MeasureNumber {
+        MeasureNumber::new(number).unwrap()
+    }
+
+    // 003 §7.7 — Feedback locates a finding "by Measure and Note". A place in
+    // the music is that pair, and naming it once means the bar number and the
+    // index cannot drift apart on their way through the system.
+    #[test]
+    fn a_location_is_a_measure_and_a_position_within_it() {
+        let location = Location::new(bar(4), 2);
+
+        assert_eq!(location.measure(), bar(4));
+        assert_eq!(location.position(), 2);
+    }
+
+    // The order is reading order, and it must be, because Location is the key
+    // the engraving adapter maps to a drawn glyph (S0) and the anchor a
+    // Practice Record stores. A set of Locations iterated in any other order
+    // would report bar 10 before bar 2.
+    #[test]
+    fn locations_order_by_measure_first_then_by_position() {
+        let mut places = [
+            Location::new(bar(10), 0),
+            Location::new(bar(2), 1),
+            Location::new(bar(2), 0),
+        ];
+        places.sort();
+
+        assert_eq!(
+            places,
+            [
+                Location::new(bar(2), 0),
+                Location::new(bar(2), 1),
+                Location::new(bar(10), 0),
+            ]
+        );
     }
 }

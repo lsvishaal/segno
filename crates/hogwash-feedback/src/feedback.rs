@@ -35,23 +35,19 @@ impl Feedback {
         for finding in analysis.findings() {
             match finding {
                 Finding::Correct { .. } => {}
-                Finding::IncorrectPitch {
-                    measure, expected, ..
-                } => {
+                Finding::IncorrectPitch { at, expected, .. } => {
                     // One statement per written note the performer missed at
                     // this position. A chord wants several notes, and naming
                     // them individually is what tells the performer which.
                     statements.extend(expected.iter().map(|written| {
                         Statement::NotPlayedAsWritten {
-                            measure: *measure,
+                            at: *at,
                             written: *written,
                         }
                     }));
                 }
-                Finding::Omitted {
-                    measure, written, ..
-                } => statements.push(Statement::NeverPlayed {
-                    measure: *measure,
+                Finding::Omitted { at, written } => statements.push(Statement::NeverPlayed {
+                    at: *at,
                     written: *written,
                 }),
                 Finding::Unexpected { .. } => after_the_end += 1,
@@ -142,7 +138,7 @@ impl Feedback {
 
 #[cfg(test)]
 mod tests {
-    use hogwash_domain::{MeasureNumber, Step};
+    use hogwash_domain::{Location, MeasureNumber, Step};
 
     use crate::feedback::Feedback;
     use crate::fixtures::{analyse, bars, note, note_letters_in, pitch, unexpected};
@@ -168,7 +164,7 @@ mod tests {
         assert_eq!(
             feedback.statements()[0],
             Statement::NotPlayedAsWritten {
-                measure: bar(1),
+                at: Location::new(bar(1), 1),
                 written: note(Step::F, 0),
             }
         );
@@ -247,8 +243,10 @@ mod tests {
 
         assert_eq!(
             feedback.statements(),
+            // Position 1: the index runs across the whole Reference
+            // Performance, not restarting per bar. Bar 1's C is position 0.
             &[Statement::NeverPlayed {
-                measure: bar(2),
+                at: Location::new(bar(2), 1),
                 written: note(Step::D, 0),
             }]
         );

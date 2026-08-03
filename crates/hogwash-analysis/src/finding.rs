@@ -1,6 +1,6 @@
 //! One thing Analysis found (`003 §7.6`).
 
-use hogwash_domain::{MeasureNumber, Pitch};
+use hogwash_domain::{Location, MeasureNumber, Pitch};
 use hogwash_notation::Note;
 
 /// A single observation about an Attempt.
@@ -29,8 +29,8 @@ use hogwash_notation::Note;
 ///
 /// # Locations, not aggregation
 ///
-/// Findings carry a [`MeasureNumber`] because Feedback locates its findings
-/// by Measure (`003 §7.7`). That is *location*. FR-407, which asks for
+/// Findings carry a [`Location`] because Feedback locates its findings by
+/// Measure and Note (`003 §7.7`). That is *location*. FR-407, which asks for
 /// results **aggregated** per measure, is deferred (`MVP §8`) and no rollup
 /// exists.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -38,9 +38,7 @@ pub enum Finding {
     /// A played note that the Score asked for at the position it was played.
     Correct {
         /// Where in the music.
-        measure: MeasureNumber,
-        /// Which step of the Reference Performance.
-        position: usize,
+        at: Location,
         /// What was played, which is also what was wanted.
         pitch: Pitch,
     },
@@ -54,9 +52,7 @@ pub enum Finding {
     /// findings, and that is a faithful account of what happened.
     IncorrectPitch {
         /// Where in the music.
-        measure: MeasureNumber,
-        /// Which step of the Reference Performance.
-        position: usize,
+        at: Location,
         /// What the performer played.
         ///
         /// A bare `Pitch`, because that is genuinely all an instrument
@@ -79,9 +75,7 @@ pub enum Finding {
     /// (`MVP §5`).
     Omitted {
         /// Where in the music.
-        measure: MeasureNumber,
-        /// Which step of the Reference Performance.
-        position: usize,
+        at: Location,
         /// What the Score asked for and did not get, as written.
         written: Note,
     },
@@ -112,12 +106,21 @@ impl Finding {
     /// `None` only for [`Unexpected`](Finding::Unexpected), which by
     /// definition belongs to no position.
     #[must_use]
-    pub const fn measure(&self) -> Option<MeasureNumber> {
+    pub const fn location(&self) -> Option<Location> {
         match self {
-            Self::Correct { measure, .. }
-            | Self::IncorrectPitch { measure, .. }
-            | Self::Omitted { measure, .. } => Some(*measure),
+            Self::Correct { at, .. }
+            | Self::IncorrectPitch { at, .. }
+            | Self::Omitted { at, .. } => Some(*at),
             Self::Unexpected { .. } => None,
+        }
+    }
+
+    /// Which bar this finding is in, if it is in one.
+    #[must_use]
+    pub const fn measure(&self) -> Option<MeasureNumber> {
+        match self.location() {
+            Some(at) => Some(at.measure()),
+            None => None,
         }
     }
 }
