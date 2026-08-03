@@ -13,9 +13,12 @@
 //! here and the instrument behind a port means `hogwash-practice` and
 //! `hogwash-analysis` can be exercised entirely from a test without a
 //! keyboard attached — which is what makes `004 §12`'s correctness-critical
-//! component testable at all. The `midir` adapter arrives later as a separate
-//! crate; `scripts/check-arch.sh` fails the build if it lands in this one.
+//! component testable at all. The port is [`MidiSource`]; its `midir`
+//! implementation is `hogwash-midi`, and `scripts/check-arch.sh` fails the
+//! build if that dependency ever lands in this crate.
 
+mod instrument;
 mod observed;
 
+pub use instrument::{Instrument, Keyboard, MidiSource, NoInstrument};
 pub use observed::ObservedPerformance;
