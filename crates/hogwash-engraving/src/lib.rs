@@ -34,5 +34,6 @@
 mod engraved;
 
 pub use engraved::{
-    ElementId, EngravedScore, Engraver, EngravingFailure, MalformedEngraving, PageIndex, Placement,
+    Details, ElementId, EngravedScore, Engraver, EngravingFailure, MalformedEngraving, PageIndex,
+    Placement,
 };

@@ -4,6 +4,7 @@ version = "0.0.0"
 edition.workspace = true
 rust-version.workspace = true
 authors.workspace = true
+license.workspace = true
 publish = false
 description = "The Verovio engraver. The only crate in this workspace that knows C exists."
 

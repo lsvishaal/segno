@@ -4,6 +4,7 @@ version = "0.0.0"
 edition.workspace = true
 rust-version.workspace = true
 authors.workspace = true
+license.workspace = true
 publish = false
 description = "Determinism harness. Not a product surface — it exists so FR-406 and NFR-301 can be tested rather than asserted."
 

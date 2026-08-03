@@ -4,6 +4,7 @@ version = "0.0.0"
 edition.workspace = true
 rust-version.workspace = true
 authors.workspace = true
+license.workspace = true
 publish = false
 description = "Wait-for-me practice: Practice Session, Attempt, and the Cursor that never gets ahead of the performer."
 

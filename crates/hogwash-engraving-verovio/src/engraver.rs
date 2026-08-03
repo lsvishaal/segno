@@ -103,10 +103,10 @@ impl Engraver for VerovioEngraver {
 
         let read = mei::read(&document).map_err(|failure| unreadable(&failure))?;
         let onsets = timemap::onsets(&times).map_err(|failure| unreadable(&failure))?;
-        let (score, placements) =
+        let (score, details, placements) =
             translate::assemble(&read, &onsets, &pages).map_err(|failure| unreadable(&failure))?;
 
-        Ok(EngravedScore::new(score, pages, placements)?)
+        Ok(EngravedScore::new(score, details, pages, placements)?)
     }
 }
 

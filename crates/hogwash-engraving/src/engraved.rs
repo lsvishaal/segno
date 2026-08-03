@@ -103,6 +103,24 @@ impl Placement {
     }
 }
 
+/// What a source file says about the work itself.
+///
+/// FR-201 requires a Piece to carry *"at minimum a title and, where
+/// available, a composer"*. Both are optional here and neither is optional
+/// there: a source file may simply not say, and the Piece supplies what is
+/// missing rather than the engraver inventing it.
+///
+/// It rides along with the engraving because it came from the same reading of
+/// the same file (`004 §6.5`). Asking for it separately would mean a second
+/// parse to answer a question the first one already passed.
+#[derive(Debug, Clone, Default, PartialEq, Eq, Hash)]
+pub struct Details {
+    /// What the source calls the work.
+    pub title: Option<String>,
+    /// Who the source says wrote it.
+    pub composer: Option<String>,
+}
+
 /// A Score, and how it was drawn.
 ///
 /// The two arrive together because they came from one reading of one file
@@ -113,6 +131,7 @@ impl Placement {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct EngravedScore {
     score: Score,
+    details: Details,
     pages: Vec<String>,
     // A BTreeMap, not a HashMap: the iteration order is the Score's order on
     // every run, which FR-406 and NFR-301 require and which the architecture
@@ -135,6 +154,7 @@ impl EngravedScore {
     /// page that was not rendered.
     pub fn new(
         score: Score,
+        details: Details,
         pages: Vec<String>,
         placements: Vec<(Location, Placement)>,
     ) -> Result<Self, MalformedEngraving> {
@@ -153,6 +173,7 @@ impl EngravedScore {
 
         Ok(Self {
             score,
+            details,
             pages,
             placements: placements.into_iter().collect(),
         })
@@ -162,6 +183,12 @@ impl EngravedScore {
     #[must_use]
     pub const fn score(&self) -> &Score {
         &self.score
+    }
+
+    /// What the source said about the work (FR-201).
+    #[must_use]
+    pub const fn details(&self) -> &Details {
+        &self.details
     }
 
     /// The rendered pages, in order.
@@ -269,7 +296,9 @@ mod tests {
     use hogwash_domain::{Location, MeasureNumber, PitchSpelling, Step};
     use hogwash_notation::{Measure, Note, Position, Score};
 
-    use crate::engraved::{ElementId, EngravedScore, MalformedEngraving, PageIndex, Placement};
+    use crate::engraved::{
+        Details, ElementId, EngravedScore, MalformedEngraving, PageIndex, Placement,
+    };
 
     fn bar(number: u32) -> MeasureNumber {
         MeasureNumber::new(number).expect("fixture measures are numbered from one")
@@ -304,6 +333,7 @@ mod tests {
     fn a_place_in_the_music_resolves_to_a_drawn_element() {
         let engraved = EngravedScore::new(
             score(),
+            Details::default(),
             vec!["<svg/>".to_owned()],
             vec![(Location::new(bar(1), 0), placed("note-1"))],
         )
@@ -317,8 +347,13 @@ mod tests {
 
     #[test]
     fn a_place_that_was_not_drawn_resolves_to_nothing() {
-        let engraved = EngravedScore::new(score(), vec!["<svg/>".to_owned()], vec![])
-            .expect("an engraving with no placements is structurally fine");
+        let engraved = EngravedScore::new(
+            score(),
+            Details::default(),
+            vec!["<svg/>".to_owned()],
+            vec![],
+        )
+        .expect("an engraving with no placements is structurally fine");
 
         assert_eq!(engraved.placement_of(Location::new(bar(1), 0)), None);
     }
@@ -331,6 +366,7 @@ mod tests {
     fn a_placement_on_a_page_that_does_not_exist_is_rejected() {
         let broken = EngravedScore::new(
             score(),
+            Details::default(),
             vec!["<svg/>".to_owned()],
             vec![(
                 Location::new(bar(1), 0),
@@ -352,7 +388,7 @@ mod tests {
     #[test]
     fn an_engraving_with_no_pages_is_rejected() {
         assert_eq!(
-            EngravedScore::new(score(), vec![], vec![]),
+            EngravedScore::new(score(), Details::default(), vec![], vec![]),
             Err(MalformedEngraving::NothingWasDrawn)
         );
     }
@@ -366,6 +402,7 @@ mod tests {
     fn placements_are_iterated_in_reading_order() {
         let engraved = EngravedScore::new(
             score(),
+            Details::default(),
             vec!["<svg/>".to_owned()],
             vec![
                 (Location::new(bar(1), 1), placed("second")),
@@ -388,8 +425,13 @@ mod tests {
     // swap it for another.
     #[test]
     fn an_engraving_carries_the_score_it_was_read_from() {
-        let engraved =
-            EngravedScore::new(score(), vec!["<svg/>".to_owned()], vec![]).expect("well formed");
+        let engraved = EngravedScore::new(
+            score(),
+            Details::default(),
+            vec!["<svg/>".to_owned()],
+            vec![],
+        )
+        .expect("well formed");
 
         assert_eq!(engraved.score().measures().len(), 1);
     }

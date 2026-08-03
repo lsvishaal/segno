@@ -14,8 +14,8 @@
 #      (003 §7) and nothing else.
 #
 #   2. The pure crates — notation, capture, practice, analysis, feedback,
-#      engraving — depend on no I/O, filesystem, MIDI, GUI, rendering or
-#      async crate.
+#      engraving, library and acquisition — depend on no I/O, filesystem,
+#      MIDI, GUI, rendering or async crate.
 #      These are the components 004 §12 relies on for correctness and
 #      determinism, and they must stay testable with no device and no window
 #      attached.
@@ -42,6 +42,8 @@ PURE_CRATES=(
     hogwash-analysis
     hogwash-feedback
     hogwash-engraving
+    hogwash-library
+    hogwash-acquisition
 )
 
 # Anything that reaches a device, a disk, a screen or a scheduler.

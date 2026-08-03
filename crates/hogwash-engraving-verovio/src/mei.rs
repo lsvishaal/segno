@@ -7,6 +7,7 @@
 use std::collections::BTreeMap;
 
 use hogwash_domain::{MeasureNumber, PitchSpelling, Step};
+use hogwash_engraving::Details;
 use roxmltree::{Document, Node};
 
 use crate::failure::TranslationFailure;
@@ -23,6 +24,7 @@ pub(crate) struct WrittenNote {
 /// Everything read out of one MEI document.
 #[derive(Debug)]
 pub(crate) struct ReadMei {
+    details: Details,
     measures: Vec<MeasureNumber>,
     // A BTreeMap so the reading is reproducible whatever order the document
     // is walked in (FR-406, NFR-301).
@@ -30,6 +32,11 @@ pub(crate) struct ReadMei {
 }
 
 impl ReadMei {
+    /// What the document says about the work (FR-201).
+    pub(crate) const fn details(&self) -> &Details {
+        &self.details
+    }
+
     /// Every bar in the document, in document order.
     ///
     /// Bars with no notes are included. A Score must account for its music
@@ -89,7 +96,55 @@ pub(crate) fn read(mei: &str) -> Result<ReadMei, TranslationFailure> {
         return Err(TranslationFailure::NoMusic);
     }
 
-    Ok(ReadMei { measures, notes })
+    Ok(ReadMei {
+        details: details_of(&document),
+        measures,
+        notes,
+    })
+}
+
+/// What the header says about the work.
+///
+/// Absent rather than guessed. Verovio writes an empty `<title/>` for a
+/// source that gave none, and an empty title is not a title — the Piece
+/// supplies a placeholder, which is a decision about presentation and not the
+/// engraver's to make.
+///
+/// The composer is a `<persName>` with `@role="composer"`, or failing that a
+/// `<composer>` element; `MusicXML`'s creator types survive transcoding as
+/// either, depending on the exporter.
+fn details_of(document: &Document<'_>) -> Details {
+    let text_of = |node: Node<'_, '_>| {
+        // Text nodes only. `descendants` yields the element itself as well,
+        // and an element's `text()` is its first text child — so counting
+        // both reads every title twice.
+        let text: String = node
+            .descendants()
+            .filter(roxmltree::Node::is_text)
+            .filter_map(|node| node.text())
+            .collect();
+        let text = text.trim().to_owned();
+
+        (!text.is_empty()).then_some(text)
+    };
+
+    let first = |tag: &str| {
+        document
+            .descendants()
+            .find(|node| node.has_tag_name(tag))
+            .and_then(text_of)
+    };
+
+    let composer = document
+        .descendants()
+        .find(|node| node.has_tag_name("persName") && node.attribute("role") == Some("composer"))
+        .and_then(text_of)
+        .or_else(|| first("composer"));
+
+    Details {
+        title: first("title"),
+        composer,
+    }
 }
 
 fn measure_number(measure: Node<'_, '_>) -> Result<MeasureNumber, TranslationFailure> {
@@ -299,6 +354,38 @@ mod tests {
         .expect("readable");
 
         assert_eq!(read.note("q").expect("the note").spelling.alter(), 1);
+    }
+
+    // FR-201 — a Piece carries "at minimum a title and, where available, a
+    // composer". Both come from the header of the same document the notes do.
+    #[test]
+    fn the_title_and_composer_are_read_from_the_header() {
+        let read = read(
+            r#"<mei xmlns="http://www.music-encoding.org/ns/mei">
+               <meiHead><fileDesc><titleStmt>
+                 <title>Minuet in G</title>
+                 <respStmt><persName role="composer">Petzold</persName></respStmt>
+               </titleStmt></fileDesc></meiHead>
+               <music><body><mdiv><score><section>
+                 <measure xml:id="m" n="1"/>
+               </section></score></mdiv></body></music></mei>"#,
+        )
+        .expect("readable");
+
+        assert_eq!(read.details().title.as_deref(), Some("Minuet in G"));
+        assert_eq!(read.details().composer.as_deref(), Some("Petzold"));
+    }
+
+    // Verovio writes an empty <title/> where the source gave none, and an
+    // empty title is not a title. Reporting it as absent lets the Piece
+    // supply a placeholder, which is a presentation decision and not the
+    // engraver's to make. The project's own fixture is exactly this case.
+    #[test]
+    fn a_document_with_no_title_reports_none_rather_than_an_empty_one() {
+        let read = read(TWO_BARS).expect("readable");
+
+        assert_eq!(read.details().title, None);
+        assert_eq!(read.details().composer, None);
     }
 
     #[test]

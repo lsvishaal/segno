@@ -1,0 +1,16 @@
+[package]
+name = "hogwash-library"
+version = "0.0.0"
+edition.workspace = true
+rust-version.workspace = true
+authors.workspace = true
+license.workspace = true
+publish = false
+description = "The Pieces available to practise. Never empty, by type."
+
+[dependencies]
+hogwash-domain = { path = "../hogwash-domain" }
+hogwash-notation = { path = "../hogwash-notation" }
+
+[lints]
+workspace = true

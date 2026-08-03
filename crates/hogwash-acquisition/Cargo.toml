@@ -1,0 +1,18 @@
+[package]
+name = "hogwash-acquisition"
+version = "0.0.0"
+edition.workspace = true
+rust-version.workspace = true
+authors.workspace = true
+license.workspace = true
+publish = false
+description = "Resolving offered material into a practisable Piece or an explained refusal. Pure — it reads no file."
+
+[dependencies]
+hogwash-domain = { path = "../hogwash-domain" }
+hogwash-engraving = { path = "../hogwash-engraving" }
+hogwash-library = { path = "../hogwash-library" }
+hogwash-notation = { path = "../hogwash-notation" }
+
+[lints]
+workspace = true

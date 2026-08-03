@@ -4,6 +4,7 @@ version = "0.0.0"
 edition.workspace = true
 rust-version.workspace = true
 authors.workspace = true
+license.workspace = true
 publish = false
 description = "What the performer actually played. Pure — the MIDI adapter that feeds it lives elsewhere."
 

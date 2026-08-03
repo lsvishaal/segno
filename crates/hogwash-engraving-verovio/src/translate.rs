@@ -14,19 +14,22 @@
 use std::collections::BTreeMap;
 
 use hogwash_domain::{Location, MeasureNumber};
-use hogwash_engraving::{ElementId, PageIndex, Placement};
+use hogwash_engraving::{Details, ElementId, PageIndex, Placement};
 use hogwash_notation::{Measure, Note, Position, Score};
 use roxmltree::Document;
 
 use crate::failure::TranslationFailure;
 use crate::mei::ReadMei;
 
-/// Builds a Score and its placements.
+/// A Score, what the source said about it, and where its notes were drawn.
+pub(crate) type Assembled = (Score, Details, Vec<(Location, Placement)>);
+
+/// Builds a Score, its details, and where each Position was drawn.
 pub(crate) fn assemble(
     read: &ReadMei,
     onsets: &[Vec<String>],
     pages: &[String],
-) -> Result<(Score, Vec<(Location, Placement)>), TranslationFailure> {
+) -> Result<Assembled, TranslationFailure> {
     let page_of = elements_by_page(pages)?;
 
     // Each onset becomes at most one Position, gathered under the bar its
@@ -101,7 +104,7 @@ pub(crate) fn assemble(
 
     let score = Score::new(measures).ok_or(TranslationFailure::NotAScore)?;
 
-    Ok((score, placements))
+    Ok((score, read.details().clone(), placements))
 }
 
 /// Which page each drawn element is on.
@@ -144,10 +147,7 @@ mod tests {
     const PAGE: &str = include_str!("../tests/fixtures/two-bars.page1.svg");
 
     /// The fixture, read end to end from real engine output.
-    fn engraved() -> (
-        hogwash_notation::Score,
-        Vec<(Location, hogwash_engraving::Placement)>,
-    ) {
+    fn engraved() -> super::Assembled {
         assemble(
             &read(MEI).expect("readable MEI"),
             &onsets(TIMEMAP).expect("readable timemap"),
@@ -164,7 +164,7 @@ mod tests {
     // then two.
     #[test]
     fn the_score_has_the_bars_and_positions_the_music_has() {
-        let (score, _) = engraved();
+        let (score, _, _) = engraved();
 
         assert_eq!(
             score
@@ -180,7 +180,7 @@ mod tests {
     // is one Position of three notes, not three Positions.
     #[test]
     fn a_chord_is_one_position_holding_all_its_notes() {
-        let (score, _) = engraved();
+        let (score, _, _) = engraved();
         let bar_two = &score.measures()[1];
 
         assert_eq!(bar_two.positions()[1].notes().len(), 3);
@@ -190,7 +190,7 @@ mod tests {
     // drawn glyphs, which is what MVP §6.6 highlights.
     #[test]
     fn every_position_is_placed_on_the_page_it_was_drawn_on() {
-        let (score, placements) = engraved();
+        let (score, _, placements) = engraved();
 
         let positions: usize = score
             .measures()
@@ -210,7 +210,7 @@ mod tests {
     // be shown half played.
     #[test]
     fn a_chords_placement_covers_every_one_of_its_notes() {
-        let (_, placements) = engraved();
+        let (_, _, placements) = engraved();
         let (_, chord) = placements.last().expect("six placements");
 
         assert_eq!(chord.elements().len(), 3);
@@ -221,7 +221,7 @@ mod tests {
     // finding after bar one would point at the wrong note.
     #[test]
     fn positions_are_numbered_across_the_piece_and_not_restarted_each_bar() {
-        let (_, placements) = engraved();
+        let (_, _, placements) = engraved();
 
         assert_eq!(
             placements.iter().map(|(at, _)| *at).collect::<Vec<_>>(),
@@ -241,7 +241,7 @@ mod tests {
     // opening bar 2 are written differently and sound the same.
     #[test]
     fn the_score_keeps_both_spellings_of_one_key() {
-        let (score, _) = engraved();
+        let (score, _, _) = engraved();
 
         let f_sharp = score.measures()[0].positions()[3].notes()[0];
         let g_flat = score.measures()[1].positions()[0].notes()[0];
@@ -256,7 +256,7 @@ mod tests {
     // it. The chord's G sounds flat, one semitone below a natural G.
     #[test]
     fn an_accidental_still_in_force_reaches_the_sounding_pitch() {
-        let (score, _) = engraved();
+        let (score, _, _) = engraved();
 
         let chord = &score.measures()[1].positions()[1];
         let top = chord.notes()[2];

@@ -9,6 +9,16 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "9330f8b2ff13f34540b44e946ef35111825727b38d33286ef986142615121801"
 
 [[package]]
+name = "hogwash-acquisition"
+version = "0.0.0"
+dependencies = [
+ "hogwash-domain",
+ "hogwash-engraving",
+ "hogwash-library",
+ "hogwash-notation",
+]
+
+[[package]]
 name = "hogwash-analysis"
 version = "0.0.0"
 dependencies = [
@@ -67,6 +77,14 @@ version = "0.0.0"
 dependencies = [
  "hogwash-analysis",
  "hogwash-capture",
+ "hogwash-domain",
+ "hogwash-notation",
+]
+
+[[package]]
+name = "hogwash-library"
+version = "0.0.0"
+dependencies = [
  "hogwash-domain",
  "hogwash-notation",
 ]
