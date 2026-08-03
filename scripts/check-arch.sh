@@ -20,6 +20,10 @@
 #      determinism, and they must stay testable with no device and no window
 #      attached.
 #
+#      hogwash-records is NOT on that list, and hogwash-midi and
+#      hogwash-engraving-verovio are not either. They are adapters: a
+#      filesystem, a device, a C library. That is what an adapter is for.
+#
 #      hogwash-capture is on that list despite owning a concept fed by live
 #      MIDI (004 §8.5). The concept is not the hardware: Observed Performance
 #      is a record of sounding pitches, and the instrument belongs behind a

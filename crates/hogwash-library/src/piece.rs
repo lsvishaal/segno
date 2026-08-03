@@ -1,21 +1,23 @@
 //! A practisable work (`003 §7.9`).
 
+use hogwash_domain::PieceId;
 use hogwash_notation::{ReferencePerformance, Score};
 
 /// A musical work the performer can practise.
 ///
-/// Holds its notation and enough about itself to be told apart from another
-/// (FR-201). It carries **no identity of its own** yet: `003 §7.2` fixes a
-/// Practice Session to one Piece, and until Practice Record Keeping exists
-/// there is nothing that needs to name a Piece across a restart. What such a
-/// name should be — a title, a path, something derived from the content — is
-/// a persistence question, and inventing an answer before the persistence
-/// decision is made would be answering it by accident.
+/// Holds its notation, a durable name, and enough about itself to be told
+/// apart from another (FR-201).
+///
+/// The name is a [`PieceId`] rather than a title, because `003 §7.2` fixes a
+/// Practice Session to exactly one Piece and a Practice Record has to say
+/// which — across restarts, and after a retitling. What the name is made of
+/// is `ADR-0010`'s business and deliberately invisible here.
 ///
 /// Immutable. FR-202 treats imported content as read-only after import, and
 /// there is no operation here that changes anything.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Piece {
+    id: PieceId,
     title: String,
     composer: Option<String>,
     score: Score,
@@ -31,10 +33,11 @@ impl Piece {
     /// error: a score with no title in it is perfectly practisable, and
     /// refusing it would be refusing music over metadata.
     #[must_use]
-    pub fn new(title: &str, composer: Option<String>, score: Score) -> Self {
+    pub fn new(id: PieceId, title: &str, composer: Option<String>, score: Score) -> Self {
         let reference = ReferencePerformance::derived_from(&score);
 
         Self {
+            id,
             title: if title.trim().is_empty() {
                 "Untitled".to_owned()
             } else {
@@ -44,6 +47,12 @@ impl Piece {
             score,
             reference,
         }
+    }
+
+    /// Its durable name, for a Practice Record to refer to.
+    #[must_use]
+    pub const fn id(&self) -> &PieceId {
+        &self.id
     }
 
     /// What to call it. Never empty (FR-201).
@@ -78,10 +87,14 @@ impl Piece {
 
 #[cfg(test)]
 mod tests {
-    use hogwash_domain::{MeasureNumber, PitchSpelling, Step};
+    use hogwash_domain::{MeasureNumber, PieceId, PitchSpelling, Step};
     use hogwash_notation::{Measure, Note, Position, Score};
 
     use crate::piece::Piece;
+
+    fn named() -> PieceId {
+        PieceId::new("fixture").expect("a plain name is usable")
+    }
 
     fn score() -> Score {
         let note = Note::new(PitchSpelling::new(Step::C, 0, 4)).expect("middle C sounds");
@@ -97,7 +110,7 @@ mod tests {
     // FR-201 — "at least a title is available".
     #[test]
     fn a_piece_has_a_title() {
-        let piece = Piece::new("Minuet in G", None, score());
+        let piece = Piece::new(named(), "Minuet in G", None, score());
 
         assert_eq!(piece.title(), "Minuet in G");
     }
@@ -107,19 +120,22 @@ mod tests {
     // available* — not that the source supplied one.
     #[test]
     fn a_piece_with_no_title_still_has_one() {
-        assert_eq!(Piece::new("   ", None, score()).title(), "Untitled");
+        assert_eq!(
+            Piece::new(named(), "   ", None, score()).title(),
+            "Untitled"
+        );
     }
 
     // FR-201 — the composer is "where available", so its absence is ordinary.
     #[test]
     fn the_composer_is_optional_and_a_blank_one_is_no_composer() {
-        assert_eq!(Piece::new("T", None, score()).composer(), None);
+        assert_eq!(Piece::new(named(), "T", None, score()).composer(), None);
         assert_eq!(
-            Piece::new("T", Some("  ".to_owned()), score()).composer(),
+            Piece::new(named(), "T", Some("  ".to_owned()), score()).composer(),
             None
         );
         assert_eq!(
-            Piece::new("T", Some("Bach".to_owned()), score()).composer(),
+            Piece::new(named(), "T", Some("Bach".to_owned()), score()).composer(),
             Some("Bach")
         );
     }
@@ -128,7 +144,7 @@ mod tests {
     // requested, then a sequence of expected musical events is returned".
     #[test]
     fn a_piece_knows_what_playing_it_should_produce() {
-        let piece = Piece::new("T", None, score());
+        let piece = Piece::new(named(), "T", None, score());
 
         assert_eq!(piece.reference().len(), 1);
     }
@@ -137,8 +153,8 @@ mod tests {
     #[test]
     fn the_same_score_always_gives_the_same_piece() {
         assert_eq!(
-            Piece::new("T", None, score()),
-            Piece::new("T", None, score())
+            Piece::new(named(), "T", None, score()),
+            Piece::new(named(), "T", None, score())
         );
     }
 }

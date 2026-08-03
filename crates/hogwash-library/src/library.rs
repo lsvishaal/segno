@@ -85,7 +85,7 @@ impl Library {
 
 #[cfg(test)]
 mod tests {
-    use hogwash_domain::{MeasureNumber, PitchSpelling, Step};
+    use hogwash_domain::{MeasureNumber, PieceId, PitchSpelling, Step};
     use hogwash_notation::{Measure, Note, Position, Score};
 
     use crate::{Library, Piece};
@@ -99,7 +99,9 @@ mod tests {
         );
         let score = Score::new(vec![measure]).expect("one measure is a score");
 
-        Piece::new(title, None, score)
+        let id = PieceId::new(&title.replace(' ', "-")).expect("fixture titles are usable names");
+
+        Piece::new(id, title, None, score)
     }
 
     // FR-206 / MVP §6.1 — a first session requires no externally obtained

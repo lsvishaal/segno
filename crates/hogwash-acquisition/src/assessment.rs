@@ -1,6 +1,7 @@
 //! Resolving offered material into a Piece or an explained refusal
 //! (`004 §8.2`).
 
+use hogwash_domain::PieceId;
 use hogwash_engraving::{Engraver, EngravingFailure};
 use hogwash_library::Piece;
 
@@ -43,12 +44,20 @@ pub enum Outcome {
 /// neither: the performer would be told their `MusicXML` is malformed, and
 /// would go and check the wrong thing.
 ///
+/// # Why the name is given rather than derived
+///
+/// `id` is supplied by the caller. It could have been derived here — from the
+/// title, or from the material — but what a Piece's durable name is made of
+/// is a persistence question (`ADR-0010`), and deriving one here would answer
+/// it in a pure crate that has no business knowing. The caller is storage, or
+/// something holding storage's answer.
+///
 /// # This never repairs anything
 ///
 /// `003 §7.15` and `Product_Discovery.md §13.4`: material is never converted
 /// or repaired. `material` is taken by shared reference, so that is carried
 /// by the signature rather than by a promise.
-pub fn assess(material: &[u8], engraver: &mut impl Engraver) -> Outcome {
+pub fn assess(material: &[u8], id: PieceId, engraver: &mut impl Engraver) -> Outcome {
     let format = recognise(material);
 
     if !format.is_supported() {
@@ -59,6 +68,7 @@ pub fn assess(material: &[u8], engraver: &mut impl Engraver) -> Outcome {
         Ok(drawn) => {
             let details = drawn.details();
             let piece = Piece::new(
+                id,
                 details.title.as_deref().unwrap_or_default(),
                 details.composer.clone(),
                 drawn.score().clone(),
@@ -119,7 +129,7 @@ fn unplaced(engraved: &hogwash_engraving::EngravedScore) -> Vec<ValidationIssue>
 
 #[cfg(test)]
 mod tests {
-    use hogwash_domain::{Location, MeasureNumber, PitchSpelling, Step};
+    use hogwash_domain::{Location, MeasureNumber, PieceId, PitchSpelling, Step};
     use hogwash_engraving::{
         Details, ElementId, EngravedScore, Engraver, EngravingFailure, PageIndex, Placement,
     };
@@ -149,6 +159,10 @@ mod tests {
         fn engrave(&mut self, _source: &[u8]) -> Result<EngravedScore, EngravingFailure> {
             self.0.clone()
         }
+    }
+
+    fn named() -> PieceId {
+        PieceId::new("fixture").expect("a plain name is usable")
     }
 
     fn one_note_score() -> Score {
@@ -195,7 +209,7 @@ mod tests {
             composer: Some("Petzold".to_owned()),
         };
 
-        match assess(MUSICXML, &mut accepting(details)) {
+        match assess(MUSICXML, named(), &mut accepting(details)) {
             Outcome::Accepted { piece, report } => {
                 assert_eq!(piece.title(), "Minuet in G");
                 assert_eq!(piece.composer(), Some("Petzold"));
@@ -208,7 +222,7 @@ mod tests {
     // FR-201 — a title is always available, even when the file gave none.
     #[test]
     fn a_file_with_no_title_still_becomes_a_named_piece() {
-        match assess(MUSICXML, &mut accepting(Details::default())) {
+        match assess(MUSICXML, named(), &mut accepting(Details::default())) {
             Outcome::Accepted { piece, .. } => assert!(!piece.title().is_empty()),
             Outcome::NotAccepted(refused) => panic!("expected acceptance, got {refused:?}"),
         }
@@ -223,7 +237,7 @@ mod tests {
             detail: "the engraver should not have been asked".to_owned(),
         }));
 
-        match assess(b"%PDF-1.7 ...", &mut never_called) {
+        match assess(b"%PDF-1.7 ...", named(), &mut never_called) {
             Outcome::NotAccepted(refused) => {
                 assert_eq!(refused.format(), OfferedFormat::Pdf);
                 assert!(refused.reason().contains("PDF"));
@@ -241,7 +255,7 @@ mod tests {
             detail: String::new(),
         }));
 
-        match assess(b"MThd\x00\x00\x00\x06", &mut never_called) {
+        match assess(b"MThd\x00\x00\x00\x06", named(), &mut never_called) {
             Outcome::NotAccepted(refused) => {
                 let reason = refused.reason().to_lowercase();
                 assert!(
@@ -269,7 +283,7 @@ mod tests {
                 detail: String::new(),
             }));
 
-            match assess(material, &mut engraver) {
+            match assess(material, named(), &mut engraver) {
                 Outcome::NotAccepted(refused) => {
                     assert!(!refused.reason().is_empty());
                     assert!(
@@ -292,7 +306,7 @@ mod tests {
             detail: "no music was found".to_owned(),
         }));
 
-        match assess(MUSICXML, &mut engraver) {
+        match assess(MUSICXML, named(), &mut engraver) {
             Outcome::NotAccepted(refused) => {
                 assert_eq!(refused.format(), OfferedFormat::MusicXml);
                 assert!(refused.reason().contains("no music was found"));
@@ -310,7 +324,7 @@ mod tests {
             detail: "libverovio.so is missing".to_owned(),
         }));
 
-        match assess(MUSICXML, &mut engraver) {
+        match assess(MUSICXML, named(), &mut engraver) {
             Outcome::NotAccepted(refused) => {
                 assert!(!refused.blames_the_material());
                 assert!(refused.reason().contains("libverovio"));
@@ -326,7 +340,7 @@ mod tests {
     fn a_note_that_could_not_be_drawn_is_reported() {
         let mut engraver = Fake(Ok(engraving(Details::default(), false)));
 
-        match assess(MUSICXML, &mut engraver) {
+        match assess(MUSICXML, named(), &mut engraver) {
             Outcome::Accepted { report, .. } => {
                 assert!(!report.is_clean());
                 assert_eq!(
@@ -348,7 +362,7 @@ mod tests {
         let material = MUSICXML.to_vec();
         let before = material.clone();
 
-        let _ = assess(&material, &mut accepting(Details::default()));
+        let _ = assess(&material, named(), &mut accepting(Details::default()));
 
         assert_eq!(material, before);
     }

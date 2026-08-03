@@ -1,0 +1,25 @@
+[package]
+name = "hogwash-records"
+version = "0.0.0"
+edition.workspace = true
+rust-version.workspace = true
+authors.workspace = true
+license.workspace = true
+publish = false
+description = "What happened, kept. One file per session, written so an interruption cannot damage an older one."
+
+[dependencies]
+hogwash-analysis = { path = "../hogwash-analysis" }
+hogwash-capture = { path = "../hogwash-capture" }
+hogwash-domain = { path = "../hogwash-domain" }
+hogwash-feedback = { path = "../hogwash-feedback" }
+hogwash-library = { path = "../hogwash-library" }
+hogwash-notation = { path = "../hogwash-notation" }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+
+[dev-dependencies]
+tempfile = "3"
+
+[lints]
+workspace = true

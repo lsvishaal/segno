@@ -9,7 +9,9 @@
 //! this concept still exist?* A `Pitch` survives that. A buffer does not.
 
 mod measure;
+mod piece;
 mod pitch;
 
 pub use measure::{Location, MeasureNumber};
+pub use piece::PieceId;
 pub use pitch::{Pitch, PitchSpelling, Step};
