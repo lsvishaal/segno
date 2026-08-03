@@ -1,0 +1,46 @@
+[package]
+name = "hogwash-engraving-verovio"
+version = "0.0.0"
+edition.workspace = true
+rust-version.workspace = true
+authors.workspace = true
+publish = false
+description = "The Verovio engraver. The only crate in this workspace that knows C exists."
+
+[dependencies]
+hogwash-domain = { path = "../hogwash-domain" }
+hogwash-engraving = { path = "../hogwash-engraving" }
+hogwash-notation = { path = "../hogwash-notation" }
+libloading = "0.8"
+roxmltree = "0.20"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+
+# NOT `workspace = true`. This is the one deliberate exception in the
+# workspace, and it has to be declared here because `unsafe_code = "forbid"`
+# in the workspace lints cannot be relaxed by an `allow` further in — that is
+# what `forbid` means, and it is why the exception takes the shape of a crate
+# opting out rather than a line opting in.
+#
+# `deny` rather than `allow`: every `unsafe` block in this crate carries an
+# `#[expect(unsafe_code, reason = "...")]` naming what makes it sound. An
+# unjustified one still fails the build.
+#
+# scripts/check-arch.sh asserts that EXACTLY ONE crate declines the workspace
+# lints, so a second exception cannot appear quietly.
+[lints.rust]
+unsafe_code = "deny"
+missing_debug_implementations = "warn"
+unreachable_pub = "warn"
+rust_2018_idioms = { level = "warn", priority = -1 }
+
+[lints.clippy]
+all = { level = "warn", priority = -1 }
+pedantic = { level = "warn", priority = -1 }
+unwrap_used = "warn"
+expect_used = "warn"
+panic = "warn"
+indexing_slicing = "warn"
+cast_possible_truncation = "warn"
+cast_precision_loss = "warn"
+cast_sign_loss = "warn"

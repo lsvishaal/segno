@@ -1,5 +1,11 @@
 /target
 
+# A locally built libverovio.so, where `just verovio-build` puts it by
+# default. Verovio is never vendored into this repository and never
+# committed — it is a separate, replaceable file, which is what ADR-0007's
+# licence reasoning rests on. See THIRD_PARTY.md.
+/.verovio-build
+
 # `docs/` is an independent git repository (remote: hogwash-docs).
 # It is deliberately not tracked here — see the plan and 004 §15.
 /docs

@@ -1,0 +1,73 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE score-partwise PUBLIC
+  "-//Recordare//DTD MusicXML 3.1 Partwise//EN"
+  "http://www.musicxml.org/dtds/partwise.dtd">
+<!--
+  A fixture, not music. Two bars, chosen to exercise exactly the things the
+  adapter has to get right and nothing else:
+
+    bar 1 — C4 D4 E4 F#4   a plain run, ending on a sharp
+    bar 2 — Gb4, then a C4+E4+G4 chord
+
+  F#4 and Gb4 are the same key on a keyboard and different notes on a page.
+  They are here so that a test can assert both halves of ADR-0001 at once:
+  that both sound 66, and that each keeps the spelling the file gave it.
+
+  The chord is here because a chord is one Position with three Notes, and
+  that is the shape most likely to be flattened by mistake.
+-->
+<score-partwise version="3.1">
+  <part-list>
+    <score-part id="P1">
+      <part-name>Piano</part-name>
+    </score-part>
+  </part-list>
+  <part id="P1">
+    <measure number="1">
+      <attributes>
+        <divisions>1</divisions>
+        <key><fifths>0</fifths></key>
+        <time><beats>4</beats><beat-type>4</beat-type></time>
+        <clef><sign>G</sign><line>2</line></clef>
+      </attributes>
+      <note>
+        <pitch><step>C</step><octave>4</octave></pitch>
+        <duration>1</duration><type>quarter</type>
+      </note>
+      <note>
+        <pitch><step>D</step><octave>4</octave></pitch>
+        <duration>1</duration><type>quarter</type>
+      </note>
+      <note>
+        <pitch><step>E</step><octave>4</octave></pitch>
+        <duration>1</duration><type>quarter</type>
+      </note>
+      <note>
+        <pitch><step>F</step><alter>1</alter><octave>4</octave></pitch>
+        <duration>1</duration><type>quarter</type>
+        <accidental>sharp</accidental>
+      </note>
+    </measure>
+    <measure number="2">
+      <note>
+        <pitch><step>G</step><alter>-1</alter><octave>4</octave></pitch>
+        <duration>2</duration><type>half</type>
+        <accidental>flat</accidental>
+      </note>
+      <note>
+        <pitch><step>C</step><octave>4</octave></pitch>
+        <duration>2</duration><type>half</type>
+      </note>
+      <note>
+        <chord/>
+        <pitch><step>E</step><octave>4</octave></pitch>
+        <duration>2</duration><type>half</type>
+      </note>
+      <note>
+        <chord/>
+        <pitch><step>G</step><octave>4</octave></pitch>
+        <duration>2</duration><type>half</type>
+      </note>
+    </measure>
+  </part>
+</score-partwise>

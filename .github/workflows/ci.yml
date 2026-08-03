@@ -33,3 +33,46 @@ jobs:
       - name: Gate
         run: just ci
         shell: bash
+
+  # Verovio is deliberately NOT part of the job above. ADR-0005 loads it at
+  # run time so that building and testing Hogwash needs no C++ toolchain —
+  # and a gate that quietly required one would give that property away
+  # without anyone deciding to.
+  #
+  # So it gets its own job: build the engine once, cache it, and run the
+  # handful of tests that genuinely cannot be faked.
+  engraving:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: Swatinem/rust-cache@v2
+
+      - uses: taiki-e/install-action@v2
+        with:
+          tool: just
+
+      # Pinned by commit, not by tag: S0 found the repository's tag and the
+      # toolkit's own reported version disagree, and the toolkit is right.
+      - name: Clone Verovio
+        run: |
+          git clone --filter=blob:none https://github.com/rism-digital/verovio.git ../verovio
+          git -C ../verovio checkout fb5c4db7e
+
+      - name: Cache the built engine
+        id: engine
+        uses: actions/cache@v4
+        with:
+          path: .verovio-build/libverovio.so
+          key: verovio-fb5c4db7e-${{ runner.os }}
+
+      - name: Build Verovio
+        if: steps.engine.outputs.cache-hit != 'true'
+        run: just verovio-build ../verovio
+
+      - name: Against a real engine
+        run: |
+          export HOGWASH_VEROVIO_LIB="$PWD/.verovio-build/libverovio.so"
+          export HOGWASH_VEROVIO_DATA="$PWD/../verovio/data"
+          just engraving-test
+          just engraving-determinism

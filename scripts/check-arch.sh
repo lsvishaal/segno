@@ -13,8 +13,9 @@
 #      crate, not on anything from crates.io. It is shared vocabulary
 #      (003 §7) and nothing else.
 #
-#   2. The pure crates — notation, capture, practice, analysis, feedback —
-#      depend on no I/O, filesystem, MIDI, GUI, rendering or async crate.
+#   2. The pure crates — notation, capture, practice, analysis, feedback,
+#      engraving — depend on no I/O, filesystem, MIDI, GUI, rendering or
+#      async crate.
 #      These are the components 004 §12 relies on for correctness and
 #      determinism, and they must stay testable with no device and no window
 #      attached.
@@ -40,6 +41,7 @@ PURE_CRATES=(
     hogwash-practice
     hogwash-analysis
     hogwash-feedback
+    hogwash-engraving
 )
 
 # Anything that reaches a device, a disk, a screen or a scheduler.
@@ -130,6 +132,55 @@ for crate in "${PURE_CRATES[@]}"; do
         failed=1
     fi
 done
+
+# --- 4. exactly one crate may step outside the workspace lints -------------
+#
+# The workspace forbids `unsafe_code`, and `forbid` cannot be lifted by an
+# `allow` inside the crate — that is what distinguishes it from `deny`. So a
+# crate that genuinely needs `unsafe` can only get it by declining the
+# workspace lint table and declaring its own.
+#
+# Exactly one crate does: hogwash-engraving-verovio, which calls Verovio's C
+# functions (ADR-0005). That exception is reviewed, documented at every call
+# site, and quarantined behind a safe API. What must not happen is a second
+# one appearing quietly, because "we already have an unsafe crate" is how a
+# forbidden thing becomes an ordinary one.
+#
+# The check is on Cargo.toml rather than on the source: a crate cannot write
+# `unsafe` at all without first opting out here, so this is the doorway.
+EXPECTED_EXCEPTION="hogwash-engraving-verovio"
+
+exceptions=()
+for manifest in crates/*/Cargo.toml; do
+    crate=$(basename "$(dirname "$manifest")")
+
+    # `[lints]` followed by `workspace = true` is the inheriting form.
+    # Anything else — including no [lints] section at all — is opting out.
+    inherits=$(awk '
+        /^\[lints\]$/            { in_lints = 1; next }
+        /^\[/                    { in_lints = 0 }
+        in_lints && /^workspace[[:space:]]*=[[:space:]]*true$/ { print "yes"; exit }
+    ' "$manifest")
+
+    if [ "$inherits" != "yes" ]; then
+        exceptions+=("$crate")
+    fi
+done
+
+if [ "${#exceptions[@]}" -eq 1 ] && [ "${exceptions[0]}" = "$EXPECTED_EXCEPTION" ]; then
+    echo "ok  $EXPECTED_EXCEPTION is the only crate outside the workspace lints"
+else
+    echo "ARCH VIOLATION: the set of crates outside the workspace lints changed."
+    echo "  expected exactly: $EXPECTED_EXCEPTION"
+    echo "  found:"
+    printf '    %s\n' "${exceptions[@]:-(none)}"
+    echo
+    echo "  Declining '[lints] workspace = true' is how a crate escapes"
+    echo "  unsafe_code = \"forbid\". ADR-0005 permits one such crate, for the"
+    echo "  Verovio C boundary. A second needs its own ADR, not a copy of that"
+    echo "  Cargo.toml."
+    failed=1
+fi
 
 if [ "$failed" -ne 0 ]; then
     echo

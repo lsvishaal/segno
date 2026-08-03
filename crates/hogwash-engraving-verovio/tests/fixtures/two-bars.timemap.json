@@ -1,0 +1,71 @@
+[
+	{
+		"on": [
+			"yv3lqdm" 
+		],
+		"qstamp": 0,
+		"tempo": 120,
+		"tstamp": 0 
+	},
+	{
+		"off": [
+			"yv3lqdm" 
+		],
+		"on": [
+			"z2gqwr3" 
+		],
+		"qstamp": 1,
+		"tstamp": 500 
+	},
+	{
+		"off": [
+			"z2gqwr3" 
+		],
+		"on": [
+			"a1pfogn4" 
+		],
+		"qstamp": 2,
+		"tstamp": 1000 
+	},
+	{
+		"off": [
+			"a1pfogn4" 
+		],
+		"on": [
+			"b8j2ung" 
+		],
+		"qstamp": 3,
+		"tstamp": 1500 
+	},
+	{
+		"off": [
+			"b8j2ung" 
+		],
+		"on": [
+			"o1w2vfrn" 
+		],
+		"qstamp": 4,
+		"tstamp": 2000 
+	},
+	{
+		"off": [
+			"o1w2vfrn" 
+		],
+		"on": [
+			"qhghzyb",
+			"s82fpt",
+			"t3elz0m" 
+		],
+		"qstamp": 6,
+		"tstamp": 3000 
+	},
+	{
+		"off": [
+			"qhghzyb",
+			"s82fpt",
+			"t3elz0m" 
+		],
+		"qstamp": 8,
+		"tstamp": 4000 
+	} 
+] 

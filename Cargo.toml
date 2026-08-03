@@ -7,13 +7,18 @@ edition = "2024"
 rust-version = "1.97"
 authors = ["Hogwash contributors"]
 
-# `license` is deliberately unset. Product_Discovery.md §3 commits to
-# open source without naming a licence, and the choice interacts with the
-# deferred engraving decision — Verovio is LGPL-3.0, and static linking
-# against it carries obligations that constrain what Hogwash may be
-# licensed as. Both are settled together in the S1 spike's ADRs.
+# ADR-0007. Verovio is LGPL-3.0, which would have constrained this had it
+# been linked in. It is not: it is a separate, replaceable shared library
+# opened at run time (ADR-0005), which is what LGPL-3.0 §4 asks for and what
+# leaves Hogwash's own code free. Apache-2.0 over MIT for the explicit patent
+# grant.
 #
-# `repository` is also unset until a remote actually exists. Guessing it
+# Verovio's own notices ship with the application. THIRD_PARTY.md records
+# that obligation, and scripts/check-native-licences.sh enforces it —
+# `cargo deny` cannot, because Verovio is not a cargo dependency.
+license = "Apache-2.0"
+
+# `repository` is still unset until a remote actually exists. Guessing it
 # from the local git identity would be unverified metadata.
 
 [workspace.lints.rust]
