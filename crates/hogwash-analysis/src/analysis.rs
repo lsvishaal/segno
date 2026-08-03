@@ -59,7 +59,7 @@ impl Analysis {
                     measure,
                     position,
                     played,
-                    expected: expected.sounding().collect(),
+                    expected: expected.notes().to_vec(),
                 });
             }
 
@@ -76,19 +76,17 @@ impl Analysis {
             };
 
             for note in expected.notes() {
-                let pitch = note.sounding();
-
                 // At the position the performer stopped on, some notes of a
                 // chord may already be down. Those were played, and reporting
                 // them as never arriving would contradict the record.
-                if position == stopped_at && cursor.has_been_played(pitch) {
+                if position == stopped_at && cursor.has_been_played(note.sounding()) {
                     continue;
                 }
 
                 findings.push(Finding::Omitted {
                     measure: expected.measure(),
                     position,
-                    pitch,
+                    written: *note,
                 });
             }
         }
@@ -193,7 +191,9 @@ mod tests {
 
     use crate::analysis::{Analysis, Summary};
     use crate::finding::Finding;
-    use crate::fixtures::{one_bar, one_chord, pitch, played, played_steps, two_bars, unexpected};
+    use crate::fixtures::{
+        note, one_bar, one_chord, pitch, played, played_steps, two_bars, unexpected,
+    };
 
     fn bar(number: u32) -> MeasureNumber {
         MeasureNumber::new(number).expect("fixture measures are numbered from one")
@@ -231,7 +231,7 @@ mod tests {
                 measure: bar(1),
                 position: 0,
                 played: pitch(Step::G),
-                expected: vec![pitch(Step::C)],
+                expected: vec![note(Step::C)],
             }
         );
     }
@@ -270,12 +270,12 @@ mod tests {
                 Finding::Omitted {
                     measure: bar(1),
                     position: 1,
-                    pitch: pitch(Step::D),
+                    written: note(Step::D),
                 },
                 Finding::Omitted {
                     measure: bar(2),
                     position: 2,
-                    pitch: pitch(Step::E),
+                    written: note(Step::E),
                 },
             ]
         );
@@ -298,7 +298,7 @@ mod tests {
             Finding::Omitted {
                 measure: bar(1),
                 position: 0,
-                pitch: pitch(Step::G),
+                written: note(Step::G),
             }
         );
     }

@@ -1,6 +1,7 @@
 //! One thing Analysis found (`003 §7.6`).
 
 use hogwash_domain::{MeasureNumber, Pitch};
+use hogwash_notation::Note;
 
 /// A single observation about an Attempt.
 ///
@@ -57,9 +58,17 @@ pub enum Finding {
         /// Which step of the Reference Performance.
         position: usize,
         /// What the performer played.
+        ///
+        /// A bare `Pitch`, because that is genuinely all an instrument
+        /// reports. ADR-0001 forbids reconstructing a spelling from it.
         played: Pitch,
         /// What the Score asked for here, in written order.
-        expected: Vec<Pitch>,
+        ///
+        /// Carried as written `Note`s rather than sounding pitches, because
+        /// `004 §8.7` gives Feedback an Analysis and nothing else, and
+        /// Feedback must speak in musical terms (`003 §7.7`) — "F was
+        /// written" cannot be said from the number 65.
+        expected: Vec<Note>,
     },
 
     /// An expected note that never arrived (FR-402).
@@ -73,8 +82,8 @@ pub enum Finding {
         measure: MeasureNumber,
         /// Which step of the Reference Performance.
         position: usize,
-        /// What the Score asked for and did not get.
-        pitch: Pitch,
+        /// What the Score asked for and did not get, as written.
+        written: Note,
     },
 
     /// A played note when the Score asked for nothing further (FR-403).

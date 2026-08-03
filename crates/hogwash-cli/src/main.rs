@@ -26,6 +26,7 @@ use std::process::ExitCode;
 use hogwash_analysis::{Analysis, Finding, Summary};
 use hogwash_capture::ObservedPerformance;
 use hogwash_domain::{MeasureNumber, Pitch, PitchSpelling, Step};
+use hogwash_feedback::Feedback;
 use hogwash_notation::{Measure, Note, Position, ReferencePerformance, Score};
 
 fn main() -> ExitCode {
@@ -130,6 +131,19 @@ fn report(analysis: &Analysis, reference: &ReferencePerformance) -> String {
     lines.push(String::new());
     lines.extend(summarise(analysis.summary()));
 
+    // The rendered Feedback is included so `just determinism` compares the
+    // words the performer actually reads, not only the raw findings. Wording
+    // that varied between runs would otherwise go unnoticed.
+    lines.push(String::new());
+    lines.push("feedback:".to_owned());
+    lines.extend(Feedback::of(analysis).lines().into_iter().map(|line| {
+        if line.is_empty() {
+            line
+        } else {
+            format!("  {line}")
+        }
+    }));
+
     // Trailing newline, so the file compared by `cmp` ends the way a text
     // file should and the diff on failure reads cleanly.
     lines.join("\n") + "\n"
@@ -162,12 +176,12 @@ fn describe(finding: &Finding) -> String {
         Finding::Omitted {
             measure,
             position,
-            pitch,
+            written,
         } => format!(
             "omitted     bar {:<3} position {:<3} wanted {}",
             measure.get(),
             position,
-            u8::from(*pitch)
+            u8::from(written.sounding())
         ),
         Finding::Unexpected { played } => {
             format!(
@@ -178,10 +192,10 @@ fn describe(finding: &Finding) -> String {
     }
 }
 
-fn numbers(pitches: &[Pitch]) -> String {
-    pitches
+fn numbers(notes: &[Note]) -> String {
+    notes
         .iter()
-        .map(|pitch| u8::from(*pitch).to_string())
+        .map(|note| u8::from(note.sounding()).to_string())
         .collect::<Vec<_>>()
         .join("+")
 }

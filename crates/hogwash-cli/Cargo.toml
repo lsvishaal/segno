@@ -11,6 +11,7 @@ description = "Determinism harness. Not a product surface — it exists so FR-40
 hogwash-analysis = { path = "../hogwash-analysis" }
 hogwash-capture = { path = "../hogwash-capture" }
 hogwash-domain = { path = "../hogwash-domain" }
+hogwash-feedback = { path = "../hogwash-feedback" }
 hogwash-notation = { path = "../hogwash-notation" }
 
 [lints]
