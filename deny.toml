@@ -10,11 +10,42 @@
 all-features = true
 
 [licenses]
-# Permissive only, for now. This list is expected to be amended by the
-# engraving ADR (S1): Verovio is LGPL-3.0, and if it is adopted, that
-# obligation is accepted deliberately and recorded — not admitted by
-# loosening this list quietly.
+# Permissive, plus one file-level copyleft licence admitted deliberately.
+#
+# This list was expected to need amending for Verovio's LGPL-3.0. It did not:
+# ADR-0005 loads Verovio at run time, so it never enters the Cargo graph and
+# cargo-deny cannot see it at all. That gap is covered by
+# scripts/check-native-licences.sh and THIRD_PARTY.md instead — see ADR-0007.
+#
+# MPL-2.0 is here for a different reason, and was added when this gate
+# rejected `resvg`/`usvg` on the day the score first needed drawing
+# (ADR-0011). It is accepted rather than worked around because:
+#
+#   - It is copyleft **per file**, not per program. Using the crates imposes
+#     nothing on Hogwash's own code; only modifications to their files would
+#     have to be published under MPL-2.0, and we make none.
+#   - The source of those files is on crates.io, which discharges the
+#     availability obligation.
+#
+# The distinction that matters: MPL-2.0 restricts what we may do to *their*
+# files, and GPL-family licences would restrict what we may do to *ours*.
+# Adding a GPL crate here would be a different act entirely, and the canary in
+# scripts/verify-licence-gate.sh exists to prove this list still refuses one.
+#
+# OFL-1.1 and UFL-1.0 are font licences, and cover the typefaces the user
+# interface draws its text with (`epaint_default_fonts`). Both permit
+# bundling and redistribution outright; what they restrict is selling the
+# fonts on their own and shipping a modified font under its original name,
+# neither of which is anywhere near what this project does.
+#
+# They are worth distinguishing from the licences above: these cover *assets*
+# that ship inside the binary, not code that is linked. That is a smaller
+# obligation, not a larger one — but it is a different kind, and a list that
+# blurred the two would be less useful for the next person reading it.
 allow = [
+    "MPL-2.0",
+    "OFL-1.1",
+    "LicenseRef-UFL-1.0",
     "MIT",
     "MIT-0",
     "Apache-2.0",
@@ -50,6 +81,34 @@ allow-wildcard-paths = true
 
 [advisories]
 yanked = "deny"
+
+# Two advisories are accepted, both `unmaintained` rather than a
+# vulnerability: no defect is known in either crate, their authors have simply
+# said they will not maintain them further.
+#
+# They arrived with the score view (ADR-0011). `ttf-parser` and `rustybuzz`
+# are the font-parsing and text-shaping layer beneath *both* egui and resvg,
+# and beneath most of the Rust 2D-graphics ecosystem — so this is not a
+# dependency chosen carelessly, it is one that any way of drawing a score in
+# Rust arrives at.
+#
+# The exposure is worth being precise about rather than waving away. Font
+# parsing is a classic attack surface, but the fonts here are the ones this
+# project ships, not anything a performer supplies. What *is* attacker-shaped
+# is the SVG: it comes from Verovio, which comes from a MusicXML file the
+# performer chose, so a hostile score could in principle reach `usvg` through
+# a chain that ends at these crates. Against that: NFR-400 and C-300 make
+# Hogwash entirely offline, so a hostile file has to be deliberately obtained
+# and opened, and there is nothing for it to exfiltrate to.
+#
+# Reviewed if any of these change: a *vulnerability* advisory appears against
+# either crate; a maintained replacement is adopted by egui or resvg; or
+# Hogwash gains any network capability, which would change the calculation
+# above entirely.
+ignore = [
+    { id = "RUSTSEC-2026-0192", reason = "ttf-parser unmaintained, no known defect; ships our own fonts only" },
+    { id = "RUSTSEC-2026-0206", reason = "rustybuzz unmaintained, no known defect; text shaping beneath egui and resvg alike" },
+]
 
 [sources]
 unknown-registry = "deny"

@@ -6,6 +6,8 @@
 
 #![cfg(test)]
 
+use std::sync::Arc;
+
 use hogwash_domain::{MeasureNumber, Pitch, PitchSpelling, Step};
 use hogwash_notation::{Measure, Note, Position, ReferencePerformance, Score};
 
@@ -39,22 +41,27 @@ fn measure(number: u32, positions: Vec<Position>) -> Measure {
     )
 }
 
-fn reference(measures: Vec<Measure>) -> ReferencePerformance {
-    ReferencePerformance::derived_from(&Score::new(measures).expect("fixture is a valid score"))
+/// Shared, because a Cursor holds a share of what it indexes into rather
+/// than borrowing it — see the note on `Cursor`. Returning the `Arc` here
+/// keeps the tests reading the way they did before.
+fn reference(measures: Vec<Measure>) -> Arc<ReferencePerformance> {
+    Arc::new(ReferencePerformance::derived_from(
+        &Score::new(measures).expect("fixture is a valid score"),
+    ))
 }
 
 /// A single bar of single notes.
-pub(crate) fn one_bar(steps: &[Step]) -> ReferencePerformance {
+pub(crate) fn one_bar(steps: &[Step]) -> Arc<ReferencePerformance> {
     reference(vec![measure(1, melody(steps))])
 }
 
 /// Two bars of single notes — needed to show a bar cannot be skipped.
-pub(crate) fn two_bars(first: &[Step], second: &[Step]) -> ReferencePerformance {
+pub(crate) fn two_bars(first: &[Step], second: &[Step]) -> Arc<ReferencePerformance> {
     reference(vec![measure(1, melody(first)), measure(2, melody(second))])
 }
 
 /// A single bar holding one chord: every step required together.
-pub(crate) fn one_chord(steps: &[Step]) -> ReferencePerformance {
+pub(crate) fn one_chord(steps: &[Step]) -> Arc<ReferencePerformance> {
     let notes = steps.iter().copied().map(note).collect();
     let chord = Position::new(notes).expect("a chord has notes");
 
@@ -65,7 +72,7 @@ pub(crate) fn one_chord(steps: &[Step]) -> ReferencePerformance {
 ///
 /// F sharp and G flat are one key on a keyboard (ADR-0001), so this is a
 /// chord a performer satisfies with a single press.
-pub(crate) fn one_enharmonic_unison() -> ReferencePerformance {
+pub(crate) fn one_enharmonic_unison() -> Arc<ReferencePerformance> {
     let f_sharp = Note::new(PitchSpelling::new(Step::F, 1, 4)).expect("F sharp 4 sounds");
     let g_flat = Note::new(PitchSpelling::new(Step::G, -1, 4)).expect("G flat 4 sounds");
     let unison = Position::new(vec![f_sharp, g_flat]).expect("a unison has notes");

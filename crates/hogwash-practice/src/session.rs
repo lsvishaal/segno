@@ -1,5 +1,7 @@
 //! A Practice Session — one sitting on one Piece (`003 §7.2`).
 
+use std::sync::Arc;
+
 use hogwash_notation::ReferencePerformance;
 
 use crate::attempt::{Attempt, EndedAttempt};
@@ -21,7 +23,7 @@ use crate::attempt::{Attempt, EndedAttempt};
 /// supplies the time; the domain never reads one.
 #[derive(Debug, Clone)]
 pub struct PracticeSession {
-    reference: ReferencePerformance,
+    reference: Arc<ReferencePerformance>,
     attempts: Vec<EndedAttempt>,
 }
 
@@ -31,7 +33,7 @@ impl PracticeSession {
     /// It begins with no Attempts, which `003 §7.2` notes is legitimate — a
     /// performer may open one and be interrupted before playing.
     #[must_use]
-    pub const fn open(reference: ReferencePerformance) -> Self {
+    pub fn open(reference: Arc<ReferencePerformance>) -> Self {
         Self {
             reference,
             attempts: Vec::new(),
@@ -40,14 +42,24 @@ impl PracticeSession {
 
     /// What the Piece expects.
     #[must_use]
-    pub const fn reference(&self) -> &ReferencePerformance {
+    pub fn reference(&self) -> &ReferencePerformance {
         &self.reference
+    }
+
+    /// A share of what the Piece expects, for whoever needs to hold one.
+    ///
+    /// The application keeps this alongside the Session, which is why the
+    /// Reference Performance is shared rather than borrowed at all — see the
+    /// note on [`Cursor`](crate::Cursor).
+    #[must_use]
+    pub fn shared_reference(&self) -> Arc<ReferencePerformance> {
+        Arc::clone(&self.reference)
     }
 
     /// Begins an Attempt at this Session's Piece.
     #[must_use]
-    pub fn begin_attempt(&self) -> Attempt<'_> {
-        Attempt::begin(&self.reference)
+    pub fn begin_attempt(&self) -> Attempt {
+        Attempt::begin(Arc::clone(&self.reference))
     }
 
     /// Adds an ended Attempt to this Session's history.

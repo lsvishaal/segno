@@ -1,6 +1,7 @@
 //! The Cursor — where the performer is expected to be (`003 §7.16`).
 
 use std::collections::BTreeSet;
+use std::sync::Arc;
 
 use hogwash_domain::{MeasureNumber, Pitch};
 use hogwash_notation::{ExpectedNotes, ReferencePerformance};
@@ -32,13 +33,20 @@ pub enum CursorMovement {
 /// cannot be skipped, a pause needs no handling, and a system that has lost
 /// its place cannot keep confidently scoring.
 ///
-/// It borrows the Reference Performance rather than owning one. `003 §7.16`
-/// says a Cursor's position "is always a position the Reference Performance
-/// contains", and borrowing makes that a fact about the type: there is no
-/// Cursor without the sequence it indexes into.
+/// It holds the Reference Performance rather than pointing at one elsewhere.
+/// `003 §7.16` says a Cursor's position *"is always a position the Reference
+/// Performance contains"*, and holding it makes that a fact about the type:
+/// there is no Cursor without the sequence it indexes into.
+///
+/// Shared rather than copied — an `Arc`, not a clone. A Reference Performance
+/// is derived once per Piece and read by every Attempt at it, and a borrow
+/// cannot do the job: an application that keeps both a Session and the
+/// Attempt open within it would be a self-referential struct, which is not a
+/// thing Rust will hold (see `IF-5`). `Arc` is `std` and touches nothing, so
+/// this crate stays pure.
 #[derive(Debug, Clone)]
-pub struct Cursor<'a> {
-    reference: &'a ReferencePerformance,
+pub struct Cursor {
+    reference: Arc<ReferencePerformance>,
     position: usize,
     /// Which of the currently expected pitches have been played.
     ///
@@ -49,13 +57,13 @@ pub struct Cursor<'a> {
     satisfied: BTreeSet<Pitch>,
 }
 
-impl<'a> Cursor<'a> {
+impl Cursor {
     /// A Cursor resting on the first thing `reference` expects.
     ///
     /// `003 §7.16` Lifecycle — *"Begins at the first expected position when
     /// an Attempt begins."*
     #[must_use]
-    pub fn at_the_beginning(reference: &'a ReferencePerformance) -> Self {
+    pub fn at_the_beginning(reference: Arc<ReferencePerformance>) -> Self {
         Self {
             reference,
             position: 0,
@@ -71,7 +79,7 @@ impl<'a> Cursor<'a> {
 
     /// What the performer is expected to play next, or `None` at the end.
     #[must_use]
-    pub fn expecting(&self) -> Option<&'a ExpectedNotes> {
+    pub fn expecting(&self) -> Option<&ExpectedNotes> {
         self.reference.at(self.position)
     }
 
@@ -132,13 +140,23 @@ impl<'a> Cursor<'a> {
 
         self.satisfied.insert(pitch);
 
+        // Asked again rather than held across the insert above. `expecting`
+        // borrows the whole Cursor — `satisfied` is part of it — so the first
+        // borrow has to end before the set can be written to. Looking up a
+        // position is an index into a Vec, so this costs nothing worth
+        // avoiding, and it beats collecting the expected pitches into a
+        // throwaway allocation on every note played.
+        //
         // A rolled chord satisfies its position: "all of them have been
         // played" is the only test available, because distinguishing
         // together from one-after-another needs a clock (003 §15, 004 §6.7).
-        if expected
-            .sounding()
-            .all(|note| self.satisfied.contains(&note))
-        {
+        let complete = self.expecting().is_some_and(|expected| {
+            expected
+                .sounding()
+                .all(|note| self.satisfied.contains(&note))
+        });
+
+        if complete {
             self.position += 1;
             self.satisfied.clear();
             CursorMovement::Advanced
@@ -150,6 +168,8 @@ impl<'a> Cursor<'a> {
 
 #[cfg(test)]
 mod tests {
+    use std::sync::Arc;
+
     use hogwash_domain::{MeasureNumber, Step};
 
     use crate::cursor::{Cursor, CursorMovement};
@@ -166,7 +186,7 @@ mod tests {
     #[test]
     fn the_cursor_waits_indefinitely_for_the_expected_note() {
         let reference = one_bar(&[Step::C, Step::D]);
-        let cursor = Cursor::at_the_beginning(&reference);
+        let cursor = Cursor::at_the_beginning(Arc::clone(&reference));
 
         assert_eq!(cursor.position(), 0);
         assert_eq!(cursor.expecting(), reference.at(0));
@@ -178,7 +198,7 @@ mod tests {
     #[test]
     fn a_bar_cannot_be_skipped() {
         let reference = two_bars(&[Step::C, Step::D], &[Step::E, Step::F]);
-        let mut cursor = Cursor::at_the_beginning(&reference);
+        let mut cursor = Cursor::at_the_beginning(reference);
 
         assert_eq!(cursor.observe(pitch(Step::E)), CursorMovement::Held);
         assert_eq!(cursor.observe(pitch(Step::F)), CursorMovement::Held);
@@ -192,7 +212,7 @@ mod tests {
     #[test]
     fn a_wrong_note_does_not_advance_the_cursor() {
         let reference = one_bar(&[Step::C, Step::D]);
-        let mut cursor = Cursor::at_the_beginning(&reference);
+        let mut cursor = Cursor::at_the_beginning(reference);
 
         assert_eq!(cursor.observe(pitch(Step::G)), CursorMovement::Held);
 
@@ -204,7 +224,7 @@ mod tests {
     #[test]
     fn noodling_does_not_advance_the_cursor() {
         let reference = one_bar(&[Step::C]);
-        let mut cursor = Cursor::at_the_beginning(&reference);
+        let mut cursor = Cursor::at_the_beginning(reference);
 
         for step in [Step::A, Step::B, Step::G, Step::A, Step::F] {
             assert_eq!(cursor.observe(pitch(step)), CursorMovement::Held);
@@ -216,7 +236,7 @@ mod tests {
     #[test]
     fn the_cursor_advances_when_the_expected_note_is_played() {
         let reference = one_bar(&[Step::C, Step::D]);
-        let mut cursor = Cursor::at_the_beginning(&reference);
+        let mut cursor = Cursor::at_the_beginning(reference);
 
         assert_eq!(cursor.observe(pitch(Step::C)), CursorMovement::Advanced);
 
@@ -229,7 +249,7 @@ mod tests {
     #[test]
     fn a_chord_advances_only_when_all_its_notes_are_played() {
         let reference = one_chord(&[Step::C, Step::E, Step::G]);
-        let mut cursor = Cursor::at_the_beginning(&reference);
+        let mut cursor = Cursor::at_the_beginning(reference);
 
         assert_eq!(cursor.observe(pitch(Step::C)), CursorMovement::Held);
         assert_eq!(cursor.observe(pitch(Step::E)), CursorMovement::Held);
@@ -248,7 +268,7 @@ mod tests {
     #[test]
     fn a_rolled_chord_satisfies_its_position() {
         let reference = one_chord(&[Step::C, Step::E, Step::G]);
-        let mut cursor = Cursor::at_the_beginning(&reference);
+        let mut cursor = Cursor::at_the_beginning(reference);
 
         // Deliberately in an order the score did not write them in.
         cursor.observe(pitch(Step::G));
@@ -271,7 +291,7 @@ mod tests {
     #[test]
     fn an_unexpected_note_does_not_undo_progress_on_a_chord() {
         let reference = one_chord(&[Step::C, Step::E, Step::G]);
-        let mut cursor = Cursor::at_the_beginning(&reference);
+        let mut cursor = Cursor::at_the_beginning(reference);
 
         cursor.observe(pitch(Step::C));
         cursor.observe(pitch(Step::E));
@@ -292,10 +312,10 @@ mod tests {
     fn the_cursor_reports_no_verdict() {
         let reference = one_chord(&[Step::C, Step::E]);
 
-        let mut after_wrong_note = Cursor::at_the_beginning(&reference);
+        let mut after_wrong_note = Cursor::at_the_beginning(Arc::clone(&reference));
         let wrong = after_wrong_note.observe(unexpected());
 
-        let mut after_partial_chord = Cursor::at_the_beginning(&reference);
+        let mut after_partial_chord = Cursor::at_the_beginning(Arc::clone(&reference));
         let incomplete = after_partial_chord.observe(pitch(Step::C));
 
         assert_eq!(wrong, incomplete);
@@ -307,7 +327,7 @@ mod tests {
     #[test]
     fn the_cursor_is_never_ahead_of_the_performer() {
         let reference = one_bar(&[Step::C, Step::D, Step::E]);
-        let mut cursor = Cursor::at_the_beginning(&reference);
+        let mut cursor = Cursor::at_the_beginning(reference);
 
         for (played, step) in [Step::C, Step::D].into_iter().enumerate() {
             cursor.observe(pitch(step));
@@ -322,7 +342,7 @@ mod tests {
     #[test]
     fn a_cursor_position_is_always_one_the_reference_contains() {
         let reference = one_bar(&[Step::C, Step::D]);
-        let mut cursor = Cursor::at_the_beginning(&reference);
+        let mut cursor = Cursor::at_the_beginning(Arc::clone(&reference));
 
         while !cursor.has_reached_the_end() {
             assert!(cursor.expecting().is_some());
@@ -340,7 +360,7 @@ mod tests {
     #[test]
     fn the_cursor_reaches_the_end_when_every_note_has_been_played() {
         let reference = one_bar(&[Step::C, Step::D]);
-        let mut cursor = Cursor::at_the_beginning(&reference);
+        let mut cursor = Cursor::at_the_beginning(reference);
 
         assert!(!cursor.has_reached_the_end());
         cursor.observe(pitch(Step::C));
@@ -354,7 +374,7 @@ mod tests {
     #[test]
     fn playing_on_past_the_end_does_not_move_the_cursor() {
         let reference = one_bar(&[Step::C]);
-        let mut cursor = Cursor::at_the_beginning(&reference);
+        let mut cursor = Cursor::at_the_beginning(reference);
 
         cursor.observe(pitch(Step::C));
         let end = cursor.position();
@@ -370,7 +390,7 @@ mod tests {
     #[test]
     fn a_unison_written_twice_needs_only_one_key_press() {
         let reference = one_enharmonic_unison();
-        let mut cursor = Cursor::at_the_beginning(&reference);
+        let mut cursor = Cursor::at_the_beginning(reference);
 
         assert_eq!(cursor.observe(unison_pitch()), CursorMovement::Advanced);
     }
@@ -382,7 +402,7 @@ mod tests {
     #[test]
     fn the_cursor_knows_which_of_the_expected_notes_are_already_played() {
         let reference = one_chord(&[Step::C, Step::E, Step::G]);
-        let mut cursor = Cursor::at_the_beginning(&reference);
+        let mut cursor = Cursor::at_the_beginning(reference);
 
         assert!(!cursor.has_been_played(pitch(Step::C)));
 
@@ -398,7 +418,7 @@ mod tests {
     #[test]
     fn advancing_forgets_which_notes_satisfied_the_previous_position() {
         let reference = one_bar(&[Step::C, Step::D]);
-        let mut cursor = Cursor::at_the_beginning(&reference);
+        let mut cursor = Cursor::at_the_beginning(reference);
 
         cursor.observe(pitch(Step::C));
 
@@ -411,7 +431,7 @@ mod tests {
     #[test]
     fn the_cursor_knows_which_measure_it_is_in() {
         let reference = two_bars(&[Step::C], &[Step::D]);
-        let mut cursor = Cursor::at_the_beginning(&reference);
+        let mut cursor = Cursor::at_the_beginning(reference);
 
         assert_eq!(cursor.measure(), Some(MeasureNumber::FIRST));
 

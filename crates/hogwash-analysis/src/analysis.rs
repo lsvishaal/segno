@@ -1,5 +1,7 @@
 //! Analysis — the comparison itself (`003 §7.6`).
 
+use std::sync::Arc;
+
 use hogwash_capture::ObservedPerformance;
 use hogwash_domain::Location;
 use hogwash_notation::ReferencePerformance;
@@ -35,11 +37,18 @@ impl Analysis {
     /// alters what it examines"* is carried by the signature.
     #[must_use]
     pub fn of(observed: &ObservedPerformance, reference: &ReferencePerformance) -> Self {
-        let mut cursor = Cursor::at_the_beginning(reference);
+        // A Cursor holds a share of what it indexes into, so one is made here.
+        // The copy is deliberate: `004 §8.6` says an Analysis is given an
+        // Observed Performance and a Reference Performance, and taking an
+        // `Arc` instead would push the Cursor's storage choice out into every
+        // caller's signature. It happens once per Attempt, not once per note.
+        let mut cursor = Cursor::at_the_beginning(Arc::new(reference.clone()));
         let mut findings = Vec::new();
 
         for &played in observed.played() {
-            let Some(expected) = cursor.expecting() else {
+            // Copied out rather than borrowed: `expecting` borrows the whole
+            // Cursor, and `observe` below needs it mutably.
+            let Some(expected) = cursor.expecting().cloned() else {
                 // Nothing corresponds to it, so it is unexpected rather than
                 // incorrect, and it has no location (FR-403).
                 findings.push(Finding::Unexpected { played });

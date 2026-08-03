@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Ode to Joy — the theme from the fourth movement of Beethoven's Ninth
+  Symphony, arranged as a single-line melody for one hand.
+
+  PROVENANCE. Beethoven died in 1827; the music is in the public domain
+  worldwide. This MusicXML encoding was written by hand for Hogwash and is
+  released under the same licence as the rest of the project (Apache-2.0),
+  so nothing here depends on a third party's engraving, edition or typeset.
+
+  That is the point of hand-encoding it. C-200 requires every provided piece
+  to be verifiably redistributable, and a downloaded file — even of
+  public-domain music — carries whatever licence its *encoder* attached.
+  A file we wrote has no such question attached to it.
+-->
+<score-partwise version="3.1">
+  <work><work-title>Ode to Joy</work-title></work>
+  <identification>
+    <creator type="composer">Ludwig van Beethoven</creator>
+    <rights>Public domain. This encoding: Apache-2.0.</rights>
+  </identification>
+  <part-list>
+    <score-part id="P1"><part-name>Piano</part-name></score-part>
+  </part-list>
+  <part id="P1">
+    <measure number="1">
+      <attributes>
+        <divisions>1</divisions>
+        <key><fifths>0</fifths></key>
+        <time><beats>4</beats><beat-type>4</beat-type></time>
+        <clef><sign>G</sign><line>2</line></clef>
+      </attributes>
+      <note><pitch><step>E</step><octave>4</octave></pitch><duration>1</duration><type>quarter</type></note>
+      <note><pitch><step>E</step><octave>4</octave></pitch><duration>1</duration><type>quarter</type></note>
+      <note><pitch><step>F</step><octave>4</octave></pitch><duration>1</duration><type>quarter</type></note>
+      <note><pitch><step>G</step><octave>4</octave></pitch><duration>1</duration><type>quarter</type></note>
+    </measure>
+    <measure number="2">
+      <note><pitch><step>G</step><octave>4</octave></pitch><duration>1</duration><type>quarter</type></note>
+      <note><pitch><step>F</step><octave>4</octave></pitch><duration>1</duration><type>quarter</type></note>
+      <note><pitch><step>E</step><octave>4</octave></pitch><duration>1</duration><type>quarter</type></note>
+      <note><pitch><step>D</step><octave>4</octave></pitch><duration>1</duration><type>quarter</type></note>
+    </measure>
+    <measure number="3">
+      <note><pitch><step>C</step><octave>4</octave></pitch><duration>1</duration><type>quarter</type></note>
+      <note><pitch><step>C</step><octave>4</octave></pitch><duration>1</duration><type>quarter</type></note>
+      <note><pitch><step>D</step><octave>4</octave></pitch><duration>1</duration><type>quarter</type></note>
+      <note><pitch><step>E</step><octave>4</octave></pitch><duration>1</duration><type>quarter</type></note>
+    </measure>
+    <measure number="4">
+      <note><pitch><step>E</step><octave>4</octave></pitch><duration>2</duration><type>half</type><dot/></note>
+      <note><pitch><step>D</step><octave>4</octave></pitch><duration>1</duration><type>quarter</type></note>
+    </measure>
+    <measure number="5">
+      <note><pitch><step>D</step><octave>4</octave></pitch><duration>4</duration><type>whole</type></note>
+    </measure>
+  </part>
+</score-partwise>

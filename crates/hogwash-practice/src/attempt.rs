@@ -1,5 +1,7 @@
 //! An Attempt — one run at a Piece (`003 §7.3`).
 
+use std::sync::Arc;
+
 use hogwash_capture::ObservedPerformance;
 use hogwash_domain::Pitch;
 use hogwash_notation::ReferencePerformance;
@@ -16,18 +18,18 @@ use crate::cursor::{Cursor, CursorMovement};
 /// happens here is only the two things `004 §8.4` and `§8.5` describe: the
 /// note is recorded, and the Cursor is told about it.
 #[derive(Debug, Clone)]
-pub struct Attempt<'a> {
-    cursor: Cursor<'a>,
+pub struct Attempt {
+    cursor: Cursor,
     observed: ObservedPerformance,
 }
 
-impl<'a> Attempt<'a> {
+impl Attempt {
     /// Begins an Attempt at the Piece `reference` describes.
     ///
     /// `003 §7.3` Lifecycle — the Observed Performance begins empty and the
     /// Cursor rests on the first expected position.
     #[must_use]
-    pub fn begin(reference: &'a ReferencePerformance) -> Self {
+    pub fn begin(reference: Arc<ReferencePerformance>) -> Self {
         Self {
             cursor: Cursor::at_the_beginning(reference),
             observed: ObservedPerformance::new(),
@@ -49,7 +51,7 @@ impl<'a> Attempt<'a> {
 
     /// Where the performer is expected to be.
     #[must_use]
-    pub const fn cursor(&self) -> &Cursor<'a> {
+    pub const fn cursor(&self) -> &Cursor {
         &self.cursor
     }
 
@@ -127,7 +129,7 @@ mod tests {
     #[test]
     fn an_attempt_begins_with_nothing_played_and_the_cursor_at_the_start() {
         let reference = one_bar(&[Step::C, Step::D]);
-        let attempt = Attempt::begin(&reference);
+        let attempt = Attempt::begin(reference);
 
         assert!(attempt.observed().is_empty());
         assert_eq!(attempt.cursor().position(), 0);
@@ -140,7 +142,7 @@ mod tests {
     #[test]
     fn every_played_note_is_recorded_including_unexpected_ones() {
         let reference = one_bar(&[Step::C]);
-        let mut attempt = Attempt::begin(&reference);
+        let mut attempt = Attempt::begin(reference);
 
         attempt.play(unexpected());
         attempt.play(pitch(Step::C));
@@ -151,7 +153,7 @@ mod tests {
     #[test]
     fn playing_the_expected_note_advances_the_attempts_cursor() {
         let reference = one_bar(&[Step::C, Step::D]);
-        let mut attempt = Attempt::begin(&reference);
+        let mut attempt = Attempt::begin(reference);
 
         assert_eq!(attempt.play(pitch(Step::C)), CursorMovement::Advanced);
 
@@ -164,7 +166,7 @@ mod tests {
     #[test]
     fn an_attempt_may_end_before_the_end_of_the_piece() {
         let reference = one_bar(&[Step::C, Step::D, Step::E]);
-        let mut attempt = Attempt::begin(&reference);
+        let mut attempt = Attempt::begin(reference);
 
         attempt.play(pitch(Step::C));
         let ended = attempt.end();
@@ -176,7 +178,7 @@ mod tests {
     #[test]
     fn an_attempt_that_reaches_the_end_says_so() {
         let reference = one_bar(&[Step::C]);
-        let mut attempt = Attempt::begin(&reference);
+        let mut attempt = Attempt::begin(reference);
 
         attempt.play(pitch(Step::C));
 
@@ -189,7 +191,7 @@ mod tests {
     fn an_attempt_in_which_nothing_was_played_is_still_an_attempt() {
         let reference = one_bar(&[Step::C]);
 
-        let ended = Attempt::begin(&reference).end();
+        let ended = Attempt::begin(reference).end();
 
         assert!(ended.observed().is_empty());
         assert_eq!(ended.reached(), 0);
@@ -202,7 +204,7 @@ mod tests {
     #[test]
     fn an_ended_attempt_keeps_what_was_played() {
         let reference = one_bar(&[Step::C, Step::D]);
-        let mut attempt = Attempt::begin(&reference);
+        let mut attempt = Attempt::begin(reference);
 
         attempt.play(pitch(Step::C));
         attempt.play(unexpected());
