@@ -3,6 +3,13 @@
 version = 4
 
 [[package]]
+name = "hogwash-capture"
+version = "0.0.0"
+dependencies = [
+ "hogwash-domain",
+]
+
+[[package]]
 name = "hogwash-domain"
 version = "0.0.0"
 
@@ -11,4 +18,13 @@ name = "hogwash-notation"
 version = "0.0.0"
 dependencies = [
  "hogwash-domain",
+]
+
+[[package]]
+name = "hogwash-practice"
+version = "0.0.0"
+dependencies = [
+ "hogwash-capture",
+ "hogwash-domain",
+ "hogwash-notation",
 ]

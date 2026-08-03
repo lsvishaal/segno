@@ -13,10 +13,17 @@
 #      crate, not on anything from crates.io. It is shared vocabulary
 #      (003 §7) and nothing else.
 #
-#   2. The pure crates — notation, practice, analysis, feedback — depend on
-#      no I/O, filesystem, MIDI, GUI, rendering or async crate. These are the
-#      components 004 §12 relies on for correctness and determinism, and they
-#      must stay testable with no device and no window attached.
+#   2. The pure crates — notation, capture, practice, analysis, feedback —
+#      depend on no I/O, filesystem, MIDI, GUI, rendering or async crate.
+#      These are the components 004 §12 relies on for correctness and
+#      determinism, and they must stay testable with no device and no window
+#      attached.
+#
+#      hogwash-capture is on that list despite owning a concept fed by live
+#      MIDI (004 §8.5). The concept is not the hardware: Observed Performance
+#      is a record of sounding pitches, and the instrument belongs behind a
+#      port in a separate adapter crate. Without that split, every test of
+#      practice, analysis and feedback would need a keyboard attached.
 #
 # Crates that do not exist yet are skipped, so this is useful from the first
 # commit rather than only once the workspace is complete.
@@ -28,6 +35,7 @@ cd "$(dirname "$0")/.."
 # Crates that must remain free of the world outside the domain.
 PURE_CRATES=(
     hogwash-notation
+    hogwash-capture
     hogwash-practice
     hogwash-analysis
     hogwash-feedback
