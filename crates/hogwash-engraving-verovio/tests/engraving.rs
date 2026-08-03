@@ -39,6 +39,37 @@ use hogwash_engraving_verovio::VerovioEngraver;
 
 const TWO_BARS: &[u8] = include_bytes!("fixtures/two-bars.musicxml");
 
+/// The two-bar fixture, repeated until it is longer than a sheet of paper.
+///
+/// Built here rather than checked in: the point is only "longer than a page",
+/// and a fixture file would fix a length that has no meaning of its own.
+///
+/// 200 copies — 400 bars — because these are four-note bars that pack several
+/// to a system. Sixty bars came to 2684px against A4's 2970, which is to say
+/// they still fitted, and a test that cannot tell the two layouts apart is
+/// not testing the layout.
+fn many_bars() -> String {
+    let source = std::str::from_utf8(TWO_BARS).expect("the fixture is text");
+    let (head, rest) = source.split_once("<measure").expect("the fixture has bars");
+    let (bars, tail) = rest
+        .rsplit_once("</measure>")
+        .expect("the fixture has bars");
+    let bars = format!("<measure{bars}</measure>");
+
+    let mut repeated = String::from(head);
+    for copy in 0..200 {
+        // Bar numbers must ascend across the whole score, so each copy is
+        // renumbered rather than repeated verbatim.
+        repeated.push_str(
+            &bars
+                .replace("number=\"1\"", &format!("number=\"{}\"", copy * 2 + 1))
+                .replace("number=\"2\"", &format!("number=\"{}\"", copy * 2 + 2)),
+        );
+    }
+    repeated.push_str(tail);
+    repeated
+}
+
 fn engraver() -> VerovioEngraver {
     VerovioEngraver::from_environment()
         .expect("set HOGWASH_VEROVIO_LIB and HOGWASH_VEROVIO_DATA, or run `just engraving-test`")
@@ -168,5 +199,67 @@ fn a_file_that_is_not_music_is_refused() {
     assert!(
         matches!(refused, Err(EngravingFailure::Unreadable { .. })),
         "expected a readable refusal, got {refused:?}"
+    );
+}
+
+/// The pixel height a rendered page declares.
+fn height_of(svg: &str) -> u32 {
+    svg.split_once("height=\"")
+        .and_then(|(_, rest)| rest.split_once("px\""))
+        .and_then(|(number, _)| number.parse::<u32>().ok())
+        .expect("a page states a height in pixels")
+}
+
+// ADR-0011 / MVP §6.4 — a practice score is scrolled, not turned, so a short
+// exercise should come back as a short strip rather than a mostly-empty sheet
+// of A4, which at this scale is a little over 3200px.
+//
+// Removing `adjustPageHeight` makes this fail, which was checked rather than
+// assumed.
+#[test]
+#[ignore = "needs a real libverovio; run `just engraving-test`"]
+fn a_short_piece_is_a_short_page_rather_than_a_mostly_empty_sheet() {
+    let engraved = engraved();
+    let height = height_of(&engraved.pages()[0]);
+
+    assert_eq!(engraved.pages().len(), 1);
+    assert!(
+        height < 1500,
+        "two bars should not occupy a sheet of paper: {height}px"
+    );
+}
+
+// The other half, and the one that stops the first being achieved by simply
+// cutting the music off: a long score keeps **every** position placed, across
+// however many pages it takes.
+//
+// Pages are real, and that is the correction this test records.
+// `adjustPageHeight` trims a page to its content; it does not abolish
+// pagination. A 400-bar score comes back as six pages, so the view stacks
+// pages rather than assuming one — asking instead for a single enormous page
+// would only have traded a seam for an enormous texture.
+#[test]
+#[ignore = "needs a real libverovio; run `just engraving-test`"]
+fn a_long_score_keeps_every_position_placed_across_its_pages() {
+    let engraved = engraver()
+        .engrave(many_bars().as_bytes())
+        .expect("the longer piece engraves");
+
+    let positions: usize = engraved
+        .score()
+        .measures()
+        .iter()
+        .map(|measure| measure.positions().len())
+        .sum();
+
+    assert!(
+        engraved.pages().len() > 1,
+        "the fixture is meant to need several pages"
+    );
+    assert_eq!(engraved.placements().count(), positions);
+    assert!(
+        engraved
+            .placements()
+            .all(|(_, placement)| placement.page().get() < engraved.pages().len())
     );
 }

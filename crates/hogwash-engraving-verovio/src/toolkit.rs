@@ -3,7 +3,7 @@
 //! Verovio exposes 60 plain `extern "C"` functions over an opaque handle
 //! (`tools/c_wrapper.h`). No C++ ABI crosses the boundary, so no `bindgen`
 //! and no `cxx` — the integration really is a declaration list, which `S0`
-//! Q1 measured. Nine of the sixty are used.
+//! Q1 measured. Ten of the sixty are used.
 //!
 //! # Why the library is opened at run time
 //!
@@ -58,6 +58,7 @@ type Destructor = unsafe extern "C" fn(*mut c_void);
 type LoadData = unsafe extern "C" fn(*mut c_void, *const c_char) -> bool;
 type LoadZipBuffer = unsafe extern "C" fn(*mut c_void, *const u8, c_int) -> bool;
 type ResetSeed = unsafe extern "C" fn(*mut c_void, c_int);
+type SetOptions = unsafe extern "C" fn(*mut c_void, *const c_char) -> bool;
 type GetString = unsafe extern "C" fn(*mut c_void) -> *const c_char;
 type GetStringWithOptions = unsafe extern "C" fn(*mut c_void, *const c_char) -> *const c_char;
 type GetPageCount = unsafe extern "C" fn(*mut c_void) -> c_int;
@@ -74,6 +75,7 @@ struct Functions {
     load_data: LoadData,
     load_zip_buffer: LoadZipBuffer,
     reset_xml_id_seed: ResetSeed,
+    set_options: SetOptions,
     get_mei: GetStringWithOptions,
     get_log: GetString,
     get_page_count: GetPageCount,
@@ -142,6 +144,7 @@ impl Toolkit {
                     b"vrvToolkit_loadZipDataBuffer",
                 )?,
                 reset_xml_id_seed: *resolve::<ResetSeed>(&handle, b"vrvToolkit_resetXmlIdSeed")?,
+                set_options: *resolve::<SetOptions>(&handle, b"vrvToolkit_setOptions")?,
                 get_mei: *resolve::<GetStringWithOptions>(&handle, b"vrvToolkit_getMEI")?,
                 get_log: *resolve::<GetString>(&handle, b"vrvToolkit_getLog")?,
                 get_page_count: *resolve::<GetPageCount>(&handle, b"vrvToolkit_getPageCount")?,
@@ -223,6 +226,24 @@ impl Toolkit {
             unsafe { (self.functions.load_zip_buffer)(self.handle.0, source.as_ptr(), length) };
 
         if loaded {
+            Ok(())
+        } else {
+            Err(ToolkitError::Refused(self.log()))
+        }
+    }
+
+    /// Applies Verovio options, given as JSON.
+    ///
+    /// Must be called **before** loading: the options that matter here change
+    /// how the music is laid out, and layout happens during parsing.
+    pub(crate) fn set_options(&mut self, options: &str) -> Result<(), ToolkitError> {
+        let json = text_in(options)?;
+
+        // SAFETY (facts 1, 2 and 3): `json` outlives the call.
+        #[expect(unsafe_code, reason = "resolved signature, own handle, live string")]
+        let accepted = unsafe { (self.functions.set_options)(self.handle.0, json.as_ptr()) };
+
+        if accepted {
             Ok(())
         } else {
             Err(ToolkitError::Refused(self.log()))

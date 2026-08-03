@@ -13,5 +13,5 @@ mod mei;
 mod timemap;
 mod translate;
 
-pub use engraver::VerovioEngraver;
+pub use engraver::{Layout, VerovioEngraver};
 mod toolkit;
