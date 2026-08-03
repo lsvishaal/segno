@@ -1,0 +1,28 @@
+@import "tailwindcss";
+
+/* The editorial palette. Warm off-white, ink rather than pure black, and one
+   accent that the cursor owns — everything else is greyscale so the score and
+   the highlights are the only colour on the page. */
+@theme {
+  --color-paper: #faf9f6;
+  --color-paper-raised: #ffffff;
+  --color-ink: #1c1a17;
+  --color-ink-muted: #6b6660;
+  --color-rule: #e4e0d8;
+
+  --color-accent: #b4551f;
+
+  --font-serif: "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, serif;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  background: var(--color-paper);
+  color: var(--color-ink);
+  -webkit-font-smoothing: antialiased;
+}

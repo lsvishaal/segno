@@ -1,6 +1,10 @@
 [workspace]
 resolver = "3"
-members = ["crates/*"]
+# `crates/*` are libraries; the application lives in `app/`, alongside the
+# frontend it serves. Tauri's own convention puts the Rust half in
+# `src-tauri/`, and following it keeps every Tauri example and generator
+# applicable to this repository.
+members = ["crates/*", "app/src-tauri"]
 
 [workspace.package]
 edition = "2024"

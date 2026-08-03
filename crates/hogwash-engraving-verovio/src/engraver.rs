@@ -63,7 +63,7 @@ impl Layout {
     /// surface where the application already says what the piece is.
     fn as_options(self) -> String {
         format!(
-            r#"{{"pageWidth":{},"scale":{},"adjustPageHeight":true,"breaks":"auto","header":"none","footer":"none"}}"#,
+            r#"{{"pageWidth":{},"scale":{},"adjustPageHeight":true,"breaks":"auto","header":"none","footer":"none","svgViewBox":true}}"#,
             self.width, self.scale
         )
     }

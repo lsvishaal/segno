@@ -156,9 +156,19 @@ done
 # `unsafe` at all without first opting out here, so this is the doorway.
 EXPECTED_EXCEPTION="hogwash-engraving-verovio"
 
+# `app/src-tauri` is included explicitly. It is a workspace member like any
+# other, and it is where an `unsafe` block would be least surprising and most
+# dangerous — the application shell is the one crate touching a window system.
+# Globbing only `crates/*` would have quietly stopped covering it the day the
+# interface moved out of that directory (ADR-0012).
 exceptions=()
-for manifest in crates/*/Cargo.toml; do
-    crate=$(basename "$(dirname "$manifest")")
+for manifest in crates/*/Cargo.toml app/src-tauri/Cargo.toml; do
+    [ -f "$manifest" ] || continue
+
+    # From the manifest, not the directory: `app/src-tauri` holds a crate
+    # called `hogwash-app`, and a violation message naming the folder would
+    # send someone looking for a crate that does not exist.
+    crate=$(awk -F'"' '/^name *= *"/ { print $2; exit }' "$manifest")
 
     # `[lints]` followed by `workspace = true` is the inheriting form.
     # Anything else — including no [lints] section at all — is opting out.

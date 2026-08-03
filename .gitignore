@@ -10,6 +10,18 @@
 # It is deliberately not tracked here — see the plan and 004 §15.
 /docs
 
+# The frontend's dependencies and build output. `package-lock.json` IS
+# committed — it is the only record of exactly which JavaScript went into a
+# build, and the Rust half has `Cargo.lock` for the same reason.
+/app/node_modules
+/app/dist
+
+# Tauri regenerates these JSON schemas from the plugin set on every build.
+# They are derived, not authored; `capabilities/` beside them is authored and
+# IS committed, because it is where the application's permissions are stated.
+/app/src-tauri/gen/schemas
+/app/src-tauri/target
+
 # OS
 .DS_Store
 Thumbs.db

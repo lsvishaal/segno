@@ -10,42 +10,38 @@
 all-features = true
 
 [licenses]
-# Permissive, plus one file-level copyleft licence admitted deliberately.
+# Permissive only.
 #
 # This list was expected to need amending for Verovio's LGPL-3.0. It did not:
 # ADR-0005 loads Verovio at run time, so it never enters the Cargo graph and
 # cargo-deny cannot see it at all. That gap is covered by
 # scripts/check-native-licences.sh and THIRD_PARTY.md instead — see ADR-0007.
 #
-# MPL-2.0 is here for a different reason, and was added when this gate
-# rejected `resvg`/`usvg` on the day the score first needed drawing
-# (ADR-0011). It is accepted rather than worked around because:
+# It briefly carried MPL-2.0 and two font licences, admitted for `resvg`,
+# `usvg` and egui's bundled typefaces. ADR-0012 replaced that interface with a
+# webview, so none of those crates is in the graph any more and the
+# exemptions were removed rather than left behind. An allow-list that outlives
+# its reasons stops being a record of decisions and becomes a list of things
+# nobody dares delete.
 #
-#   - It is copyleft **per file**, not per program. Using the crates imposes
-#     nothing on Hogwash's own code; only modifications to their files would
-#     have to be published under MPL-2.0, and we make none.
-#   - The source of those files is on crates.io, which discharges the
-#     availability obligation.
+# MPL-2.0 is here again after that reset, which is the point of re-deriving
+# rather than inheriting: the crates and the reason both changed. It now
+# covers `cssparser`, `cssparser-macros`, `dtoa-short` and `option-ext`,
+# reached through `wry`'s webview bindings and through `dirs`.
+#
+# It is accepted because it is copyleft **per file**, not per program. Using
+# the crates imposes nothing on Hogwash's own code; only modifications to
+# their files would have to be published under MPL-2.0, and we make none.
+# Their source is on crates.io, which discharges the availability obligation.
 #
 # The distinction that matters: MPL-2.0 restricts what we may do to *their*
-# files, and GPL-family licences would restrict what we may do to *ours*.
-# Adding a GPL crate here would be a different act entirely, and the canary in
-# scripts/verify-licence-gate.sh exists to prove this list still refuses one.
+# files; a GPL-family licence would restrict what we may do to *ours*.
 #
-# OFL-1.1 and UFL-1.0 are font licences, and cover the typefaces the user
-# interface draws its text with (`epaint_default_fonts`). Both permit
-# bundling and redistribution outright; what they restrict is selling the
-# fonts on their own and shipping a modified font under its original name,
-# neither of which is anywhere near what this project does.
-#
-# They are worth distinguishing from the licences above: these cover *assets*
-# that ship inside the binary, not code that is linked. That is a smaller
-# obligation, not a larger one — but it is a different kind, and a list that
-# blurred the two would be less useful for the next person reading it.
+# Anything added here is added deliberately, with the reason written down. The
+# canary in scripts/verify-licence-gate.sh exists to prove the list still
+# refuses a GPL-family crate.
 allow = [
     "MPL-2.0",
-    "OFL-1.1",
-    "LicenseRef-UFL-1.0",
     "MIT",
     "MIT-0",
     "Apache-2.0",
@@ -82,32 +78,58 @@ allow-wildcard-paths = true
 [advisories]
 yanked = "deny"
 
-# Two advisories are accepted, both `unmaintained` rather than a
-# vulnerability: no defect is known in either crate, their authors have simply
-# said they will not maintain them further.
+# Nothing is ignored.
 #
-# They arrived with the score view (ADR-0011). `ttf-parser` and `rustybuzz`
-# are the font-parsing and text-shaping layer beneath *both* egui and resvg,
-# and beneath most of the Rust 2D-graphics ecosystem — so this is not a
-# dependency chosen carelessly, it is one that any way of drawing a score in
-# Rust arrives at.
+# Two `unmaintained` advisories were accepted here for `ttf-parser` and
+# `rustybuzz`, the text-shaping layer beneath egui and resvg. ADR-0012 moved
+# the interface to a webview, which draws its own text, so neither crate is in
+# the graph and both exemptions were removed with the reason that justified
+# them.
 #
-# The exposure is worth being precise about rather than waving away. Font
-# parsing is a classic attack surface, but the fonts here are the ones this
-# project ships, not anything a performer supplies. What *is* attacker-shaped
-# is the SVG: it comes from Verovio, which comes from a MusicXML file the
-# performer chose, so a hostile score could in principle reach `usvg` through
-# a chain that ends at these crates. Against that: NFR-400 and C-300 make
-# Hogwash entirely offline, so a hostile file has to be deliberately obtained
-# and opened, and there is nothing for it to exfiltrate to.
+# An `ignore` entry is a decision to run with a known problem, and it should
+# have to be re-argued rather than inherited. So these were re-argued.
 #
-# Reviewed if any of these change: a *vulnerability* advisory appears against
-# either crate; a maintained replacement is adopted by egui or resvg; or
-# Hogwash gains any network capability, which would change the calculation
-# above entirely.
+# Sixteen advisories, and **every one is `unmaintained`** — not a single
+# vulnerability among them. They are the GTK3 bindings Tauri uses for its
+# Linux window (`gtk`, `gdk`, `atk`, `glib-sys` and friends), plus
+# `proc-macro-error` and the `unic-*` Unicode tables reached through them.
+#
+# Why they are accepted rather than avoided: they are not a dependency anyone
+# chose, they are what Tauri v2 is built on for Linux. Removing them means
+# removing Tauri. The upstream direction of travel is GTK4, and Tauri will
+# arrive there on its own schedule.
+#
+# What the exposure actually is, rather than a wave: these crates parse and
+# draw the *application's own window furniture*, not anything a performer
+# supplies. What is attacker-shaped is a MusicXML file, and that reaches
+# Verovio and then the webview's SVG parser — neither of which is on this
+# list. Against even that: NFR-400 and C-300 make Hogwash entirely offline, so
+# a hostile file must be deliberately obtained and opened, and there is
+# nothing for it to exfiltrate to.
+#
+# Reviewed if: any of these turns into a *vulnerability* advisory; Tauri moves
+# to GTK4 and they leave the graph; or Hogwash gains any network capability,
+# which would change the reasoning above entirely.
 ignore = [
-    { id = "RUSTSEC-2026-0192", reason = "ttf-parser unmaintained, no known defect; ships our own fonts only" },
-    { id = "RUSTSEC-2026-0206", reason = "rustybuzz unmaintained, no known defect; text shaping beneath egui and resvg alike" },
+    # GTK3 bindings, beneath Tauri's Linux window.
+    { id = "RUSTSEC-2024-0411", reason = "gtk-rs GTK3 binding, unmaintained; Tauri v2's Linux backend" },
+    { id = "RUSTSEC-2024-0412", reason = "gtk-rs GTK3 binding, unmaintained; Tauri v2's Linux backend" },
+    { id = "RUSTSEC-2024-0413", reason = "gtk-rs GTK3 binding, unmaintained; Tauri v2's Linux backend" },
+    { id = "RUSTSEC-2024-0414", reason = "gtk-rs GTK3 binding, unmaintained; Tauri v2's Linux backend" },
+    { id = "RUSTSEC-2024-0415", reason = "gtk-rs GTK3 binding, unmaintained; Tauri v2's Linux backend" },
+    { id = "RUSTSEC-2024-0416", reason = "gtk-rs GTK3 binding, unmaintained; Tauri v2's Linux backend" },
+    { id = "RUSTSEC-2024-0417", reason = "gtk-rs GTK3 binding, unmaintained; Tauri v2's Linux backend" },
+    { id = "RUSTSEC-2024-0418", reason = "gtk-rs GTK3 binding, unmaintained; Tauri v2's Linux backend" },
+    { id = "RUSTSEC-2024-0419", reason = "gtk-rs GTK3 binding, unmaintained; Tauri v2's Linux backend" },
+    { id = "RUSTSEC-2024-0420", reason = "gtk-rs GTK3 binding, unmaintained; Tauri v2's Linux backend" },
+
+    # Reached through those bindings and through Tauri's macros.
+    { id = "RUSTSEC-2024-0370", reason = "proc-macro-error unmaintained, no known defect; build-time only" },
+    { id = "RUSTSEC-2025-0075", reason = "unic-char-range unmaintained, no known defect; Unicode tables" },
+    { id = "RUSTSEC-2025-0080", reason = "unic-* unmaintained, no known defect; Unicode tables" },
+    { id = "RUSTSEC-2025-0081", reason = "unic-char-property unmaintained, no known defect; Unicode tables" },
+    { id = "RUSTSEC-2025-0098", reason = "unic-* unmaintained, no known defect; Unicode tables" },
+    { id = "RUSTSEC-2025-0100", reason = "unic-* unmaintained, no known defect; Unicode tables" },
 ]
 
 [sources]
