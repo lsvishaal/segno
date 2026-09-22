@@ -13,8 +13,12 @@ use std::path::PathBuf;
 
 use hogwash_app_lib::commands::accept_offered;
 
+/// A fresh directory for one test. Emptied first: imported files are kept
+/// read-only, so a previous run's copy would refuse to be written again.
 fn temporary(name: &str) -> PathBuf {
-    std::env::temp_dir().join(format!("hogwash-import-test-{name}"))
+    let path = std::env::temp_dir().join(format!("hogwash-import-test-{name}"));
+    let _ = std::fs::remove_dir_all(&path);
+    path
 }
 
 fn hogwash(root: &std::path::Path) -> hogwash_app_lib::state::Hogwash {
