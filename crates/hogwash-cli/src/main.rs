@@ -1,26 +1,22 @@
-//! Determinism harness. **Not a product surface.**
+//! Two jobs, both for developers rather than performers.
 //!
-//! `FR-406`, `NFR-300` and `NFR-301` require identical results across
-//! separate executions, and `MVP §9.2` makes that release-blocking. A test
-//! inside one process cannot demonstrate it: the failure this guards against
-//! — a hash-ordered container, a pointer address, an uninitialised read —
-//! shows up precisely *between* runs. So `just determinism` runs this binary
-//! twice and diffs the bytes.
-//!
-//! It reads **no file format**, deliberately. How practice material and
-//! records are stored is an unmade decision (`004 §15`), and inventing a
-//! format in order to test determinism would be exactly the speculative work
-//! this project avoids. The score is built in code; the performance arrives
-//! as MIDI note numbers on the command line.
-//!
-//! The formatting lives here rather than on `Analysis`, because `003 §7.6`
-//! says an Analysis "does not present anything; Feedback does". This is a
-//! raw dump for a diff, not the human-readable output FR-500 asks for.
+//! **Determinism harness** (no subcommand). The same performance must give
+//! byte-identical analysis across separate processes, and a test inside one
+//! process cannot show that: a hash-ordered container or a pointer address
+//! only shows up *between* runs. So `just determinism` runs this twice and
+//! diffs the bytes. The score is built in code and the performance arrives as
+//! MIDI note numbers:
 //!
 //! ```text
 //! hogwash-cli 60 62 64 65 67
 //! ```
+//!
+//! **Replay** (`replay`, `expected`): a real `MusicXML` file through the real
+//! practice and analysis path, with no keyboard. See [`replay`].
 
+mod replay;
+
+use std::path::Path;
 use std::process::ExitCode;
 
 use hogwash_analysis::{Analysis, Finding, Summary};
@@ -29,14 +25,41 @@ use hogwash_domain::{MeasureNumber, Pitch, PitchSpelling, Step};
 use hogwash_feedback::Feedback;
 use hogwash_notation::{Measure, Note, Position, ReferencePerformance, Score};
 
+const USAGE: &str = "replay <score.musicxml> <events.json> | expected <score.musicxml>";
+
 fn main() -> ExitCode {
     let arguments: Vec<String> = std::env::args().skip(1).collect();
+
+    let replayed = match arguments.as_slice() {
+        [command, score, events] if command == "replay" => {
+            Some(replay::replay(Path::new(score), Path::new(events)))
+        }
+        [command, score] if command == "expected" => Some(replay::expected(Path::new(score))),
+        [command, ..] if command == "replay" || command == "expected" => {
+            Some(Err(format!("usage: hogwash-cli {USAGE}")))
+        }
+        _ => None,
+    };
+
+    if let Some(result) = replayed {
+        return match result {
+            Ok(output) => {
+                print!("{output}");
+                ExitCode::SUCCESS
+            }
+            Err(complaint) => {
+                eprintln!("hogwash-cli: {complaint}");
+                ExitCode::from(2)
+            }
+        };
+    }
 
     let observed = match performance_from(&arguments) {
         Ok(observed) => observed,
         Err(complaint) => {
             eprintln!("hogwash-cli: {complaint}");
             eprintln!("usage: hogwash-cli <midi-note-number>...");
+            eprintln!("       hogwash-cli {USAGE}");
             return ExitCode::from(2);
         }
     };
@@ -48,7 +71,11 @@ fn main() -> ExitCode {
 
     print!(
         "{}",
-        report(&Analysis::of(&observed, &reference), &reference)
+        report(
+            &Analysis::of(&observed, &reference),
+            &reference,
+            "built-in exercise"
+        )
     );
 
     ExitCode::SUCCESS
@@ -109,9 +136,9 @@ fn exercise() -> Option<ReferencePerformance> {
 ///
 /// Every line is derived from the ordered findings, so the output is fixed by
 /// the inputs alone — which is the property under test.
-fn report(analysis: &Analysis, reference: &ReferencePerformance) -> String {
+fn report(analysis: &Analysis, reference: &ReferencePerformance, piece: &str) -> String {
     let mut lines = vec![
-        "piece: built-in exercise".to_owned(),
+        format!("piece: {piece}"),
         format!("expected positions: {}", reference.len()),
         String::new(),
         "findings:".to_owned(),

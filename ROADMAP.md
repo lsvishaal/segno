@@ -7,7 +7,7 @@ struggle with and helps you fix them.
 
 - [x] 0.1 Cleanup: drop the no-advice rule and its test, delete STATUS.md,
       reset this roadmap, trim the README
-- [ ] 0.2 `hogwash-cli replay`: run a MusicXML file and a JSON file of played
+- [x] 0.2 `hogwash-cli replay`: run a MusicXML file and a JSON file of played
       notes through the real practice + analysis path, step by step
 - [ ] 0.3 Real-music verification on Prelude in C and Minuet in G: grand
       staff, ties, repeats, grace notes and ornaments; bundle both pieces

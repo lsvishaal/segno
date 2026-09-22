@@ -52,7 +52,7 @@ picks up a dependency on the outside world.
 | `hogwash-acquisition` | Turns an offered file into a playable piece, or explains why not. |
 | `hogwash-midi` | The MIDI keyboard, plus MIDI Thru to a synth or hardware output. |
 | `hogwash-records` | Practice history on disk, one file per session, written atomically. |
-| `hogwash-cli` | Determinism harness. |
+| `hogwash-cli` | Determinism harness, and `replay`: a MusicXML file plus a JSON file of played notes, run through the real practice path without a keyboard (`just replay <score> <events>`). |
 | `hogwash-app` (`app/src-tauri`) | The Tauri shell: commands over the Rust core. |
 
 The interface (`app/`) is React 19, TypeScript, Vite, Tailwind v4 and Motion

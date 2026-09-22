@@ -153,3 +153,15 @@ provided-test: _require-verovio
 engraving-determinism: _require-verovio
     HOGWASH_VEROVIO_LIB="{{verovio_lib}}" HOGWASH_VEROVIO_DATA="{{verovio_data}}" \
         ./scripts/check-engraving-determinism.sh
+
+# runs a MusicXML file and a JSON file of played notes through practice + analysis, step by step
+[group('verovio')]
+replay score events: _require-verovio
+    @HOGWASH_VEROVIO_LIB="{{verovio_lib}}" HOGWASH_VEROVIO_DATA="{{verovio_data}}" \
+        cargo run --quiet --package hogwash-cli -- replay "{{score}}" "{{events}}"
+
+# prints what the cursor will require for a MusicXML file, as a replayable (perfect) events file
+[group('verovio')]
+expected score: _require-verovio
+    @HOGWASH_VEROVIO_LIB="{{verovio_lib}}" HOGWASH_VEROVIO_DATA="{{verovio_data}}" \
+        cargo run --quiet --package hogwash-cli -- expected "{{score}}"
