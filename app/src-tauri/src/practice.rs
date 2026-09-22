@@ -525,8 +525,16 @@ fn drain(active: &mut Ongoing, sink: &Sink) {
             .expecting()
             .is_some_and(|expected| expected.sounding().any(|note| note == pitch));
 
+        // A grace note or part of an ornament: recorded like every note,
+        // but neither correct nor wrong, so nothing is marked on the score.
+        let tolerated = active.attempt.cursor().tolerates(pitch);
+
         let position = active.attempt.cursor().position();
         let movement = active.attempt.play(pitch);
+
+        if tolerated {
+            continue;
+        }
 
         emit(
             sink,

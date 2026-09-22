@@ -19,6 +19,9 @@ use crate::{Note, Score};
 pub struct ExpectedNotes {
     measure: MeasureNumber,
     notes: Vec<Note>,
+    /// Pitches that are neither required nor wrong here. Never one of the
+    /// required pitches.
+    tolerated: Vec<Pitch>,
 }
 
 impl ExpectedNotes {
@@ -32,7 +35,11 @@ impl ExpectedNotes {
         if notes.is_empty() {
             None
         } else {
-            Some(Self { measure, notes })
+            Some(Self {
+                measure,
+                notes,
+                tolerated: Vec::new(),
+            })
         }
     }
 
@@ -54,6 +61,13 @@ impl ExpectedNotes {
     /// key has no spelling.
     pub fn sounding(&self) -> impl Iterator<Item = Pitch> + '_ {
         self.notes.iter().map(|note| note.sounding())
+    }
+
+    /// Whether `pitch`, played here, is tolerated: a grace note or part of an
+    /// ornament. It does not advance the cursor, and it is not a mistake.
+    #[must_use]
+    pub fn tolerates(&self, pitch: Pitch) -> bool {
+        self.tolerated.binary_search(&pitch).is_ok()
     }
 }
 
@@ -77,6 +91,9 @@ impl ExpectedNotes {
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct ReferencePerformance {
     steps: Vec<ExpectedNotes>,
+    /// What the last step tolerates at "the next step", which is past the
+    /// end: the tail of a trill on the final note.
+    after_the_end: Vec<Pitch>,
 }
 
 impl ReferencePerformance {
@@ -87,17 +104,44 @@ impl ReferencePerformance {
     /// note could advance it past, and practice would hang.
     #[must_use]
     pub fn derived_from(score: &Score) -> Self {
-        let steps = score
-            .performance()
-            .into_iter()
-            .flat_map(|measure| {
-                measure.positions().iter().filter_map(move |position| {
-                    ExpectedNotes::new(measure.number(), position.notes().to_vec())
-                })
-            })
-            .collect();
+        let mut steps: Vec<ExpectedNotes> = Vec::new();
+        // What the previous step tolerates at the next one.
+        let mut carried: Vec<Pitch> = Vec::new();
 
-        Self { steps }
+        for measure in score.performance() {
+            for position in measure.positions() {
+                let Some(mut step) =
+                    ExpectedNotes::new(measure.number(), position.notes().to_vec())
+                else {
+                    continue;
+                };
+
+                let mut tolerated: Vec<Pitch> = carried
+                    .iter()
+                    .chain(position.tolerated())
+                    .copied()
+                    .filter(|pitch| !step.sounding().any(|required| required == *pitch))
+                    .collect();
+                tolerated.sort_unstable();
+                tolerated.dedup();
+                step.tolerated = tolerated;
+
+                carried = position.tolerated().to_vec();
+                steps.push(step);
+            }
+        }
+
+        Self {
+            steps,
+            after_the_end: carried,
+        }
+    }
+
+    /// Whether `pitch`, played after the last step, is the tail of something
+    /// the last step tolerated rather than an unexpected note.
+    #[must_use]
+    pub fn tolerates_after_the_end(&self, pitch: Pitch) -> bool {
+        self.after_the_end.contains(&pitch)
     }
 
     /// How many steps the performer is expected to play.
@@ -252,6 +296,68 @@ mod tests {
             steps_of(&reference),
             vec![Step::C, Step::D, Step::C, Step::D, Step::E]
         );
+    }
+
+    fn pitch(number: u8) -> hogwash_domain::Pitch {
+        hogwash_domain::Pitch::new(number).unwrap()
+    }
+
+    // A grace note or an ornament's neighbours are tolerated at their own
+    // step and the next one -- no further, and never in place of a
+    // required note.
+    #[test]
+    fn tolerated_pitches_reach_their_step_and_the_next_one_only() {
+        let c = Position::new(vec![note(Step::C, 4)]).unwrap().tolerating([
+            pitch(61),
+            pitch(62),
+            pitch(60),
+        ]);
+        let score = score_of(vec![Measure::new(
+            MeasureNumber::FIRST,
+            vec![
+                c,
+                Position::new(vec![note(Step::D, 4)]).unwrap(),
+                Position::new(vec![note(Step::E, 4)]).unwrap(),
+            ],
+        )]);
+
+        let reference = ReferencePerformance::derived_from(&score);
+        let (first, second, third) = (
+            reference.at(0).unwrap(),
+            reference.at(1).unwrap(),
+            reference.at(2).unwrap(),
+        );
+
+        assert!(first.tolerates(pitch(61)));
+        assert!(
+            !first.tolerates(pitch(60)),
+            "required, so not merely tolerated"
+        );
+        assert!(second.tolerates(pitch(60)) && second.tolerates(pitch(61)));
+        assert!(!second.tolerates(pitch(62)), "required at the second step");
+        assert!(
+            !third.tolerates(pitch(61)),
+            "two steps on, it is a mistake again"
+        );
+    }
+
+    // A trill on the last note keeps going after the cursor has reached the
+    // end. Its tail is tolerated there too.
+    #[test]
+    fn the_last_steps_tolerance_reaches_past_the_end() {
+        let score = score_of(vec![Measure::new(
+            MeasureNumber::FIRST,
+            vec![
+                Position::new(vec![note(Step::C, 4)])
+                    .unwrap()
+                    .tolerating([pitch(62)]),
+            ],
+        )]);
+
+        let reference = ReferencePerformance::derived_from(&score);
+
+        assert!(reference.tolerates_after_the_end(pitch(62)));
+        assert!(!reference.tolerates_after_the_end(pitch(64)));
     }
 
     // A bar of rests asks the performer for nothing, so it contributes no

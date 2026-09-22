@@ -50,8 +50,11 @@ impl Analysis {
             // Cursor, and `observe` below needs it mutably.
             let Some(expected) = cursor.expecting().cloned() else {
                 // Nothing corresponds to it, so it is unexpected rather than
-                // incorrect, and it has no location (FR-403).
-                findings.push(Finding::Unexpected { played });
+                // incorrect, and it has no location -- unless it is the tail
+                // of a trill on the final note.
+                if !cursor.tolerates(played) {
+                    findings.push(Finding::Unexpected { played });
+                }
                 continue;
             };
 
@@ -59,7 +62,9 @@ impl Analysis {
 
             if expected.sounding().any(|wanted| wanted == played) {
                 findings.push(Finding::Correct { at, pitch: played });
-            } else {
+            } else if !cursor.tolerates(played) {
+                // A tolerated pitch -- a grace note, or part of an ornament --
+                // is neither required nor wrong: no finding, no count moves.
                 findings.push(Finding::IncorrectPitch {
                     at,
                     played,
@@ -193,7 +198,8 @@ mod tests {
     use crate::analysis::{Analysis, Summary};
     use crate::finding::Finding;
     use crate::fixtures::{
-        note, one_bar, one_chord, pitch, played, played_steps, two_bars, unexpected,
+        note, one_bar, one_bar_tolerating, one_chord, ornament_on, pitch, played, played_steps,
+        two_bars, unexpected,
     };
 
     fn bar(number: u32) -> MeasureNumber {
@@ -462,5 +468,101 @@ mod tests {
         let observed = played(&[pitch(Step::F)]);
 
         assert_eq!(Analysis::of(&observed, &reference).summary().correct(), 1);
+    }
+
+    // A trill on E, resolving down to D, played as upper-note trill: F E F E
+    // F E, then D. The extra notes are tolerated at the trilled note and the
+    // one after it, so nothing is wrong and nothing is unexpected.
+    #[test]
+    fn a_trill_played_correctly_has_no_wrong_notes() {
+        let reference = one_bar_tolerating(&[Step::C, Step::E, Step::D], 1, &ornament_on(Step::E));
+        let trill = [
+            Step::C,
+            Step::F,
+            Step::E,
+            Step::F,
+            Step::E,
+            Step::F,
+            Step::E,
+            Step::D,
+        ];
+
+        let summary = Analysis::of(&played_steps(&trill), &reference).summary();
+
+        assert_eq!(summary.incorrect(), 0);
+        assert_eq!(summary.unexpected(), 0);
+        assert_eq!(summary.correct(), 3);
+        assert!(summary.reached_the_end());
+    }
+
+    // An A is nowhere near the trilled E. Played during the trill, it is
+    // still a wrong note.
+    #[test]
+    fn a_clearly_wrong_note_during_a_trill_is_still_wrong() {
+        let reference = one_bar_tolerating(&[Step::C, Step::E, Step::D], 1, &ornament_on(Step::E));
+
+        let summary = Analysis::of(
+            &played_steps(&[Step::C, Step::E, Step::F, Step::A, Step::E, Step::D]),
+            &reference,
+        )
+        .summary();
+
+        assert_eq!(summary.incorrect(), 1);
+    }
+
+    // The tolerance belongs to the ornamented note. The same neighbour played
+    // where nothing is ornamented is an ordinary wrong note.
+    #[test]
+    fn a_neighbour_note_where_nothing_is_ornamented_is_still_wrong() {
+        let reference = one_bar_tolerating(&[Step::C, Step::E, Step::D], 1, &ornament_on(Step::E));
+
+        let analysis = Analysis::of(&played_steps(&[Step::D, Step::C]), &reference);
+
+        assert_eq!(analysis.summary().incorrect(), 1);
+        assert!(matches!(
+            analysis.findings()[0],
+            Finding::IncorrectPitch { .. }
+        ));
+    }
+
+    // A grace note is optional. Played, it is not a mistake of any kind --
+    // it must never reach the counts later per-bar statistics are built on.
+    #[test]
+    fn a_played_grace_note_is_neither_wrong_nor_unexpected() {
+        let reference = one_bar_tolerating(&[Step::C, Step::D], 1, &[pitch(Step::G)]);
+
+        let analysis = Analysis::of(&played_steps(&[Step::C, Step::G, Step::D]), &reference);
+
+        assert_eq!(analysis.summary().incorrect(), 0);
+        assert_eq!(analysis.summary().unexpected(), 0);
+        assert_eq!(analysis.summary().correct(), 2);
+        assert_eq!(analysis.findings().len(), 2, "the grace note is no finding");
+    }
+
+    // Skipped, a grace note is not waited for and not reported missing.
+    #[test]
+    fn a_skipped_grace_note_is_not_waited_for() {
+        let reference = one_bar_tolerating(&[Step::C, Step::D], 1, &[pitch(Step::G)]);
+
+        let summary = Analysis::of(&played_steps(&[Step::C, Step::D]), &reference).summary();
+
+        assert!(summary.reached_the_end());
+        assert_eq!(summary.omitted(), 0);
+    }
+
+    // A trill on the final note keeps going once the cursor has reached the
+    // end. Its tail is not "unexpected".
+    #[test]
+    fn a_trill_on_the_last_note_is_not_unexpected_after_the_end() {
+        let reference = one_bar_tolerating(&[Step::C, Step::E], 1, &ornament_on(Step::E));
+
+        let summary = Analysis::of(
+            &played_steps(&[Step::C, Step::E, Step::F, Step::E, Step::F]),
+            &reference,
+        )
+        .summary();
+
+        assert_eq!(summary.unexpected(), 0);
+        assert_eq!(summary.incorrect(), 0);
     }
 }

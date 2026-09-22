@@ -22,6 +22,10 @@ pub(crate) struct WrittenNote {
     /// Whether a tie reaches this note from an earlier one. A tied-to note is
     /// drawn but not struck again, so it is never waited for.
     pub(crate) continues_a_tie: bool,
+    /// A grace note: optional, never waited for.
+    pub(crate) grace: bool,
+    /// Carries a trill, mordent or turn, whose extra notes are tolerated.
+    pub(crate) ornamented: bool,
 }
 
 /// Everything read out of one MEI document.
@@ -70,6 +74,7 @@ pub(crate) fn read(mei: &str) -> Result<ReadMei, TranslationFailure> {
     let mut measure_ids = BTreeMap::new();
     let mut notes = BTreeMap::new();
     let tied_to = tie_continuations(&document);
+    let ornamented = ornament_targets(&document);
 
     // Every `measure` element anywhere in the document, in document order.
     // Verovio nests sections — the fixture has a `section` inside a `section`
@@ -102,6 +107,13 @@ pub(crate) fn read(mei: &str) -> Result<ReadMei, TranslationFailure> {
                     measure: number,
                     spelling: spelling_of(note)?,
                     continues_a_tie: tied_to.contains(id),
+                    grace: is_grace(note),
+                    ornamented: ornamented.contains(id)
+                        || note
+                            .ancestors()
+                            .filter(|node| node.has_tag_name("chord"))
+                            .filter_map(identifier)
+                            .any(|chord| ornamented.contains(chord)),
                 },
             );
         }
@@ -187,6 +199,28 @@ fn tie_continuations(document: &Document<'_>) -> BTreeSet<String> {
         .map(str::to_owned);
 
     by_element.chain(by_attribute).collect()
+}
+
+/// Whether a note is a grace note: `@grace` on it or on its chord, or
+/// inside a `<graceGrp>`.
+fn is_grace(note: Node<'_, '_>) -> bool {
+    note.attribute("grace").is_some()
+        || note.ancestors().any(|node| {
+            node.has_tag_name("graceGrp")
+                || (node.has_tag_name("chord") && node.attribute("grace").is_some())
+        })
+}
+
+/// Every note or chord a trill, mordent or turn is attached to (`@startid`).
+fn ornament_targets(document: &Document<'_>) -> BTreeSet<String> {
+    document
+        .descendants()
+        .filter(|node| {
+            node.has_tag_name("trill") || node.has_tag_name("mordent") || node.has_tag_name("turn")
+        })
+        .filter_map(|ornament| ornament.attribute("startid"))
+        .map(|start| start.trim_start_matches('#').to_owned())
+        .collect()
 }
 
 fn measure_number(measure: Node<'_, '_>) -> Result<MeasureNumber, TranslationFailure> {
@@ -504,6 +538,34 @@ mod tests {
         assert!(!read.note("i").expect("i").continues_a_tie);
         assert!(read.note("m2").expect("m2").continues_a_tie);
         assert!(read.note("t").expect("t").continues_a_tie);
+    }
+
+    // As Verovio writes them from MusicXML: @grace on a note, and a trill as
+    // a control event pointing at its note. A mordent on a chord marks every
+    // note of it.
+    #[test]
+    fn grace_notes_and_ornamented_notes_are_marked() {
+        let read = read(
+            r##"<mei xmlns="http://www.music-encoding.org/ns/mei"><music><body><mdiv><score>
+               <section><measure xml:id="m" n="1"><staff><layer>
+               <note xml:id="g" oct="5" pname="d" grace="acc"/>
+               <note xml:id="e" oct="5" pname="e"/>
+               <note xml:id="f" oct="5" pname="f"/>
+               <chord xml:id="ch"><note xml:id="c1" oct="4" pname="c"/><note xml:id="c2" oct="4" pname="e"/></chord>
+               <graceGrp><note xml:id="gg" oct="4" pname="b"/></graceGrp>
+               </layer></staff>
+               <trill startid="#f"/><mordent startid="#ch"/>
+               </measure></section>
+               </score></mdiv></body></music></mei>"##,
+        )
+        .expect("readable");
+
+        let note = |id| read.note(id).expect("present");
+        assert!(note("g").grace && note("gg").grace);
+        assert!(!note("e").grace && !note("f").grace);
+        assert!(note("f").ornamented);
+        assert!(note("c1").ornamented && note("c2").ornamented);
+        assert!(!note("e").ornamented);
     }
 
     #[test]

@@ -83,6 +83,18 @@ impl Cursor {
         self.reference.at(self.position)
     }
 
+    /// Whether `pitch` is tolerated where the Cursor stands: a grace note or
+    /// part of an ornament at this step, or — once the end is reached — the
+    /// tail of an ornament on the last one. A tolerated note does not move
+    /// the Cursor, and it is not a mistake.
+    #[must_use]
+    pub fn tolerates(&self, pitch: Pitch) -> bool {
+        self.expecting().map_or_else(
+            || self.reference.tolerates_after_the_end(pitch),
+            |expected| expected.tolerates(pitch),
+        )
+    }
+
     /// The Measure the Cursor is standing in, or `None` at the end.
     ///
     /// `003 §7.16` — *"It occupies a position within a Measure, which is how
@@ -438,5 +450,34 @@ mod tests {
         cursor.observe(pitch(Step::C));
 
         assert_eq!(cursor.measure(), MeasureNumber::new(2));
+    }
+
+    // A grace note is tolerated, not required: playing it does not move the
+    // cursor, and the cursor says it tolerates it so nothing is marked wrong.
+    #[test]
+    fn a_tolerated_note_holds_the_cursor_and_is_reported_as_tolerated() {
+        use hogwash_domain::PitchSpelling;
+        use hogwash_notation::{Measure, Note, Position, ReferencePerformance, Score};
+
+        let note = |step| Note::new(PitchSpelling::new(step, 0, 4)).unwrap();
+        let grace = pitch(Step::G);
+        let reference = ReferencePerformance::derived_from(
+            &Score::new(vec![Measure::new(
+                MeasureNumber::FIRST,
+                vec![
+                    Position::new(vec![note(Step::C)])
+                        .unwrap()
+                        .tolerating([grace]),
+                ],
+            )])
+            .unwrap(),
+        );
+        let mut cursor = Cursor::at_the_beginning(Arc::new(reference));
+
+        assert!(cursor.tolerates(grace));
+        assert!(!cursor.tolerates(pitch(Step::D)));
+        assert_eq!(cursor.observe(grace), CursorMovement::Held);
+        assert_eq!(cursor.observe(pitch(Step::C)), CursorMovement::Advanced);
+        assert!(cursor.tolerates(grace), "the tail, past the end");
     }
 }

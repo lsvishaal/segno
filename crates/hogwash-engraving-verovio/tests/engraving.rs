@@ -383,3 +383,32 @@ fn a_repeat_is_played_twice_against_a_real_engine() {
         "every performed step is placed on the page"
     );
 }
+
+// Bar 2 opens with a grace D5 before E5 (over a bass G2), then a trilled F5.
+// The grace note is never required, and is tolerated where the performer
+// plays it; the trill's neighbours are tolerated at F5 and the step after.
+#[test]
+#[ignore = "needs a real libverovio; run `just engraving-test`"]
+fn grace_notes_and_trills_are_tolerated_against_a_real_engine() {
+    let engraved = engraver()
+        .engrave(REAL_NOTATION)
+        .expect("the fixture engraves");
+    let reference = hogwash_notation::ReferencePerformance::derived_from(engraved.score());
+    let pitch = |number| hogwash_domain::Pitch::new(number).expect("in range");
+
+    assert_eq!(
+        required(&engraved).get(3..7),
+        Some(&[vec![43], vec![76], vec![77], vec![79]][..]),
+        "bar 2 without its grace note"
+    );
+
+    let (g2, e5, f5, g5) = (
+        reference.at(3).expect("G2"),
+        reference.at(4).expect("E5"),
+        reference.at(5).expect("F5"),
+        reference.at(6).expect("G5"),
+    );
+    assert!(g2.tolerates(pitch(74)) && e5.tolerates(pitch(74)));
+    assert!(f5.tolerates(pitch(78)) && g5.tolerates(pitch(78)) && g5.tolerates(pitch(77)));
+    assert!(!f5.tolerates(pitch(74)));
+}

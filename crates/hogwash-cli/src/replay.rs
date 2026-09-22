@@ -64,6 +64,7 @@ pub(crate) fn replay(score: &Path, events: &Path) -> Result<String, String> {
     for (pitch, time_us) in events {
         let at = attempt.cursor().position();
         let expected = attempt.cursor().expecting().cloned();
+        let tolerated = attempt.cursor().tolerates(pitch);
         let movement = attempt.play(pitch);
 
         let time = time_us.map_or_else(|| "        ".to_owned(), seconds);
@@ -71,7 +72,11 @@ pub(crate) fn replay(score: &Path, events: &Path) -> Result<String, String> {
             || ("-".to_owned(), "(end of piece)".to_owned()),
             |expected| (expected.measure().get().to_string(), names(expected)),
         );
-        let outcome = outcome(&attempt, expected.as_ref(), pitch, movement);
+        let outcome = if tolerated {
+            "tolerated (grace note or ornament), held".to_owned()
+        } else {
+            outcome(&attempt, expected.as_ref(), pitch, movement)
+        };
 
         let _ = writeln!(
             out,

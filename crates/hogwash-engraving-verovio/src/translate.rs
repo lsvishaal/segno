@@ -13,7 +13,7 @@
 
 use std::collections::BTreeMap;
 
-use hogwash_domain::{Location, MeasureNumber};
+use hogwash_domain::{Location, MeasureNumber, Pitch};
 use hogwash_engraving::{Details, ElementId, PageIndex, Placement};
 use hogwash_notation::{Measure, Note, Position, Score};
 use roxmltree::Document;
@@ -45,10 +45,16 @@ pub(crate) fn assemble(
     let mut positions_by_measure: BTreeMap<MeasureNumber, Vec<(Position, Vec<ElementId>)>> =
         BTreeMap::new();
 
+    // Grace notes seen but not yet given to a Position. They go to the first
+    // Position at or after their onset (the notation crate then tolerates
+    // them at the step after that too, where their main note usually is).
+    let mut graces: Vec<Pitch> = Vec::new();
+
     for sounding in onsets {
         let mut measure = None;
         let mut notes = Vec::new();
         let mut elements = Vec::new();
+        let mut ornaments: Vec<Pitch> = Vec::new();
 
         for id in sounding {
             // A copy is a repeat's second pass over notes already read from
@@ -76,6 +82,18 @@ pub(crate) fn assemble(
                 )
             })?;
 
+            // Optional: tolerated if played, never waited for.
+            if written.grace {
+                graces.push(note.sounding());
+                continue;
+            }
+
+            // A trill, mordent or turn is played as the main note plus its
+            // neighbours; within two semitones of it is not a mistake.
+            if written.ornamented {
+                ornaments.extend(neighbours(note.sounding()));
+            }
+
             measure.get_or_insert(written.measure);
             notes.push(note);
             elements.push(ElementId::new(id.clone()));
@@ -84,6 +102,7 @@ pub(crate) fn assemble(
         let (Some(measure), Some(position)) = (measure, Position::new(notes)) else {
             continue;
         };
+        let position = position.tolerating(graces.drain(..).chain(ornaments));
 
         positions_by_measure
             .entry(measure)
@@ -138,6 +157,12 @@ pub(crate) fn assemble(
     }
 
     Ok((score, read.details().clone(), placements))
+}
+
+/// Every pitch within two semitones of `main`, `main` included.
+fn neighbours(main: Pitch) -> impl Iterator<Item = Pitch> {
+    let main = u8::from(main);
+    (main.saturating_sub(2)..=main.saturating_add(2)).filter_map(Pitch::new)
 }
 
 /// The bars in the order they are played, as written bar numbers.
@@ -392,6 +417,50 @@ mod tests {
             .collect();
         assert_eq!(played, [1, 2]);
         assert_eq!(placements.len(), 2);
+    }
+
+    // As Verovio lays out a grace note: it shares its onset with the other
+    // hand's note, and its main note sounds a moment later. It is required
+    // nowhere, and tolerated at both of those steps. The trilled F tolerates
+    // its neighbours.
+    #[test]
+    fn grace_notes_are_tolerated_and_ornaments_tolerate_their_neighbours() {
+        let mei = r##"<mei xmlns="http://www.music-encoding.org/ns/mei"><music><body><mdiv><score>
+            <section><measure xml:id="m" n="1">
+              <staff n="1"><layer><note xml:id="g" oct="5" pname="d" grace="acc"/><note xml:id="e" oct="5" pname="e"/><note xml:id="f" oct="5" pname="f"/></layer></staff>
+              <staff n="2"><layer><note xml:id="b" oct="2" pname="g"/></layer></staff>
+              <trill startid="#f"/>
+            </measure></section></score></mdiv></body></music></mei>"##;
+        let timemap =
+            r#"[{"on":["g","b"],"qstamp":0},{"on":["e"],"qstamp":0.5},{"on":["f"],"qstamp":1}]"#;
+        let page = r#"<svg xmlns="http://www.w3.org/2000/svg"><g id="g"/><g id="e"/><g id="f"/><g id="b"/></svg>"#;
+
+        let (score, _, _) = assemble(
+            &read(mei).expect("readable"),
+            &onsets(timemap).expect("readable"),
+            &[],
+            &BTreeMap::new(),
+            &[page.to_owned()],
+        )
+        .expect("assembles");
+        let reference = hogwash_notation::ReferencePerformance::derived_from(&score);
+        let pitch = |number| hogwash_domain::Pitch::new(number).expect("in range");
+
+        let required: Vec<Vec<u8>> = reference
+            .iter()
+            .map(|step| step.sounding().map(u8::from).collect())
+            .collect();
+        assert_eq!(required, [vec![43], vec![76], vec![77]], "no grace note");
+
+        let d = pitch(74);
+        assert!(reference.at(0).expect("G2").tolerates(d));
+        assert!(reference.at(1).expect("E5").tolerates(d));
+        assert!(!reference.at(2).expect("F5").tolerates(d));
+
+        let trilled = reference.at(2).expect("F5");
+        assert!(trilled.tolerates(pitch(78)) && trilled.tolerates(pitch(79)));
+        assert!(!trilled.tolerates(pitch(80)));
+        assert!(reference.tolerates_after_the_end(pitch(77)));
     }
 
     // A chord's placement covers all three glyphs, so a half-played chord can

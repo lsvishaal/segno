@@ -21,3 +21,6 @@ struggle with and helps you fix them.
 ## Phase 3
 
 ## Later
+- An upward-resolving trill (e.g. F trilled with G, then G) advances the
+  cursor early on its first G, and the rest of the trill then counts as wrong:
+  the ornament tolerance only covers the trilled step and the next one.

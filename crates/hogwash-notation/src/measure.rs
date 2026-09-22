@@ -1,6 +1,6 @@
 //! Positions and Measures — how a Score is divided (`003 §7.8`, `§7.9`).
 
-use hogwash_domain::MeasureNumber;
+use hogwash_domain::{MeasureNumber, Pitch};
 
 use crate::Note;
 
@@ -16,6 +16,9 @@ use crate::Note;
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct Position {
     notes: Vec<Note>,
+    /// Pitches that are not required but are not wrong either, here and at
+    /// the next step: a grace note's, or the neighbours of an ornamented note.
+    tolerated: Vec<Pitch>,
 }
 
 impl Position {
@@ -31,14 +34,36 @@ impl Position {
         if notes.is_empty() {
             None
         } else {
-            Some(Self { notes })
+            Some(Self {
+                notes,
+                tolerated: Vec::new(),
+            })
         }
+    }
+
+    /// The same Position, also tolerating `pitches` here and at the next
+    /// step of the performance: played there, they neither advance the
+    /// cursor nor count as wrong. How a grace note stays optional, and how
+    /// the extra notes of a trill or mordent are not mistakes.
+    #[must_use]
+    pub fn tolerating(mut self, pitches: impl IntoIterator<Item = Pitch>) -> Self {
+        self.tolerated.extend(pitches);
+        self.tolerated.sort_unstable();
+        self.tolerated.dedup();
+        self
     }
 
     /// The Notes required together here. Never empty.
     #[must_use]
     pub fn notes(&self) -> &[Note] {
         &self.notes
+    }
+
+    /// The pitches tolerated here and at the next step. See
+    /// [`tolerating`](Self::tolerating).
+    #[must_use]
+    pub fn tolerated(&self) -> &[Pitch] {
+        &self.tolerated
     }
 }
 

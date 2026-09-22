@@ -250,3 +250,51 @@ fn sessions_come_back_in_a_stable_order() {
 
     assert_eq!(names, ["aaa", "bbb", "ccc"]);
 }
+
+// Grace notes and ornament notes are tolerated, never mistakes. What is kept
+// is every note played, and an analysis of it read back after a restart must
+// still count none of them as wrong or unexpected -- later per-bar statistics
+// are built from exactly these counts.
+#[test]
+fn tolerated_notes_are_not_mistakes_in_a_kept_attempt() {
+    use hogwash_analysis::Analysis;
+    use hogwash_domain::{MeasureNumber, PitchSpelling, Step};
+    use hogwash_notation::{Measure, Note, Position, ReferencePerformance, Score};
+
+    let note = |step| Note::new(PitchSpelling::new(step, 0, 4)).expect("sounds");
+    let pitch = |number| Pitch::new(number).expect("in range");
+    // C, then D with a grace G before it, then E with a trill.
+    let reference = ReferencePerformance::derived_from(
+        &Score::new(vec![Measure::new(
+            MeasureNumber::FIRST,
+            vec![
+                Position::new(vec![note(Step::C)]).expect("a note"),
+                Position::new(vec![note(Step::D)])
+                    .expect("a note")
+                    .tolerating([pitch(67)]),
+                Position::new(vec![note(Step::E)])
+                    .expect("a note")
+                    .tolerating((62..=66).map(pitch)),
+            ],
+        )])
+        .expect("a score"),
+    );
+
+    let directory = tempfile::tempdir().expect("a temporary directory");
+    let mut kept = session("tolerated");
+    // C, grace G, D, trilled E (E F E F), and the trill's tail after the end.
+    kept.attempts = vec![AttemptRecord {
+        played: played(&[60, 67, 62, 64, 65, 64, 65]),
+        reached: 3,
+    }];
+    Records::under(directory.path())
+        .keep(&kept)
+        .expect("the session is kept");
+
+    let back = reopened(directory.path());
+    let summary = Analysis::of(&back[0].attempts[0].played, &reference).summary();
+
+    assert_eq!(summary.incorrect(), 0);
+    assert_eq!(summary.unexpected(), 0);
+    assert_eq!(summary.correct(), 3);
+}

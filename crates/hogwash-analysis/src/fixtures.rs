@@ -68,3 +68,34 @@ pub(crate) fn played(pitches: &[Pitch]) -> ObservedPerformance {
 pub(crate) fn played_steps(steps: &[Step]) -> ObservedPerformance {
     played(&steps.iter().copied().map(pitch).collect::<Vec<_>>())
 }
+
+/// One bar of single notes, where the note at `at` also tolerates
+/// `pitches` (at that step and the next): a grace note or an ornament.
+pub(crate) fn one_bar_tolerating(
+    steps: &[Step],
+    at: usize,
+    pitches: &[Pitch],
+) -> ReferencePerformance {
+    let positions = melody(steps)
+        .into_iter()
+        .enumerate()
+        .map(|(index, position)| {
+            if index == at {
+                position.tolerating(pitches.iter().copied())
+            } else {
+                position
+            }
+        })
+        .collect();
+
+    reference(vec![measure(1, positions)])
+}
+
+/// A trill, mordent or turn on `step`: every pitch within two semitones of
+/// it, which is what the Verovio adapter tolerates for an ornamented note.
+pub(crate) fn ornament_on(step: Step) -> Vec<Pitch> {
+    let main = u8::from(pitch(step));
+    (main - 2..=main + 2)
+        .map(|number| Pitch::new(number).expect("octave 4 neighbours are in range"))
+        .collect()
+}
