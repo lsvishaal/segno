@@ -330,3 +330,32 @@ fn a_long_score_keeps_every_position_placed_across_its_pages() {
             .all(|(_, placement)| placement.page().get() < engraved.pages().len())
     );
 }
+
+/// A small grand-staff score with the notation real pieces use: a tie, a
+/// repeat, a grace note and a trill. Bar 1 (inside the repeat): a treble C5
+/// half note tied into a C5 quarter, then D5, over a bass C3 and E3.
+const REAL_NOTATION: &[u8] = include_bytes!("fixtures/real-notation.musicxml");
+
+/// The pitches each step of the Reference Performance requires, in order.
+fn required(engraved: &EngravedScore) -> Vec<Vec<u8>> {
+    hogwash_notation::ReferencePerformance::derived_from(engraved.score())
+        .iter()
+        .map(|step| step.sounding().map(u8::from).collect())
+        .collect()
+}
+
+// Verovio's timemap lists the tied-to C5 as sounding again at beat 3. It is
+// held, not struck, so the cursor must not wait for it: beat 3 asks only for
+// the bass E3.
+#[test]
+#[ignore = "needs a real libverovio; run `just engraving-test`"]
+fn a_tied_note_is_required_once_against_a_real_engine() {
+    let engraved = engraver()
+        .engrave(REAL_NOTATION)
+        .expect("the fixture engraves");
+
+    assert_eq!(
+        required(&engraved).get(..3),
+        Some(&[vec![72, 48], vec![52], vec![74]][..])
+    );
+}

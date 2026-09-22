@@ -50,6 +50,12 @@ pub(crate) fn assemble(
                 continue;
             };
 
+            // Held from an earlier note, not struck again. An onset holding
+            // nothing else then forms no Position at all.
+            if written.continues_a_tie {
+                continue;
+            }
+
             let note = Note::new(written.spelling).ok_or_else(|| {
                 TranslationFailure::UnreadableNote(
                     "a note lies outside the range of any key on the instrument".to_owned(),
@@ -204,6 +210,64 @@ mod tests {
                 .iter()
                 .all(|(_, placement)| placement.page().get() == 0)
         );
+    }
+
+    // The timemap lists a tied-to note as sounding again; the Score must not
+    // ask for it. Here the tie runs from the first C into the second, which
+    // shares its onset with a bass E: only the E is required there.
+    #[test]
+    fn a_note_a_tie_arrives_at_is_not_required_again() {
+        let mei = r##"<mei xmlns="http://www.music-encoding.org/ns/mei"><music><body><mdiv><score>
+            <section><measure xml:id="m" n="1">
+              <staff n="1"><layer><note xml:id="c1" oct="5" pname="c"/><note xml:id="c2" oct="5" pname="c"/><note xml:id="d" oct="5" pname="d"/></layer></staff>
+              <staff n="2"><layer><note xml:id="lc" oct="3" pname="c"/><note xml:id="le" oct="3" pname="e"/></layer></staff>
+              <tie startid="#c1" endid="#c2"/>
+            </measure></section></score></mdiv></body></music></mei>"##;
+        let timemap = r#"[{"on":["c1","lc"],"qstamp":0},{"on":["c2","le"],"qstamp":2},{"on":["d"],"qstamp":3}]"#;
+        let page = r#"<svg xmlns="http://www.w3.org/2000/svg"><g id="c1"/><g id="c2"/><g id="d"/><g id="lc"/><g id="le"/></svg>"#;
+
+        let (score, _, _) = assemble(
+            &read(mei).expect("readable"),
+            &onsets(timemap).expect("readable"),
+            &[page.to_owned()],
+        )
+        .expect("assembles");
+
+        let required: Vec<Vec<u8>> = score.measures()[0]
+            .positions()
+            .iter()
+            .map(|position| {
+                position
+                    .notes()
+                    .iter()
+                    .map(|note| u8::from(note.sounding()))
+                    .collect()
+            })
+            .collect();
+        assert_eq!(required, [vec![72, 48], vec![52], vec![74]]);
+    }
+
+    // An onset where the only thing that happens is a held note continuing
+    // is not a place the performer has to play anything.
+    #[test]
+    fn an_onset_holding_only_a_tie_continuation_is_not_a_position() {
+        let mei = r##"<mei xmlns="http://www.music-encoding.org/ns/mei"><music><body><mdiv><score>
+            <section><measure xml:id="m" n="1"><staff><layer>
+              <note xml:id="a" oct="4" pname="c"/><note xml:id="b" oct="4" pname="c"/>
+            </layer></staff><tie startid="#a" endid="#b"/></measure></section>
+            </score></mdiv></body></music></mei>"##;
+        let timemap = r#"[{"on":["a"],"qstamp":0},{"on":["b"],"qstamp":2}]"#;
+        let page = r#"<svg xmlns="http://www.w3.org/2000/svg"><g id="a"/><g id="b"/></svg>"#;
+
+        let (score, _, placements) = assemble(
+            &read(mei).expect("readable"),
+            &onsets(timemap).expect("readable"),
+            &[page.to_owned()],
+        )
+        .expect("assembles");
+
+        assert_eq!(score.measures()[0].positions().len(), 1);
+        assert_eq!(placements.len(), 1);
     }
 
     // A chord's placement covers all three glyphs, so a half-played chord can

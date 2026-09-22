@@ -4,7 +4,7 @@
 //! separated from the C boundary and tested against a checked-in MEI file
 //! that Verovio actually produced. No library is needed to run these tests.
 
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, BTreeSet};
 
 use hogwash_domain::{MeasureNumber, PitchSpelling, Step};
 use hogwash_engraving::Details;
@@ -19,6 +19,9 @@ pub(crate) struct WrittenNote {
     pub(crate) measure: MeasureNumber,
     /// How it is written — letter, alteration, octave.
     pub(crate) spelling: PitchSpelling,
+    /// Whether a tie reaches this note from an earlier one. A tied-to note is
+    /// drawn but not struck again, so it is never waited for.
+    pub(crate) continues_a_tie: bool,
 }
 
 /// Everything read out of one MEI document.
@@ -59,6 +62,7 @@ pub(crate) fn read(mei: &str) -> Result<ReadMei, TranslationFailure> {
 
     let mut measures = Vec::new();
     let mut notes = BTreeMap::new();
+    let tied_to = tie_continuations(&document);
 
     // Every `measure` element anywhere in the document, in document order.
     // Verovio nests sections — the fixture has a `section` inside a `section`
@@ -87,6 +91,7 @@ pub(crate) fn read(mei: &str) -> Result<ReadMei, TranslationFailure> {
                 WrittenNote {
                     measure: number,
                     spelling: spelling_of(note)?,
+                    continues_a_tie: tied_to.contains(id),
                 },
             );
         }
@@ -145,6 +150,32 @@ fn details_of(document: &Document<'_>) -> Details {
         title: first("title"),
         composer,
     }
+}
+
+/// Every note a tie arrives at.
+///
+/// Verovio writes ties as `<tie startid="#a" endid="#b"/>` control events;
+/// MEI also allows `@tie="m"` / `@tie="t"` (medial, terminal) on the note
+/// itself. Both are read. Verovio's timemap lists a tied-to note as sounding
+/// again, which would make the cursor wait for a key that is only held.
+fn tie_continuations(document: &Document<'_>) -> BTreeSet<String> {
+    let by_element = document
+        .descendants()
+        .filter(|node| node.has_tag_name("tie"))
+        .filter_map(|tie| tie.attribute("endid"))
+        .map(|end| end.trim_start_matches('#').to_owned());
+
+    let by_attribute = document
+        .descendants()
+        .filter(|node| node.has_tag_name("note"))
+        .filter(|note| {
+            note.attribute("tie")
+                .is_some_and(|tie| tie.contains('m') || tie.contains('t'))
+        })
+        .filter_map(identifier)
+        .map(str::to_owned);
+
+    by_element.chain(by_attribute).collect()
 }
 
 fn measure_number(measure: Node<'_, '_>) -> Result<MeasureNumber, TranslationFailure> {
@@ -422,6 +453,46 @@ mod tests {
         );
 
         assert!(refused.is_err());
+    }
+
+    // A held note is struck once. The note a tie arrives at is still read
+    // (it is drawn), but it is marked so nothing waits for it.
+    #[test]
+    fn a_note_a_tie_arrives_at_is_marked_as_continuing_it() {
+        let read = read(
+            r##"<mei xmlns="http://www.music-encoding.org/ns/mei"><music><body><mdiv><score>
+               <section><measure xml:id="m" n="1"><staff><layer>
+               <note xml:id="first" oct="5" pname="c"/>
+               <note xml:id="held" oct="5" pname="c"/>
+               <note xml:id="after" oct="5" pname="d"/>
+               </layer></staff>
+               <tie xml:id="t1" startid="#first" endid="#held"/>
+               </measure></section>
+               </score></mdiv></body></music></mei>"##,
+        )
+        .expect("readable");
+
+        assert!(!read.note("first").expect("first").continues_a_tie);
+        assert!(read.note("held").expect("held").continues_a_tie);
+        assert!(!read.note("after").expect("after").continues_a_tie);
+    }
+
+    #[test]
+    fn a_tie_written_as_an_attribute_is_read_too() {
+        let read = read(
+            r#"<mei xmlns="http://www.music-encoding.org/ns/mei"><music><body><mdiv><score>
+               <section><measure xml:id="m" n="1"><staff><layer>
+               <note xml:id="i" oct="5" pname="c" tie="i"/>
+               <note xml:id="m2" oct="5" pname="c" tie="m"/>
+               <note xml:id="t" oct="5" pname="c" tie="t"/>
+               </layer></staff></measure></section>
+               </score></mdiv></body></music></mei>"#,
+        )
+        .expect("readable");
+
+        assert!(!read.note("i").expect("i").continues_a_tie);
+        assert!(read.note("m2").expect("m2").continues_a_tie);
+        assert!(read.note("t").expect("t").continues_a_tie);
     }
 
     #[test]
