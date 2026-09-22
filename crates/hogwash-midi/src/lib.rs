@@ -11,5 +11,7 @@
 
 mod keyboard;
 mod message;
+mod output;
 
 pub use keyboard::MidiInstruments;
+pub use output::{NoOutput, OutputPort, Thru, output_ports};

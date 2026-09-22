@@ -27,12 +27,14 @@ use std::sync::mpsc::{Sender, SyncSender, channel, sync_channel};
 use std::thread;
 
 use hogwash_engraving::{EngravedScore, Engraver, EngravingFailure};
+use hogwash_engraving_verovio::Layout;
 
 use crate::startup::{Startup, Unavailable};
 
 /// One thing to engrave, and where to send the result.
 struct Request {
     source: Vec<u8>,
+    layout: Layout,
     reply: SyncSender<Result<EngravedScore, EngravingFailure>>,
 }
 
@@ -79,6 +81,7 @@ impl Engraving {
                 // Ends when the last handle is dropped and the channel
                 // closes, which is the application shutting down.
                 for request in incoming {
+                    engraver.lay_out(request.layout);
                     let outcome = engraver.engrave(&request.source);
 
                     // A failed reply means the caller gave up waiting. That
@@ -106,13 +109,17 @@ impl Engraving {
         }
     }
 
-    /// Engraves `source`, waiting for the answer.
+    /// Engraves `source` at `layout`, waiting for the answer.
     ///
     /// # Errors
     ///
     /// Whatever the engraver said, or [`EngravingFailure::EngineUnavailable`]
     /// if the thread has gone.
-    pub fn engrave(&self, source: &[u8]) -> Result<EngravedScore, EngravingFailure> {
+    pub fn engrave(
+        &self,
+        source: &[u8],
+        layout: Layout,
+    ) -> Result<EngravedScore, EngravingFailure> {
         // A rendezvous channel: this call blocks until the engraver answers,
         // so there is no queue of stale replies to reason about.
         let (reply, answer) = sync_channel(0);
@@ -124,6 +131,7 @@ impl Engraving {
         self.requests
             .send(Request {
                 source: source.to_vec(),
+                layout,
                 reply,
             })
             .map_err(|_| gone())?;

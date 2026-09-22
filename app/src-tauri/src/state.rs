@@ -16,6 +16,7 @@
 use std::sync::Mutex;
 
 use hogwash_domain::PieceId;
+use hogwash_engraving_verovio::Layout;
 use hogwash_library::{Library, Piece};
 use hogwash_records::Records;
 
@@ -57,7 +58,7 @@ impl Hogwash {
         let mut refused = Vec::new();
 
         for provided in PROVIDED {
-            match engraving.engrave(provided.source) {
+            match engraving.engrave(provided.source, Layout::default()) {
                 Ok(engraved) => {
                     let details = engraved.details();
 
@@ -99,6 +100,18 @@ impl Hogwash {
     #[must_use]
     pub const fn library(&self) -> &Library {
         &self.library
+    }
+
+    /// Joins an imported Piece to the session's Library.
+    ///
+    /// `Library::with` consumes and returns rather than mutating in place
+    /// (`004 §8.1`), so an addition here is a clone-and-replace rather than a
+    /// push. `Library` is cheap enough — one imported Piece is a title, a
+    /// Score and a Reference Performance, and import is a performer clicking
+    /// a button, not a hot path — that paying for the clone is the honest
+    /// cost of that design, not a reason to work around it.
+    pub fn accept_piece(&mut self, piece: Piece) {
+        self.library = self.library.clone().with(piece);
     }
 
     /// The engraver, for reading a score the performer offers.

@@ -1,24 +1,25 @@
 /*
   The score panel.
 
-  Everything here targets Verovio's own markup (`g.note`) for the ink itself,
-  and an overlay layer — a cursor bar and two kinds of dot, positioned by
-  `Score.tsx` from real measurements — for the Cursor and correctness. Notes
-  never change colour; that is the point (see `Score.tsx`'s module doc).
+  Everything here targets Verovio's own markup (`g.note`) for the ink itself
+  — a correct note recolours its own ink directly — and an overlay layer — a
+  cursor bar and a wrong-note dot, positioned by `Score.tsx` from real
+  measurements — for everything that has no element of its own to recolour
+  (see `Score.tsx`'s module doc).
 */
 
 .hw-score {
   --hw-ink: var(--color-ink);
   --hw-paper: #ffffff;
   --hw-rule: var(--color-rule);
-  --hw-cursor: var(--color-accent);
+  /* Translucent on purpose — a wash over the staff, not an opaque bar. */
+  --hw-cursor: color-mix(in srgb, #3db8ea 65%, transparent);
   --hw-correct: #2f6f4e;
-  /*
-    A true red, not a shade of the cursor's warm orange (`--color-accent`,
-    an amber/orange hue) — the two need to read as different signals, not
-    as the same one at different brightness.
-  */
+  /* A true red, not a shade of anything else in the score's palette — this
+     and `--hw-correct` need to read as two different signals, not as one
+     hue at different brightness. */
   --hw-wrong: #dc2626;
+  --hw-note-name: color-mix(in srgb, var(--hw-ink) 55%, transparent);
 
   overflow-y: auto;
   scroll-padding-block: 25%;
@@ -36,14 +37,19 @@
 }
 
 /*
-  The frame around the pages, so the score reads as a physical sheet sitting
-  on the panel rather than a flat SVG on a flat background. One frame around
-  every page, not one per page: today's provided pieces are all one page, and
-  a multi-page frame is a Stage E/F question, not this pass's.
+  A correct note's flash and fade back — `Score.tsx` sets `color` directly on
+  the real element (Verovio draws with `currentColor`), and this transition
+  is what turns that instant change into the fade the dot used to fake with
+  a separately-positioned overlay.
 */
-.hw-sheet {
-  background: var(--hw-paper);
-  border: 1px solid var(--hw-rule);
+.hw-page g.note {
+  transition: color 0.4s ease;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hw-page g.note {
+    transition: none;
+  }
 }
 
 /*
@@ -56,6 +62,7 @@
   --hw-ink: #e8e4dc;
   --hw-paper: #17161a;
   --hw-rule: #2c2a30;
+  --hw-cursor: color-mix(in srgb, #6cd0f5 60%, transparent);
   --hw-correct: #5fb98a;
   --hw-wrong: #f87171;
 }
@@ -74,16 +81,55 @@
   transform: translateX(-50%);
 }
 
+/*
+  A small circular cap at the cursor's top — the note-shaped detail a bare
+  bar was missing. It breathes: a slow, gentle pulse rather than a static
+  dot, the same unhurried "still alive" motion a waiting cursor deserves
+  (cf. Material 3 Expressive's breathing indicators) — noticeable, but never
+  urgent. Purely decorative: it takes its colour from `--hw-cursor` like the
+  bar itself, and asserts nothing about correctness (`004 §8.8`) — the
+  wrong-note ghost dot below is what does that.
+*/
+.hw-cursor-bar::before {
+  content: "";
+  position: absolute;
+  top: -3px;
+  left: 50%;
+  width: 11px;
+  height: 11px;
+  border-radius: 50%;
+  background: var(--hw-cursor);
+  transform: translate(-50%, -50%);
+  animation: hw-cursor-breathe 3.2s ease-in-out infinite;
+}
+
+@keyframes hw-cursor-breathe {
+  0%,
+  100% {
+    transform: translate(-50%, -50%) scale(1);
+    opacity: 0.75;
+  }
+  50% {
+    transform: translate(-50%, -50%) scale(1.35);
+    opacity: 1;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .hw-cursor-bar {
     transition: none;
   }
+
+  .hw-cursor-bar::before {
+    animation: none;
+    opacity: 1;
+  }
 }
 
 /*
-  A dot: correct or wrong, centred on its computed point the same way the
-  cursor is. Sizing and colour are the only difference between the two —
-  the motion (fade and scale in, then out) is identical, on the Motion side.
+  The wrong-note ghost: a pitch with no element of its own, so it gets a dot
+  centred on a computed point the same way the cursor is — the only case
+  left that needs one, now that a correct note recolours its own ink.
 */
 .hw-dot {
   position: absolute;
@@ -93,10 +139,18 @@
   transform: translate(-50%, -50%);
 }
 
-.hw-dot-correct {
-  background: var(--hw-correct);
-}
-
 .hw-dot-wrong {
   background: var(--hw-wrong);
+}
+
+/*
+  A note's own letter name, labelled above its notehead. Purely
+  informational — it plays no part in correctness feedback.
+*/
+.hw-note-name {
+  position: absolute;
+  transform: translate(-50%, -100%);
+  font-size: 0.65rem;
+  font-weight: 600;
+  color: var(--hw-note-name);
 }

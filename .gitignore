@@ -31,3 +31,7 @@ Thumbs.db
 *~
 .idea/
 .vscode/
+
+# Local design reference screenshots, not part of the project.
+/ideal-pics
+/picofcurrentapp

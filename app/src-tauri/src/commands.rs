@@ -26,13 +26,16 @@
     reason = "tauri commands receive State and AppHandle by value; both are handles"
 )]
 
+use hogwash_engraving::{EngravedScore, Engraver, EngravingFailure};
 use hogwash_notation::ReferencePerformance;
 use serde::Serialize;
 use tauri::{Manager as _, State};
+use tauri_plugin_dialog::DialogExt as _;
 
+use crate::engraving::Engraving;
 use crate::practice::AttemptSummary;
 use crate::startup::Unavailable;
-use crate::state::{Failed, Shared};
+use crate::state::{Failed, Hogwash, Shared};
 
 /// A Piece, as the library screen needs it.
 #[derive(Debug, Clone, Serialize)]
@@ -157,6 +160,57 @@ pub fn library(state: State<'_, Shared>) -> Result<Vec<PieceSummary>, Refused> {
 pub fn open_piece(id: String, state: State<'_, Shared>) -> Result<OpenedPiece, Refused> {
     let hogwash = state.inner().0.lock().map_err(|_| POISONED.to_owned())?;
 
+    opened_piece(id, hogwash_engraving_verovio::Layout::default(), &hogwash)
+}
+
+/// Re-engraves a Piece at a different staff size (`BFR-4`).
+///
+/// Stateless with respect to `Practice`'s session: a Piece's `Attempt` is
+/// keyed on `Location`/pitch, never on an element id, so re-engraving at a
+/// new scale never disturbs one in progress. The frontend gets a full fresh
+/// `OpenedPiece` — new `pages` and new `marks` together, atomically — rather
+/// than being asked to patch anything in place.
+///
+/// # Errors
+///
+/// As [`open_piece`].
+#[tauri::command]
+pub fn rescale_piece(
+    id: String,
+    scale: u32,
+    state: State<'_, Shared>,
+) -> Result<OpenedPiece, Refused> {
+    let hogwash = state.inner().0.lock().map_err(|_| POISONED.to_owned())?;
+
+    let layout = hogwash_engraving_verovio::Layout {
+        scale: clamp_scale(scale),
+        ..hogwash_engraving_verovio::Layout::default()
+    };
+
+    opened_piece(id, layout, &hogwash)
+}
+
+/// Keeps a requested staff size within what is actually usable — not trusting
+/// the frontend's arithmetic (a rapid Ctrl+scroll, or a slider dragged past
+/// its own visual ends) any more than any other boundary input.
+const fn clamp_scale(requested: u32) -> u32 {
+    if requested < 50 {
+        50
+    } else if requested > 400 {
+        400
+    } else {
+        requested
+    }
+}
+
+/// The body [`open_piece`] and [`rescale_piece`] share: everything about
+/// engraving a Piece except which [`Layout`](hogwash_engraving_verovio::Layout)
+/// to engrave it at.
+fn opened_piece(
+    id: String,
+    layout: hogwash_engraving_verovio::Layout,
+    hogwash: &crate::state::Hogwash,
+) -> Result<OpenedPiece, Refused> {
     let piece = hogwash
         .library()
         .pieces()
@@ -173,7 +227,7 @@ pub fn open_piece(id: String, state: State<'_, Shared>) -> Result<OpenedPiece, R
 
     let engraved = hogwash
         .engraving()
-        .engrave(&source)
+        .engrave(&source, layout)
         .map_err(|failure| format!("{failure:?}"))?;
 
     // Derived again here rather than reused from `Piece::reference()`: the
@@ -216,6 +270,212 @@ pub fn open_piece(id: String, state: State<'_, Shared>) -> Result<OpenedPiece, R
             })
             .collect(),
     })
+}
+
+/// Saves a Piece's original source to a location the performer chooses
+/// (`BFR-1`, the tractable slice of it — `MusicXML` only, this round).
+///
+/// The dialog is a **blocking** call, so the state lock is released before
+/// showing it: holding it would freeze every other command (the library
+/// listing, the practice thread's commands) for as long as the performer is
+/// looking at a file picker.
+///
+/// # Errors
+///
+/// If the piece is not in the library, its source could not be found, or the
+/// chosen location could not be written to. A cancelled dialog is **not** an
+/// error — it resolves successfully, having done nothing.
+#[tauri::command]
+pub fn export_musicxml(
+    id: String,
+    app: tauri::AppHandle,
+    state: State<'_, Shared>,
+) -> Result<(), Refused> {
+    let (title, source) = {
+        let hogwash = state.inner().0.lock().map_err(|_| POISONED.to_owned())?;
+
+        let piece_id = hogwash_domain::PieceId::new(&id)
+            .ok_or_else(|| format!("`{id}` is not a usable piece name."))?;
+
+        let piece = hogwash
+            .library()
+            .pieces()
+            .into_iter()
+            .find(|piece| *piece.id() == piece_id)
+            .ok_or_else(|| format!("There is no piece called `{id}` in the library."))?;
+
+        let source = hogwash.source_of(piece.id()).ok_or_else(|| {
+            "The music for this piece could not be found, so it cannot be exported.".to_owned()
+        })?;
+
+        (piece.title().to_owned(), source)
+    };
+
+    let extension = extension_of(&source);
+    let suggested = format!("{title}.{extension}");
+
+    let Some(destination) = app
+        .dialog()
+        .file()
+        .set_file_name(&suggested)
+        .add_filter("MusicXML", &[extension])
+        .blocking_save_file()
+    else {
+        return Ok(());
+    };
+
+    let path = destination
+        .into_path()
+        .map_err(|error| format!("Could not use that location: {error}"))?;
+
+    std::fs::write(&path, &source).map_err(|error| format!("Could not save the file: {error}"))
+}
+
+/// Whether a piece's source is compressed `MusicXML` (`.mxl`, a zip) or plain
+/// (`.musicxml`) — the same signature `hogwash-acquisition` and the engraver
+/// already sniff for (see `hogwash_engraving_verovio::engraver`), sniffed
+/// again here only to suggest the right extension in the save dialog.
+fn extension_of(source: &[u8]) -> &'static str {
+    if source.starts_with(b"PK") {
+        "mxl"
+    } else {
+        "musicxml"
+    }
+}
+
+/// A piece a performer offered, resolved into what the library screen needs.
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ImportedPiece {
+    /// The Piece now available to practise.
+    pub piece: PieceSummary,
+    /// What was noticed while reading it (`ValidationReport::lines`),
+    /// verbatim — "The whole score was read." when nothing was lost, one
+    /// sentence per loss otherwise. Carried here because nothing later can
+    /// reconstruct it: this is the one reading of the file that produced it.
+    pub lines: Vec<String>,
+}
+
+/// Adapts [`Engraving`]'s channel handle to the [`Engraver`] port
+/// `hogwash_acquisition::assess` is written against.
+///
+/// The mismatch is only in shape, not substance: `Engraving::engrave` takes
+/// `&self` and a `Layout` because it just posts to a channel and the engine
+/// on the other end holds the layout state; `Engraver::engrave` takes
+/// `&mut self` and no layout because a port assumes an engine that holds the
+/// document it is working on (`ADR-0008`). Import has no layout of its own —
+/// the Library does not keep one — so [`Layout::default`] is the same choice
+/// every other command already makes when opening a piece for the first
+/// time, not a placeholder invented for this.
+struct ImportEngraver<'a>(&'a Engraving);
+
+impl Engraver for ImportEngraver<'_> {
+    fn engrave(&mut self, source: &[u8]) -> Result<EngravedScore, EngravingFailure> {
+        self.0
+            .engrave(source, hogwash_engraving_verovio::Layout::default())
+    }
+}
+
+/// Imports a `MusicXML` file the performer chooses, joining it to the
+/// library (FR-100, FR-102, FR-104).
+///
+/// The dialog is a **blocking** call and happens before anything is looked
+/// up, so nothing needs the state lock while the performer is looking at a
+/// file picker — the same reasoning [`export_musicxml`] documents, applied
+/// the other way around because import has nothing to look up until the
+/// dialog returns.
+///
+/// # Errors
+///
+/// If the chosen file could not be read, or [`hogwash_acquisition::assess`]
+/// refused it — in which case the error is the refusal's reason and route,
+/// verbatim (`004 §8.2`): this command adds no wording of its own to an
+/// explanation that is already complete.
+#[tauri::command]
+pub fn import_musicxml(
+    app: tauri::AppHandle,
+    state: State<'_, Shared>,
+) -> Result<Option<ImportedPiece>, Refused> {
+    let Some(chosen) = app
+        .dialog()
+        .file()
+        .add_filter("MusicXML", &["musicxml", "mxl"])
+        .blocking_pick_file()
+    else {
+        return Ok(None);
+    };
+
+    let path = chosen
+        .into_path()
+        .map_err(|error| format!("Could not use that location: {error}"))?;
+
+    let material =
+        std::fs::read(&path).map_err(|error| format!("Could not read that file: {error}"))?;
+
+    let mut hogwash = state.inner().0.lock().map_err(|_| POISONED.to_owned())?;
+
+    accept_offered(&material, &mut hogwash).map(Some)
+}
+
+/// The body [`import_musicxml`] runs once it has bytes and a locked
+/// [`Hogwash`] — separated out, and public, so an integration test can drive
+/// it without a real dialog or `AppHandle` (see `lib.rs`'s module doc).
+///
+/// # Errors
+///
+/// As [`import_musicxml`]: the offered material was refused, verbatim from
+/// [`hogwash_acquisition::assess`].
+pub fn accept_offered(material: &[u8], hogwash: &mut Hogwash) -> Result<ImportedPiece, Refused> {
+    let id = crate::provided::identify(material);
+
+    // Re-offering the same bytes is not a second piece: `PieceId` is the
+    // lookup key `source_of` and `open_piece` use, and a duplicate under one
+    // id would make that lookup ambiguous rather than merely wasteful.
+    if let Some(already) = hogwash
+        .library()
+        .pieces()
+        .into_iter()
+        .find(|piece| *piece.id() == id)
+    {
+        return Ok(ImportedPiece {
+            piece: summarise(already),
+            lines: vec!["This piece is already in your library.".to_owned()],
+        });
+    }
+
+    let mut engraver = ImportEngraver(hogwash.engraving());
+
+    match hogwash_acquisition::assess(material, id.clone(), &mut engraver) {
+        hogwash_acquisition::Outcome::NotAccepted(refused) => {
+            Err(format!("{}\n\n{}", refused.reason(), refused.route()))
+        }
+        hogwash_acquisition::Outcome::Accepted { piece, report } => {
+            hogwash
+                .records()
+                .keep_piece(&id, piece.title(), piece.composer(), material)
+                .map_err(|failure| format!("Could not keep that piece: {failure:?}"))?;
+
+            let summary = summarise(&piece);
+            hogwash.accept_piece(*piece);
+
+            Ok(ImportedPiece {
+                piece: summary,
+                lines: report.lines(),
+            })
+        }
+    }
+}
+
+/// A Piece, as the library screen needs it — the same shape [`library`]
+/// produces, so an import and a startup listing agree on what a summary is.
+fn summarise(piece: &hogwash_library::Piece) -> PieceSummary {
+    PieceSummary {
+        id: piece.id().as_str().to_owned(),
+        title: piece.title().to_owned(),
+        composer: piece.composer().map(str::to_owned),
+        bars: piece.score().measures().len(),
+        notes: piece.reference().len(),
+    }
 }
 
 /// Why the application cannot work, if it cannot.
@@ -312,6 +572,98 @@ pub fn end_attempt(state: State<'_, Shared>) -> Result<AttemptSummary, Refused> 
         .map_err(|_| "No attempt is in progress.".to_owned())
 }
 
+/// A MIDI output device, as the picker needs it.
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct OutputPortSummary {
+    /// What to show the performer, and what `set_thru` names it by.
+    pub name: String,
+}
+
+/// The MIDI output devices currently available, for routing Thru (`BFR`,
+/// "remove the sound, allow modification of input and output sources").
+///
+/// # Errors
+///
+/// If none are available, or the practice thread has gone.
+#[tauri::command]
+pub fn output_ports(state: State<'_, Shared>) -> Result<Vec<OutputPortSummary>, Refused> {
+    let hogwash = state.inner().0.lock().map_err(|_| POISONED.to_owned())?;
+
+    hogwash
+        .practice()
+        .output_ports()
+        .map(|found| {
+            found
+                .into_iter()
+                .map(|port| OutputPortSummary {
+                    name: port.name().to_owned(),
+                })
+                .collect()
+        })
+        .map_err(|absent| absent.describe())
+}
+
+/// Sets or clears the MIDI Thru route: everything `input` reports gets
+/// forwarded, byte for byte, to `output` — instead of Hogwash making its own
+/// sound. Independent of `start_attempt`: routing works whether or not a
+/// practice attempt is running.
+///
+/// Passing `null` for either side clears whatever route was set.
+///
+/// # Errors
+///
+/// If either device could not be opened, or the practice thread has gone.
+#[tauri::command]
+pub fn set_thru(
+    input: Option<String>,
+    output: Option<String>,
+    state: State<'_, Shared>,
+) -> Result<(), Refused> {
+    let hogwash = state.inner().0.lock().map_err(|_| POISONED.to_owned())?;
+
+    hogwash
+        .practice()
+        .set_thru(
+            input.map(hogwash_capture::Instrument::new),
+            output.map(hogwash_midi::OutputPort::new),
+        )
+        .map_err(|absent| absent.describe())
+}
+
 /// What to say when the state cannot be read.
 const POISONED: &str = "Hogwash got into a state it cannot recover from. Restarting it should clear this; \
      your practice history is on disk and is unaffected.";
+
+#[cfg(test)]
+mod tests {
+    use super::{clamp_scale, extension_of};
+
+    #[test]
+    fn plain_musicxml_has_no_zip_signature() {
+        assert_eq!(
+            extension_of(b"<?xml version=\"1.0\"?><score-partwise/>"),
+            "musicxml"
+        );
+    }
+
+    #[test]
+    fn a_zip_signature_means_compressed_musicxml() {
+        assert_eq!(extension_of(b"PK\x03\x04rest of the archive"), "mxl");
+    }
+
+    #[test]
+    fn a_usable_scale_passes_through_unchanged() {
+        assert_eq!(clamp_scale(150), 150);
+    }
+
+    #[test]
+    fn too_small_is_clamped_up() {
+        assert_eq!(clamp_scale(0), 50);
+    }
+
+    #[test]
+    fn too_large_is_clamped_down() {
+        assert_eq!(clamp_scale(10_000), 400);
+    }
+}

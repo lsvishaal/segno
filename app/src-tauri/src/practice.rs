@@ -50,7 +50,7 @@ use hogwash_analysis::Analysis;
 use hogwash_capture::{Instrument, Keyboard, MidiSource, NoInstrument};
 use hogwash_domain::PieceId;
 use hogwash_feedback::Feedback;
-use hogwash_midi::MidiInstruments;
+use hogwash_midi::{MidiInstruments, NoOutput, OutputPort, Thru, output_ports};
 use hogwash_notation::ReferencePerformance;
 use hogwash_practice::{Attempt, CursorMovement, PracticeSession};
 use hogwash_records::{AttemptRecord, Records, SessionRecord};
@@ -155,6 +155,17 @@ enum Command {
     End {
         reply: SyncSender<Result<AttemptSummary, NotPracticing>>,
     },
+    OutputPorts {
+        reply: SyncSender<Result<Vec<OutputPort>, NoOutput>>,
+    },
+    /// Sets or clears the MIDI Thru route, independent of whatever `Attempt`
+    /// may or may not be running — a performer can route sound to a real
+    /// synth without starting a practice session at all.
+    SetThru {
+        input: Option<Instrument>,
+        output: Option<OutputPort>,
+        reply: SyncSender<Result<(), NoOutput>>,
+    },
 }
 
 /// A handle to the practice thread.
@@ -254,6 +265,54 @@ impl Practice {
 
         answer.recv().map_err(|_| NotPracticing)?
     }
+
+    /// The MIDI output devices currently available, for routing Thru.
+    ///
+    /// # Errors
+    ///
+    /// [`NoOutput::NoneConnected`] if there are none, or if the practice
+    /// thread has gone.
+    pub fn output_ports(&self) -> Result<Vec<OutputPort>, NoOutput> {
+        let (reply, answer) = sync_channel(0);
+
+        if self.commands.send(Command::OutputPorts { reply }).is_err() {
+            return Err(NoOutput::NoneConnected);
+        }
+
+        answer.recv().unwrap_or(Err(NoOutput::NoneConnected))
+    }
+
+    /// Sets or clears the MIDI Thru route.
+    ///
+    /// Independent of `start_attempt`/`end_attempt`: a performer can route
+    /// sound to a real synth whether or not a practice attempt is running,
+    /// because Thru forwards raw MIDI and has nothing to do with correctness.
+    /// Passing `None` for either side clears whatever route was set.
+    ///
+    /// # Errors
+    ///
+    /// [`NoOutput`] if either device could not be opened.
+    pub fn set_thru(
+        &self,
+        input: Option<Instrument>,
+        output: Option<OutputPort>,
+    ) -> Result<(), NoOutput> {
+        let (reply, answer) = sync_channel(0);
+
+        self.commands
+            .send(Command::SetThru {
+                input,
+                output,
+                reply,
+            })
+            .map_err(|_| NoOutput::Unavailable {
+                detail: "the practice thread is no longer running".to_owned(),
+            })?;
+
+        answer.recv().map_err(|_| NoOutput::Unavailable {
+            detail: "the practice thread is no longer running".to_owned(),
+        })?
+    }
 }
 
 /// One piece's practice sitting, and enough about it to keep a record.
@@ -278,6 +337,9 @@ fn run(incoming: &Receiver<Command>, sink: &Sink, records: &Records) {
     let mut source = MidiInstruments;
     let mut session: Option<OpenSession> = None;
     let mut ongoing: Option<Ongoing> = None;
+    // Decoupled from `ongoing` on purpose: a performer can route MIDI Thru
+    // to a real synth whether or not an Attempt is running.
+    let mut thru: Option<Thru> = None;
 
     loop {
         let timeout = if ongoing.is_some() {
@@ -292,6 +354,7 @@ fn run(incoming: &Receiver<Command>, sink: &Sink, records: &Records) {
                 &mut source,
                 &mut session,
                 &mut ongoing,
+                &mut thru,
                 records,
                 sink,
             ),
@@ -310,6 +373,7 @@ fn handle(
     source: &mut MidiInstruments,
     session: &mut Option<OpenSession>,
     ongoing: &mut Option<Ongoing>,
+    thru: &mut Option<Thru>,
     records: &Records,
     sink: &Sink,
 ) {
@@ -355,6 +419,28 @@ fn handle(
                 summary
             });
             drop(reply.send(outcome.ok_or(NotPracticing)));
+        }
+        Command::OutputPorts { reply } => {
+            drop(reply.send(output_ports()));
+        }
+        Command::SetThru {
+            input,
+            output,
+            reply,
+        } => {
+            // Torn down unconditionally first: reconnecting is cheap
+            // compared to reasoning about whether a change is "the same
+            // route" worth keeping open.
+            *thru = None;
+
+            let outcome = match (input, output) {
+                (Some(input), Some(output)) => {
+                    Thru::connect(&input, &output).map(|connected| *thru = Some(connected))
+                }
+                _ => Ok(()),
+            };
+
+            drop(reply.send(outcome));
         }
     }
 }

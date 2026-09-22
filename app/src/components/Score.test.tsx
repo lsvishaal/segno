@@ -1,4 +1,4 @@
-import { render } from "@testing-library/react";
+import { act, render } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import type { Mark } from "../bridge";
@@ -163,6 +163,31 @@ describe("the score component", () => {
 
   // The SVG derives from a file the performer supplied. The CSP already
   // refuses inline script; this is the second lock.
+  it("labels notes with their letter name when enabled", async () => {
+    const { container, findByText } = render(
+      <Score
+        pages={[PAGE]}
+        marks={MARKS}
+        cursor={{ position: 0 }}
+        dot={null}
+        followCursor={false}
+        showNoteNames
+      />,
+    );
+
+    const label = await findByText("C");
+    expect(label).toHaveClass("hw-note-name");
+    expect(container.querySelector(".hw-note-name")).not.toBeNull();
+  });
+
+  it("shows no labels when the toggle is off", () => {
+    const { container } = render(
+      <Score pages={[PAGE]} marks={MARKS} cursor={{ position: 0 }} dot={null} followCursor={false} />,
+    );
+
+    expect(container.querySelector(".hw-note-name")).toBeNull();
+  });
+
   it("strips anything executable from the engraving", () => {
     const hostile = `<svg xmlns="http://www.w3.org/2000/svg">
       <script>globalThis.__hogwash_escaped = true;</script>
@@ -183,5 +208,104 @@ describe("the score component", () => {
 
     expect(container.querySelector("script")).toBeNull();
     expect(container.querySelector("#note-a")).not.toHaveAttribute("onload");
+  });
+
+  // A correct note was written, so it has a real element to recolour
+  // directly — no separate dot to position, and therefore nothing that can
+  // drift out of alignment with it (`Score.tsx`'s module doc).
+  it("flashes the real notehead green on a correct note, then fades it back", () => {
+    vi.useFakeTimers();
+
+    const { container, rerender } = render(
+      <Score pages={[PAGE]} marks={MARKS} cursor={{ position: 0 }} dot={null} followCursor={false} />,
+    );
+
+    rerender(
+      <Score
+        pages={[PAGE]}
+        marks={MARKS}
+        cursor={{ position: 0 }}
+        dot={{ kind: "correct", position: 0, pitch: 60 }}
+        followCursor={false}
+      />,
+    );
+
+    const note = container.querySelector("#note-a") as SVGElement;
+    expect(note.style.color).toBe("var(--hw-correct)");
+
+    vi.advanceTimersByTime(420);
+    expect(note.style.color).toBe("");
+
+    vi.useRealTimers();
+  });
+
+  it("never produces a green dot overlay — the notehead itself is what flashes", () => {
+    const { container } = render(
+      <Score
+        pages={[PAGE]}
+        marks={MARKS}
+        cursor={{ position: 0 }}
+        dot={{ kind: "correct", position: 0, pitch: 60 }}
+        followCursor={false}
+      />,
+    );
+
+    expect(container.querySelector(".hw-dot")).toBeNull();
+  });
+});
+
+describe("resize-driven re-measurement", () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  // The root cause of the cursor drifting on anything other than the exact
+  // screen shape it was last measured against: nothing used to re-measure
+  // on a resize at all. This proves the fix without needing a real browser
+  // layout — a mock `ResizeObserver` stands in for "the container's size
+  // just changed," the same way `getBoundingClientRect` already stands in
+  // for real layout throughout this file.
+  it("re-measures note positions when the container is resized", () => {
+    const PAGE = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 100">
+      <g id="note-a" class="note"><ellipse cx="40" cy="50" rx="8" ry="6"/></g>
+    </svg>`;
+    const MARKS: readonly Mark[] = [
+      { measure: 1, position: 0, page: 0, notes: [{ elementId: "note-a", step: "C", octave: 4 }] },
+    ];
+
+    const callbacks: (() => void)[] = [];
+
+    class MockResizeObserver {
+      constructor(callback: () => void) {
+        callbacks.push(callback);
+      }
+      observe(): void {}
+      unobserve(): void {}
+      disconnect(): void {}
+    }
+
+    vi.stubGlobal("ResizeObserver", MockResizeObserver);
+
+    const { container } = render(
+      <Score pages={[PAGE]} marks={MARKS} cursor={{ position: 0 }} dot={null} followCursor={false} showNoteNames />,
+    );
+
+    const note = container.querySelector("#note-a")!;
+    const label = () => container.querySelector(".hw-note-name") as HTMLElement;
+    const rectSpy = vi.spyOn(note, "getBoundingClientRect");
+
+    rectSpy.mockReturnValue(stubbedRect(40, 50, 16, 12));
+    act(() => {
+      for (const callback of callbacks) callback();
+    });
+    expect(label().style.left).toBe("48px");
+
+    // The container's size just changed — same element, different box.
+    rectSpy.mockReturnValue(stubbedRect(140, 50, 16, 12));
+    act(() => {
+      for (const callback of callbacks) callback();
+    });
+
+    expect(label().style.left).toBe("148px");
   });
 });

@@ -3,7 +3,7 @@ import type { ReactNode } from "react";
 
 import { AnimatePresence, motion, MotionConfig } from "motion/react";
 
-import { library, openPiece, startupFailure } from "./bridge";
+import { importMusicXml, library, openPiece, startupFailure } from "./bridge";
 import type { OpenedPiece, PieceSummary, Unavailable } from "./bridge";
 import { LibraryScreen } from "./screens/Library";
 import { PracticeScreen } from "./screens/Practice";
@@ -20,10 +20,10 @@ import { UnavailableScreen } from "./screens/Unavailable";
 function Transitioned({ children }: { readonly children: ReactNode }) {
   return (
     <motion.div
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      exit={{ opacity: 0 }}
-      transition={{ duration: 0.18, ease: "easeOut" }}
+      initial={{ opacity: 0, scale: 0.98 }}
+      animate={{ opacity: 1, scale: 1 }}
+      exit={{ opacity: 0, scale: 0.98 }}
+      transition={{ duration: 0.2, ease: "easeOut" }}
       className="h-full"
     >
       {children}
@@ -49,6 +49,8 @@ type Screen =
 
 export function App() {
   const [screen, setScreen] = useState<Screen>({ kind: "starting" });
+  const [importing, setImporting] = useState(false);
+  const [importError, setImportError] = useState<string | null>(null);
 
   useEffect(() => {
     let live = true;
@@ -104,6 +106,39 @@ export function App() {
     );
   }, []);
 
+  // A refused import surfaces as a banner on the library screen, not a
+  // full-screen takeover: one file that did not work is not "Hogwash cannot
+  // start" (`UnavailableScreen` is reserved for that). The command's error is
+  // already the refusal's reason and route, joined verbatim — nothing here
+  // adds wording of its own.
+  const importPiece = useCallback(() => {
+    void (async () => {
+      setImporting(true);
+      setImportError(null);
+
+      try {
+        const imported = await importMusicXml();
+
+        if (imported) {
+          setScreen((current) =>
+            current.kind === "library"
+              ? {
+                  kind: "library",
+                  pieces: [...current.pieces, imported.piece],
+                }
+              : current,
+          );
+        }
+      } catch (error) {
+        setImportError(String(error));
+      } finally {
+        setImporting(false);
+      }
+    })();
+  }, []);
+
+  const dismissImportError = useCallback(() => setImportError(null), []);
+
   // `reducedMotion="user"` makes every `motion.*` component below honour
   // `prefers-reduced-motion` automatically, in one place, rather than each
   // component checking it independently.
@@ -127,7 +162,14 @@ export function App() {
             case "library":
               return (
                 <Transitioned key="library">
-                  <LibraryScreen pieces={screen.pieces} onOpen={open} />
+                  <LibraryScreen
+                    pieces={screen.pieces}
+                    onOpen={open}
+                    onImport={importPiece}
+                    importing={importing}
+                    importError={importError}
+                    onDismissError={dismissImportError}
+                  />
                 </Transitioned>
               );
 

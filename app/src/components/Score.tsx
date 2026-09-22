@@ -3,6 +3,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { AnimatePresence, motion } from "motion/react";
 
 import type { DrawnNote, Mark } from "../bridge";
+import { NoteNames } from "./NoteNames";
 import { nearestSpelling, verticalPositionFor } from "./staffGeometry";
 import type { Spelling } from "./staffGeometry";
 
@@ -39,15 +40,19 @@ export interface Box {
  * it. The cursor and the dots are a *separate* layer, one React fully owns,
  * sitting on top.
  *
- * # Why marking a note is no longer a class on it
+ * # Correct notes recolor real ink; wrong notes cannot
  *
- * The previous approach recoloured the notehead itself. That worked for a
- * note that was written — every wrong note isn't one: a keyboard reports a
- * struck key's sound, never its spelling (`ADR-0001`), so a wrong note has
- * no element to put a class on. The cursor and both dots are therefore an
- * overlay, positioned from real measurements (`getBoundingClientRect()` on
- * whatever was actually drawn — trustworthy, unlike the static-file geometry
- * bug `ADR-0012` records) rather than from anything Verovio drew for them.
+ * A correct note was written, so it has a real element — its own `color` is
+ * set directly (Verovio draws with `currentColor`, inherited from
+ * `.hw-page`) and transitions back, no positioning involved. A wrong note
+ * has no such element: a keyboard reports a struck key's sound, never its
+ * spelling (`ADR-0001`), so there is nothing to recolor. That's the one case
+ * still drawn as an overlay, positioned from real measurements
+ * (`getBoundingClientRect()` on whatever *was* actually drawn — trustworthy,
+ * unlike the static-file geometry bug `ADR-0012` records) rather than from
+ * anything Verovio drew for the pitch that was actually played. The cursor
+ * bar is an overlay for the same reason a wrong note is: it marks a position
+ * on the staff, not a specific drawn element.
  */
 export function Score({
   pages,
@@ -55,17 +60,23 @@ export function Score({
   cursor,
   dot,
   followCursor = true,
+  showNoteNames = false,
 }: {
   readonly pages: readonly string[];
   readonly marks: readonly Mark[];
   readonly cursor: CursorState;
   readonly dot: Dot | null;
   readonly followCursor?: boolean;
+  readonly showNoteNames?: boolean;
 }) {
   const wrapper = useRef<HTMLDivElement>(null);
   const container = useRef<HTMLDivElement>(null);
   const [cursorBox, setCursorBox] = useState<Box | null>(null);
-  const [dotBox, setDotBox] = useState<{ box: Box; kind: "correct" | "wrong" } | null>(null);
+  const [dotBox, setDotBox] = useState<Box | null>(null);
+  const [noteLabels, setNoteLabels] = useState<readonly { elementId: string; step: string; box: Box }[]>([]);
+  // Bumped by the `ResizeObserver` below — its value is never read, only its
+  // identity change matters, to force every measurement effect to re-run.
+  const [layoutTick, setLayoutTick] = useState(0);
 
   /** Position in the piece → the notes drawn for it. */
   const notesAt = useMemo(() => {
@@ -89,6 +100,24 @@ export function Score({
 
     return index;
   }, [marks]);
+
+  // Every stored box is a snapshot of `getBoundingClientRect()`, which goes
+  // stale the instant the container's actual on-screen size changes — a
+  // window resize, an orientation change, or simply the app running on a
+  // differently-shaped screen than whatever it was last measured against.
+  // `.hw-page svg { width: 100%; height: auto }` means the score's pixel
+  // size depends entirely on this element's width, so that's what's watched.
+  useEffect(() => {
+    const root = wrapper.current;
+    if (!root) return;
+
+    const observer = new ResizeObserver(() => {
+      setLayoutTick((tick) => tick + 1);
+    });
+
+    observer.observe(root);
+    return () => observer.disconnect();
+  }, []);
 
   // The pages, injected once per piece. `marks` deliberately is not a
   // dependency: new marks for the same score must not re-inject it.
@@ -115,10 +144,13 @@ export function Score({
     if (!root) return;
 
     setCursorBox(unionBox(root, notesAt.get(cursor.position)));
-  }, [cursor, notesAt, pages]);
+  }, [cursor, notesAt, pages, layoutTick]);
 
-  // A dot, positioned and then retired on its own timer — its lifetime is
-  // not tied to whatever event happens to arrive next.
+  // A correct note recolors the real notehead — there is one, so there is
+  // nothing to position (`ADR-0001` only forces an overlay for a *wrong*
+  // pitch, which has no element of its own). A wrong note still gets a
+  // positioned ghost dot, retired on its own timer so its lifetime isn't
+  // tied to whatever event happens to arrive next.
   useEffect(() => {
     if (!dot) return;
 
@@ -127,18 +159,56 @@ export function Score({
 
     const notes = notesAt.get(dot.position);
 
-    const box =
-      dot.kind === "correct"
-        ? unionBox(root, notes)
-        : wrongNoteBox(root, dot, notes, pageOf, marks);
+    if (dot.kind === "correct") {
+      const elements = (notes ?? []).flatMap((note) => {
+        const element = root.querySelector(`#${CSS.escape(note.elementId)}`);
+        return element instanceof SVGElement ? [element] : [];
+      });
 
-    if (box) setDotBox({ box, kind: dot.kind });
+      for (const element of elements) {
+        element.style.color = "var(--hw-correct)";
+      }
+
+      const timeout = window.setTimeout(() => {
+        for (const element of elements) {
+          element.style.color = "";
+        }
+      }, 420);
+
+      return () => window.clearTimeout(timeout);
+    }
+
+    const box = wrongNoteBox(root, dot, notes, pageOf, marks);
+    if (box) setDotBox(box);
 
     const timeout = window.setTimeout(() => setDotBox(null), 420);
     return () => window.clearTimeout(timeout);
     // `dot` is a fresh object per event even when its fields repeat, so a
     // second wrong note in a row still restarts the animation.
-  }, [dot, notesAt, pageOf, marks]);
+  }, [dot, notesAt, pageOf, marks, layoutTick]);
+
+  // Note-name labels, one per drawn note — recomputed whenever the toggle
+  // turns on or the pages themselves change. Declared after the pages
+  // effect above so it always measures a DOM that effect already injected
+  // into (effects within one component fire in declaration order).
+  useEffect(() => {
+    if (!showNoteNames) {
+      setNoteLabels([]);
+      return;
+    }
+
+    const root = wrapper.current;
+    if (!root) return;
+
+    const labels = marks.flatMap((mark) =>
+      mark.notes.flatMap((note) => {
+        const box = boxOf(root, note.elementId);
+        return box ? [{ elementId: note.elementId, step: note.step, box }] : [];
+      }),
+    );
+
+    setNoteLabels(labels);
+  }, [showNoteNames, marks, pages, layoutTick]);
 
   // Keep the cursor in view. `block: "center"` rather than "nearest" so the
   // performer reads with music above and below, not pinned to an edge.
@@ -154,13 +224,12 @@ export function Score({
   }, [cursor, notesAt, followCursor]);
 
   return (
-    <div ref={wrapper} className="relative mx-auto max-w-6xl">
-      <div
-        ref={container}
-        className="hw-sheet rounded-xl p-8 shadow-[0_20px_60px_-32px_rgb(28_26_23/0.35)]"
-      />
+    <div ref={wrapper} className="relative mx-auto w-full max-w-[1600px]">
+      <div ref={container} className="py-6" />
 
       <div className="pointer-events-none absolute inset-0">
+        <NoteNames labels={noteLabels} />
+
         {cursorBox && (
           <motion.div
             className="hw-cursor-bar"
@@ -176,11 +245,11 @@ export function Score({
         <AnimatePresence>
           {dotBox && (
             <motion.div
-              key={`${dot?.kind}-${dot?.position}-${dot?.pitch}-${dotBox.box.left}-${dotBox.box.top}`}
-              className={dotBox.kind === "correct" ? "hw-dot hw-dot-correct" : "hw-dot hw-dot-wrong"}
+              key={`${dot?.position}-${dot?.pitch}-${dotBox.left}-${dotBox.top}`}
+              className="hw-dot hw-dot-wrong"
               style={{
-                left: dotBox.box.left + dotBox.box.width / 2,
-                top: dotBox.box.top + dotBox.box.height / 2,
+                left: dotBox.left + dotBox.width / 2,
+                top: dotBox.top + dotBox.height / 2,
               }}
               initial={{ opacity: 0, scale: 0.4 }}
               animate={{ opacity: 1, scale: 1 }}
@@ -194,24 +263,31 @@ export function Score({
   );
 }
 
+/** One drawn element's own box, relative to `root` — or nothing if it isn't there. */
+export function boxOf(root: HTMLElement, elementId: string): Box | null {
+  const element = root.querySelector(`#${CSS.escape(elementId)}`);
+  if (!element) return null;
+
+  const origin = root.getBoundingClientRect();
+  const rect = element.getBoundingClientRect();
+
+  return {
+    left: rect.left - origin.left,
+    top: rect.top - origin.top,
+    width: rect.width,
+    height: rect.height,
+  };
+}
+
 /** The union of every drawn note's box for one position, relative to `root`. */
 export function unionBox(root: HTMLElement, notes: readonly DrawnNote[] | undefined): Box | null {
   if (!notes || notes.length === 0) return null;
 
-  const origin = root.getBoundingClientRect();
   let box: Box | null = null;
 
   for (const note of notes) {
-    const element = root.querySelector(`#${CSS.escape(note.elementId)}`);
-    if (!element) continue;
-
-    const rect = element.getBoundingClientRect();
-    const relative: Box = {
-      left: rect.left - origin.left,
-      top: rect.top - origin.top,
-      width: rect.width,
-      height: rect.height,
-    };
+    const relative = boxOf(root, note.elementId);
+    if (!relative) continue;
 
     box = box ? union(box, relative) : relative;
   }
@@ -246,17 +322,13 @@ export function wrongNoteBox(
   if (!anchorBox || !anchor) return null;
 
   const page = pageOf.get(dot.position);
-  const origin = root.getBoundingClientRect();
 
   const calibration = marks
     .filter((mark) => mark.page === page)
     .flatMap((mark) => mark.notes)
     .flatMap((note) => {
-      const element = root.querySelector(`#${CSS.escape(note.elementId)}`);
-      if (!element) return [];
-
-      const rect = element.getBoundingClientRect();
-      return [{ spelling: spellingOf(note), y: rect.top - origin.top }];
+      const box = boxOf(root, note.elementId);
+      return box ? [{ spelling: spellingOf(note), y: box.top }] : [];
     });
 
   const ghost = nearestSpelling(dot.pitch, spellingOf(anchor));

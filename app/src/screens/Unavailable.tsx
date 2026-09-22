@@ -13,7 +13,7 @@ import type { Unavailable } from "../bridge";
 export function UnavailableScreen({ failure }: { readonly failure: Unavailable }) {
   return (
     <main className="mx-auto flex min-h-full max-w-2xl flex-col justify-center px-8 py-16">
-      <h1 className="font-serif text-3xl leading-tight tracking-tight text-balance">
+      <h1 className="font-serif text-heading text-balance">
         {failure.summary}
       </h1>
 
@@ -22,8 +22,9 @@ export function UnavailableScreen({ failure }: { readonly failure: Unavailable }
       </p>
 
       {failure.lookedIn.length > 0 && (
-        <section className="mt-8 border-t border-rule pt-6">
-          <h2 className="text-xs font-medium tracking-[0.12em] text-ink-muted uppercase">
+        <section className="mt-8">
+          <div className="staff-rule" />
+          <h2 className="pt-4 text-label font-medium text-ink-muted uppercase">
             Looked in
           </h2>
           <ul className="mt-3 space-y-1.5">

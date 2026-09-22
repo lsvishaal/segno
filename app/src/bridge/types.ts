@@ -96,9 +96,28 @@ export interface Unavailable {
   readonly lookedIn: readonly string[];
 }
 
+/**
+ * What importing a `MusicXML` file produced, once accepted.
+ *
+ * `lines` is `ValidationReport::lines()`, verbatim — "The whole score was
+ * read." when nothing was lost, one sentence per loss otherwise. Nothing on
+ * this side could reconstruct it after the fact, so it travels with the
+ * result.
+ */
+export interface ImportedPiece {
+  readonly piece: PieceSummary;
+  readonly lines: readonly string[];
+}
+
 /** A MIDI instrument the performer could play (FR-307). */
 export interface InstrumentSummary {
   /** What to show, and what `startAttempt` names it by. */
+  readonly name: string;
+}
+
+/** A MIDI output device the performer could route sound to. */
+export interface OutputPortSummary {
+  /** What to show, and what `setThru` names it by. */
   readonly name: string;
 }
 

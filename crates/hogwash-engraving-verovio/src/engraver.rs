@@ -47,15 +47,19 @@ pub struct Layout {
 impl Default for Layout {
     fn default() -> Self {
         // 2100 is A4's width in Verovio's units, and is wide enough to hold
-        // several bars per system without crowding. 150% rather than
-        // Verovio's own default of 100%, and above this crate's earlier
-        // 110%: a performer reading a screen at arm's length, on a score
-        // that may well be the only thing on that screen, benefits from
-        // noteheads and staff lines closer to what a beginner's method book
-        // prints than what a page of dense orchestral engraving does.
+        // several bars per system without crowding. 300% rather than
+        // Verovio's own default of 100%, and well above this crate's earlier
+        // 110% and then 150%: a performer reading a screen at arm's length,
+        // on a score that may well be the only thing on that screen,
+        // benefits from noteheads and staff lines that are unmistakable
+        // rather than merely legible — closer to a beginner's method book
+        // held open on a music stand than a page of dense orchestral
+        // engraving. Still well inside the zoom control's own range
+        // (`commands.rs`'s `clamp_scale`, 50–400), so nothing about the
+        // ceiling needed to move to make room for this.
         Self {
             width: 2100,
-            scale: 150,
+            scale: 300,
         }
     }
 }

@@ -80,10 +80,15 @@ pub fn run() -> Result<(), tauri::Error> {
         .invoke_handler(tauri::generate_handler![
             commands::library,
             commands::open_piece,
+            commands::rescale_piece,
             commands::startup_failure,
             commands::instruments,
             commands::start_attempt,
             commands::end_attempt,
+            commands::export_musicxml,
+            commands::import_musicxml,
+            commands::output_ports,
+            commands::set_thru,
         ])
         .run(tauri::generate_context!())
 }

@@ -35,7 +35,7 @@ use std::path::Path;
 
 use hogwash_domain::{Location, MeasureNumber, Step};
 use hogwash_engraving::{EngravedScore, Engraver, EngravingFailure};
-use hogwash_engraving_verovio::VerovioEngraver;
+use hogwash_engraving_verovio::{Layout, VerovioEngraver};
 
 const TWO_BARS: &[u8] = include_bytes!("fixtures/two-bars.musicxml");
 
@@ -150,6 +150,56 @@ fn the_same_file_engraves_identically_twice_over() {
     assert_eq!(
         first.placements().collect::<Vec<_>>(),
         second.placements().collect::<Vec<_>>()
+    );
+}
+
+// Zoom (`BFR-4`) re-engraves the same score at a different `Layout.scale`
+// while an Attempt may be in progress. That is only safe if an element's
+// identifier depends on the music's content, not on the size it was drawn
+// at — otherwise the frontend's `Mark.notes[].elementId`s would go stale the
+// instant a performer zoomed mid-attempt. This is that assumption, checked
+// rather than assumed: if it ever fails, the design still holds (the
+// frontend always replaces `marks` wholesale on a rescale, never patches
+// them), but nobody should be surprised by it happening.
+#[test]
+#[ignore = "needs a real libverovio; run `just engraving-test`"]
+fn rescaling_keeps_the_same_element_ids_but_changes_geometry() {
+    let mut engraver = engraver();
+
+    engraver.lay_out(Layout {
+        scale: 100,
+        ..Layout::default()
+    });
+    let small = engraver.engrave(TWO_BARS).expect("engraves at 100%");
+
+    engraver.lay_out(Layout {
+        scale: 200,
+        ..Layout::default()
+    });
+    let large = engraver.engrave(TWO_BARS).expect("engraves at 200%");
+
+    // Same music either way — scale is not content.
+    assert_eq!(small.score(), large.score());
+
+    let ids_of = |engraved: &EngravedScore| -> Vec<_> {
+        engraved
+            .placements()
+            .map(|(_, placement)| placement.elements().to_vec())
+            .collect()
+    };
+
+    assert_eq!(
+        ids_of(&small),
+        ids_of(&large),
+        "element ids must not depend on scale"
+    );
+
+    // And the geometry actually did change — otherwise the assertion above
+    // would be vacuously true rather than meaningful.
+    assert_ne!(
+        height_of(&small.pages()[0]),
+        height_of(&large.pages()[0]),
+        "200% should not render the same page height as 100%"
     );
 }
 
