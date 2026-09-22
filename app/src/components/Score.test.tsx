@@ -180,6 +180,21 @@ describe("the score component", () => {
     expect(container.querySelector(".hw-note-name")).not.toBeNull();
   });
 
+  // A repeat marks the same drawn note once per pass.
+  it("labels a note in a repeated bar once", async () => {
+    const repeated: readonly Mark[] = [
+      { measure: 1, position: 0, page: 0, notes: [{ elementId: "note-a", step: "C", octave: 4 }] },
+      { measure: 1, position: 1, page: 0, notes: [{ elementId: "note-a", step: "C", octave: 4 }] },
+    ];
+
+    const { container, findByText } = render(
+      <Score pages={[PAGE]} marks={repeated} cursor={{ position: 0 }} dot={null} followCursor={false} showNoteNames />,
+    );
+
+    await findByText("C");
+    expect(container.querySelectorAll(".hw-note-name")).toHaveLength(1);
+  });
+
   it("shows no labels when the toggle is off", () => {
     const { container } = render(
       <Score pages={[PAGE]} marks={MARKS} cursor={{ position: 0 }} dot={null} followCursor={false} />,

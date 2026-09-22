@@ -200,8 +200,13 @@ export function Score({
     const root = wrapper.current;
     if (!root) return;
 
+    // A repeated bar is marked once per pass but drawn once, so each drawn
+    // note is labelled once.
+    const seen = new Set<string>();
     const labels = marks.flatMap((mark) =>
       mark.notes.flatMap((note) => {
+        if (seen.has(note.elementId)) return [];
+        seen.add(note.elementId);
         const box = boxOf(root, note.elementId);
         return box ? [{ elementId: note.elementId, step: note.step, box }] : [];
       }),
