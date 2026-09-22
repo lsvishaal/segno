@@ -359,3 +359,27 @@ fn a_tied_note_is_required_once_against_a_real_engine() {
         Some(&[vec![72, 48], vec![52], vec![74]][..])
     );
 }
+
+// The fixture's bars 1-2 sit inside repeat signs. Verovio writes the repeat
+// out for its timemap under copied identifiers; the cursor must follow the
+// performed order: 1 2 1 2 3.
+#[test]
+#[ignore = "needs a real libverovio; run `just engraving-test`"]
+fn a_repeat_is_played_twice_against_a_real_engine() {
+    let engraved = engraver()
+        .engrave(REAL_NOTATION)
+        .expect("the fixture engraves");
+
+    let mut bars: Vec<u32> = hogwash_notation::ReferencePerformance::derived_from(engraved.score())
+        .iter()
+        .map(|step| step.measure().get())
+        .collect();
+    bars.dedup();
+
+    assert_eq!(bars, [1, 2, 1, 2, 3]);
+    assert_eq!(
+        engraved.placements().count(),
+        hogwash_notation::ReferencePerformance::derived_from(engraved.score()).len(),
+        "every performed step is placed on the page"
+    );
+}

@@ -19,6 +19,9 @@ use crate::Measure;
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct Score {
     measures: Vec<Measure>,
+    /// The bars in the order they are played, repeats written out. Empty
+    /// means written order.
+    played: Vec<MeasureNumber>,
 }
 
 impl Score {
@@ -54,7 +57,10 @@ impl Score {
         });
 
         if strictly_ascending {
-            Some(Self { measures })
+            Some(Self {
+                measures,
+                played: Vec::new(),
+            })
         } else {
             None
         }
@@ -64,6 +70,42 @@ impl Score {
     #[must_use]
     pub fn measures(&self) -> &[Measure] {
         &self.measures
+    }
+
+    /// The same Score, played as `order` says: the bars a performer plays,
+    /// in the order they play them, with repeats written out (`1 2 1 2 3`).
+    ///
+    /// `None` if `order` names a bar the Score does not have. An empty order
+    /// means written order.
+    #[must_use]
+    pub fn played_as(mut self, order: Vec<MeasureNumber>) -> Option<Self> {
+        if order.iter().all(|number| self.measure(*number).is_some()) {
+            self.played = order;
+            Some(self)
+        } else {
+            None
+        }
+    }
+
+    /// The measures in the order they are played: written order, unless
+    /// [`played_as`](Self::played_as) said otherwise.
+    #[must_use]
+    pub fn performance(&self) -> Vec<&Measure> {
+        if self.played.is_empty() {
+            self.measures.iter().collect()
+        } else {
+            self.played
+                .iter()
+                .filter_map(|number| self.measure(*number))
+                .collect()
+        }
+    }
+
+    fn measure(&self, number: MeasureNumber) -> Option<&Measure> {
+        self.measures
+            .binary_search_by_key(&number, Measure::number)
+            .ok()
+            .and_then(|index| self.measures.get(index))
     }
 }
 
@@ -143,6 +185,53 @@ mod tests {
         let with_a_gap = Score::new(vec![measure(1, &[Step::C]), measure(5, &[Step::D])]);
 
         assert!(with_a_gap.is_some());
+    }
+
+    // Repeats: the bars are written once and played as the repeat signs say.
+    #[test]
+    fn a_score_can_be_played_in_an_order_other_than_written() {
+        let bar = |number| MeasureNumber::new(number).unwrap();
+        let score = Score::new(vec![
+            measure(1, &[Step::C]),
+            measure(2, &[Step::D]),
+            measure(3, &[Step::E]),
+        ])
+        .unwrap()
+        .played_as(vec![bar(1), bar(2), bar(1), bar(2), bar(3)])
+        .unwrap();
+
+        let played: Vec<u32> = score
+            .performance()
+            .iter()
+            .map(|measure| measure.number().get())
+            .collect();
+
+        assert_eq!(played, [1, 2, 1, 2, 3]);
+        assert_eq!(score.measures().len(), 3, "still written once");
+    }
+
+    #[test]
+    fn a_score_is_played_in_written_order_unless_told_otherwise() {
+        let score = Score::new(vec![measure(1, &[Step::C]), measure(2, &[Step::D])]).unwrap();
+
+        let played: Vec<u32> = score
+            .performance()
+            .iter()
+            .map(|measure| measure.number().get())
+            .collect();
+
+        assert_eq!(played, [1, 2]);
+    }
+
+    #[test]
+    fn a_play_order_naming_a_missing_bar_is_refused() {
+        let score = Score::new(vec![measure(1, &[Step::C])]).unwrap();
+
+        assert!(
+            score
+                .played_as(vec![MeasureNumber::new(2).unwrap()])
+                .is_none()
+        );
     }
 
     // 003 §7.10 — "Every Note in a Score belongs to exactly one Measure of

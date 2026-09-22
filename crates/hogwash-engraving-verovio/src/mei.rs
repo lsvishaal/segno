@@ -29,6 +29,7 @@ pub(crate) struct WrittenNote {
 pub(crate) struct ReadMei {
     details: Details,
     measures: Vec<MeasureNumber>,
+    measure_ids: BTreeMap<String, MeasureNumber>,
     // A BTreeMap so the reading is reproducible whatever order the document
     // is walked in (FR-406, NFR-301).
     notes: BTreeMap<String, WrittenNote>,
@@ -49,6 +50,11 @@ impl ReadMei {
         &self.measures
     }
 
+    /// The bar the document calls `id`.
+    pub(crate) fn measure(&self, id: &str) -> Option<MeasureNumber> {
+        self.measure_ids.get(id).copied()
+    }
+
     /// The note the document calls `id`.
     pub(crate) fn note(&self, id: &str) -> Option<WrittenNote> {
         self.notes.get(id).copied()
@@ -61,6 +67,7 @@ pub(crate) fn read(mei: &str) -> Result<ReadMei, TranslationFailure> {
         .map_err(|failure| TranslationFailure::NotADocument(failure.to_string()))?;
 
     let mut measures = Vec::new();
+    let mut measure_ids = BTreeMap::new();
     let mut notes = BTreeMap::new();
     let tied_to = tie_continuations(&document);
 
@@ -74,6 +81,9 @@ pub(crate) fn read(mei: &str) -> Result<ReadMei, TranslationFailure> {
     {
         let number = measure_number(measure)?;
         measures.push(number);
+        if let Some(id) = identifier(measure) {
+            measure_ids.insert(id.to_owned(), number);
+        }
 
         for note in measure
             .descendants()
@@ -104,6 +114,7 @@ pub(crate) fn read(mei: &str) -> Result<ReadMei, TranslationFailure> {
     Ok(ReadMei {
         details: details_of(&document),
         measures,
+        measure_ids,
         notes,
     })
 }

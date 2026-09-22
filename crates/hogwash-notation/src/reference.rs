@@ -88,8 +88,8 @@ impl ReferencePerformance {
     #[must_use]
     pub fn derived_from(score: &Score) -> Self {
         let steps = score
-            .measures()
-            .iter()
+            .performance()
+            .into_iter()
             .flat_map(|measure| {
                 measure.positions().iter().filter_map(move |position| {
                     ExpectedNotes::new(measure.number(), position.notes().to_vec())
@@ -235,6 +235,22 @@ mod tests {
         assert_eq!(
             reference.at(1).unwrap().measure(),
             MeasureNumber::new(2).unwrap()
+        );
+    }
+
+    // A repeated bar is played, and so expected, twice, in playing order.
+    #[test]
+    fn a_repeated_bar_is_expected_again_where_it_is_played_again() {
+        let bar = |number| MeasureNumber::new(number).unwrap();
+        let score = score_of(vec![melody(1, &[Step::C, Step::D]), melody(2, &[Step::E])])
+            .played_as(vec![bar(1), bar(1), bar(2)])
+            .unwrap();
+
+        let reference = ReferencePerformance::derived_from(&score);
+
+        assert_eq!(
+            steps_of(&reference),
+            vec![Step::C, Step::D, Step::C, Step::D, Step::E]
         );
     }
 

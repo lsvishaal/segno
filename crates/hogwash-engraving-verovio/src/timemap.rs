@@ -18,6 +18,8 @@
 //! each onset — a chord appears as its three notes, not as the chord element
 //! — which is also what is wanted.
 
+use std::collections::BTreeMap;
+
 use serde::Deserialize;
 
 use crate::failure::TranslationFailure;
@@ -36,25 +38,16 @@ struct Moment {
     /// The notes that begin sounding here.
     #[serde(default)]
     on: Vec<String>,
+    /// The bar that begins here, if one does.
+    #[serde(default, rename = "measureOn")]
+    measure_on: Option<String>,
 }
 
 /// The notes that sound together, in the order they are played.
 ///
 /// Each entry is one Position's worth of note identifiers.
 pub(crate) fn onsets(timemap: &str) -> Result<Vec<Vec<String>>, TranslationFailure> {
-    let mut moments: Vec<Moment> = serde_json::from_str(timemap)
-        .map_err(|failure| TranslationFailure::UnreadableTiming(failure.to_string()))?;
-
-    // Verovio emits these in order already. Sorting anyway costs nothing at
-    // this size and means the reading does not depend on that staying true —
-    // FR-406 is release-blocking (`MVP §9.2`), and "it happened to be sorted"
-    // is not a property to rest it on.
-    //
-    // `total_cmp` rather than `partial_cmp`: a NaN qstamp would otherwise
-    // make the comparison inconsistent and the sort order arbitrary.
-    moments.sort_by(|earlier, later| earlier.qstamp.total_cmp(&later.qstamp));
-
-    Ok(moments
+    Ok(moments(timemap)?
         .into_iter()
         // A moment where notes only stop is not a Position. The timemap's
         // last entry is always one of these.
@@ -63,9 +56,58 @@ pub(crate) fn onsets(timemap: &str) -> Result<Vec<Vec<String>>, TranslationFailu
         .collect())
 }
 
+/// The bars, by identifier, in the order they are played.
+///
+/// The timemap is built from a copy of the document with repeats written
+/// out, so a repeated bar appears again here under a copy's identifier —
+/// see [`originals`].
+pub(crate) fn measures(timemap: &str) -> Result<Vec<String>, TranslationFailure> {
+    Ok(moments(timemap)?
+        .into_iter()
+        .filter_map(|moment| moment.measure_on)
+        .collect())
+}
+
+fn moments(timemap: &str) -> Result<Vec<Moment>, TranslationFailure> {
+    let mut moments: Vec<Moment> = serde_json::from_str(timemap)
+        .map_err(|failure| TranslationFailure::UnreadableTiming(failure.to_string()))?;
+
+    // Verovio emits these in order already. Sorting anyway costs nothing at
+    // this size and means the reading does not depend on that staying true.
+    //
+    // `total_cmp` rather than `partial_cmp`: a NaN qstamp would otherwise
+    // make the comparison inconsistent and the sort order arbitrary.
+    moments.sort_by(|earlier, later| earlier.qstamp.total_cmp(&later.qstamp));
+
+    Ok(moments)
+}
+
+/// Which element each identifier is a copy of, from Verovio's expansion map.
+///
+/// The map lists, for each repeated element, every identifier it has —
+/// `{"a": ["a", "a-rend2"], "a-rend2": ["a", "a-rend2"]}` — the original
+/// first. An identifier that is not in the map is not a copy of anything.
+pub(crate) fn originals(
+    expansion_map: &str,
+) -> Result<BTreeMap<String, String>, TranslationFailure> {
+    let map: BTreeMap<String, Vec<String>> = serde_json::from_str(expansion_map)
+        .map_err(|failure| TranslationFailure::UnreadableTiming(failure.to_string()))?;
+
+    let mut originals = BTreeMap::new();
+    for copies in map.into_values() {
+        if let Some((original, _)) = copies.split_first() {
+            for copy in &copies {
+                originals.insert(copy.clone(), original.clone());
+            }
+        }
+    }
+
+    Ok(originals)
+}
+
 #[cfg(test)]
 mod tests {
-    use crate::timemap::onsets;
+    use crate::timemap::{measures, onsets, originals};
 
     /// Real Verovio output for `tests/fixtures/two-bars.musicxml`.
     const TWO_BARS: &str = include_str!("../tests/fixtures/two-bars.timemap.json");
@@ -116,6 +158,39 @@ mod tests {
             onsets,
             vec![vec!["early".to_owned()], vec!["late".to_owned()]]
         );
+    }
+
+    // With includeMeasures, each bar's start is marked. A repeat plays bars
+    // again under copied identifiers, in the order they are played.
+    #[test]
+    fn bars_are_listed_in_the_order_they_are_played() {
+        let played = measures(
+            r#"[{"on":["a"],"qstamp":0,"measureOn":"m1"},{"on":["b"],"qstamp":4,"measureOn":"m1-rend2"},
+                {"on":["c"],"qstamp":2},{"qstamp":8,"measureOn":"m2"}]"#,
+        )
+        .expect("readable");
+
+        assert_eq!(played, ["m1", "m1-rend2", "m2"]);
+    }
+
+    // Verovio's own shape: every identifier of a repeated element maps to all
+    // of them, the original first.
+    #[test]
+    fn a_copy_is_traced_back_to_its_original() {
+        let originals = originals(
+            r#"{"n": ["n", "n-rend2", "n-rend3"], "n-rend2": ["n", "n-rend2", "n-rend3"]}"#,
+        )
+        .expect("readable");
+
+        assert_eq!(originals.get("n-rend2").map(String::as_str), Some("n"));
+        assert_eq!(originals.get("n-rend3").map(String::as_str), Some("n"));
+        assert_eq!(originals.get("n").map(String::as_str), Some("n"));
+        assert_eq!(originals.get("other"), None);
+    }
+
+    #[test]
+    fn an_expansion_map_that_is_not_json_is_refused() {
+        assert!(originals("[").is_err());
     }
 
     #[test]

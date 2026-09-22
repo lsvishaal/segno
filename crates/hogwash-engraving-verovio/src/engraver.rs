@@ -179,6 +179,8 @@ impl Engraver for VerovioEngraver {
 
         let document = self.toolkit.mei().map_err(refused)?;
         let times = self.toolkit.timemap().map_err(refused)?;
+        // After the timemap: building it is what writes the repeats out.
+        let copies = self.toolkit.expansion_map().map_err(refused)?;
 
         // Verovio numbers pages from one.
         let pages = (1..=self.toolkit.page_count())
@@ -188,8 +190,11 @@ impl Engraver for VerovioEngraver {
 
         let read = mei::read(&document).map_err(|failure| unreadable(&failure))?;
         let onsets = timemap::onsets(&times).map_err(|failure| unreadable(&failure))?;
+        let played = timemap::measures(&times).map_err(|failure| unreadable(&failure))?;
+        let originals = timemap::originals(&copies).map_err(|failure| unreadable(&failure))?;
         let (score, details, placements) =
-            translate::assemble(&read, &onsets, &pages).map_err(|failure| unreadable(&failure))?;
+            translate::assemble(&read, &onsets, &played, &originals, &pages)
+                .map_err(|failure| unreadable(&failure))?;
 
         Ok(EngravedScore::new(score, details, pages, placements)?)
     }

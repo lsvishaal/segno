@@ -81,6 +81,7 @@ struct Functions {
     get_page_count: GetPageCount,
     render_to_svg: RenderToSvg,
     render_to_timemap: GetStringWithOptions,
+    render_to_expansion_map: GetString,
 }
 
 /// A live Verovio toolkit.
@@ -152,6 +153,10 @@ impl Toolkit {
                 render_to_timemap: *resolve::<GetStringWithOptions>(
                     &handle,
                     b"vrvToolkit_renderToTimemap",
+                )?,
+                render_to_expansion_map: *resolve::<GetString>(
+                    &handle,
+                    b"vrvToolkit_renderToExpansionMap",
                 )?,
             };
 
@@ -278,9 +283,32 @@ impl Toolkit {
         self.timemap().map(|_| ())
     }
 
-    /// The timemap as JSON: which notes sound, and when.
+    /// The timemap as JSON: which notes sound, and when, and which bar
+    /// begins at each moment (`includeMeasures`) — the order bars are played
+    /// in, repeats included.
     pub(crate) fn timemap(&mut self) -> Result<String, ToolkitError> {
-        self.string_with_options(self.functions.render_to_timemap, "{}")
+        self.string_with_options(
+            self.functions.render_to_timemap,
+            r#"{"includeMeasures": true}"#,
+        )
+    }
+
+    /// Which identifiers are copies of which, as JSON.
+    ///
+    /// The timemap is built from a copy of the document with repeats written
+    /// out, and every repeated element there gets a new identifier
+    /// (`<id>-rend2`) that the MEI does not contain. This map is how a note in
+    /// a second pass is traced back to the note that was drawn. Call after
+    /// [`Self::timemap`], which is what creates the expanded copy.
+    pub(crate) fn expansion_map(&mut self) -> Result<String, ToolkitError> {
+        // SAFETY (facts 1, 2 and 3).
+        #[expect(
+            unsafe_code,
+            reason = "resolved signature, own handle, string copied at once"
+        )]
+        let returned = unsafe { (self.functions.render_to_expansion_map)(self.handle.0) };
+
+        text_out(returned)
     }
 
     /// How many pages the current layout produced.

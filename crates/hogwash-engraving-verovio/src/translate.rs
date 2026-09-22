@@ -25,12 +25,20 @@ use crate::mei::ReadMei;
 pub(crate) type Assembled = (Score, Details, Vec<(Location, Placement)>);
 
 /// Builds a Score, its details, and where each Position was drawn.
+///
+/// `played` is the bars in the order they are played (the timemap's
+/// `measureOn`), and `originals` traces a repeat's copied identifiers back to
+/// the written ones (the expansion map). Both may be empty, for music with no
+/// repeats.
 pub(crate) fn assemble(
     read: &ReadMei,
     onsets: &[Vec<String>],
+    played: &[String],
+    originals: &BTreeMap<String, String>,
     pages: &[String],
 ) -> Result<Assembled, TranslationFailure> {
     let page_of = elements_by_page(pages)?;
+    let original = |id: &str| originals.get(id).map_or(id, String::as_str).to_owned();
 
     // Each onset becomes at most one Position, gathered under the bar its
     // notes are in.
@@ -43,6 +51,12 @@ pub(crate) fn assemble(
         let mut elements = Vec::new();
 
         for id in sounding {
+            // A copy is a repeat's second pass over notes already read from
+            // the first. The play order below is what plays them again.
+            if original(id) != *id {
+                continue;
+            }
+
             // An identifier the timemap knows and the document does not.
             // Nothing can be said about such a note, and inventing one would
             // put a note in the Score that the performer cannot see.
@@ -78,17 +92,36 @@ pub(crate) fn assemble(
     }
 
     let mut measures = Vec::new();
-    let mut placements = Vec::new();
-    // Counts across the whole piece, not per bar, because that is what
-    // `ReferencePerformance::derived_from` produces and what `Location`
-    // means. Getting this wrong would put every finding in the wrong place.
-    let mut index = 0;
+    let mut drawn: BTreeMap<MeasureNumber, Vec<Vec<ElementId>>> = BTreeMap::new();
 
     for &number in read.measures() {
-        let sounding = positions_by_measure.remove(&number).unwrap_or_default();
-        let mut positions = Vec::new();
+        let (positions, elements): (Vec<_>, Vec<_>) = positions_by_measure
+            .remove(&number)
+            .unwrap_or_default()
+            .into_iter()
+            .unzip();
 
-        for (position, elements) in sounding {
+        drawn.insert(number, elements);
+        measures.push(Measure::new(number, positions));
+    }
+
+    let order = play_order(read, played, &original, &drawn);
+    let score = Score::new(measures)
+        .and_then(|score| score.played_as(order))
+        .ok_or(TranslationFailure::NotAScore)?;
+
+    // One placement per step of the performance, so a repeated bar's steps
+    // point at the same drawn notes again. Counts across the whole
+    // performance, not per bar, because that is what
+    // `ReferencePerformance::derived_from` produces and what `Location`
+    // means. Getting this wrong would put every finding in the wrong place.
+    let mut placements = Vec::new();
+    let mut index = 0;
+
+    for measure in score.performance() {
+        let number = measure.number();
+
+        for elements in drawn.get(&number).into_iter().flatten() {
             let at = Location::new(number, index);
             index += 1;
 
@@ -97,20 +130,38 @@ pub(crate) fn assemble(
             if let Some(page) = elements
                 .first()
                 .and_then(|first| page_of.get(first.as_str()))
-                && let Some(placement) = Placement::new(*page, elements)
+                && let Some(placement) = Placement::new(*page, elements.clone())
             {
                 placements.push((at, placement));
             }
-
-            positions.push(position);
         }
-
-        measures.push(Measure::new(number, positions));
     }
 
-    let score = Score::new(measures).ok_or(TranslationFailure::NotAScore)?;
-
     Ok((score, read.details().clone(), placements))
+}
+
+/// The bars in the order they are played, as written bar numbers.
+///
+/// Empty — written order — when the timemap names no bars, or when it misses
+/// a bar that has notes in it: trusting an order that would silently drop
+/// music is worse than ignoring the repeats.
+fn play_order(
+    read: &ReadMei,
+    played: &[String],
+    original: &impl Fn(&str) -> String,
+    drawn: &BTreeMap<MeasureNumber, Vec<Vec<ElementId>>>,
+) -> Vec<MeasureNumber> {
+    let order: Vec<MeasureNumber> = played
+        .iter()
+        .filter_map(|id| read.measure(&original(id)))
+        .collect();
+
+    let complete = drawn
+        .iter()
+        .filter(|(_, positions)| !positions.is_empty())
+        .all(|(number, _)| order.contains(number));
+
+    if complete { order } else { Vec::new() }
 }
 
 /// Which page each drawn element is on.
@@ -142,6 +193,8 @@ fn elements_by_page(pages: &[String]) -> Result<BTreeMap<String, PageIndex>, Tra
 
 #[cfg(test)]
 mod tests {
+    use std::collections::BTreeMap;
+
     use hogwash_domain::{Location, MeasureNumber, Step};
 
     use crate::mei::read;
@@ -157,6 +210,8 @@ mod tests {
         assemble(
             &read(MEI).expect("readable MEI"),
             &onsets(TIMEMAP).expect("readable timemap"),
+            &[],
+            &BTreeMap::new(),
             &[PAGE.to_owned()],
         )
         .expect("the fixture assembles")
@@ -229,6 +284,8 @@ mod tests {
         let (score, _, _) = assemble(
             &read(mei).expect("readable"),
             &onsets(timemap).expect("readable"),
+            &[],
+            &BTreeMap::new(),
             &[page.to_owned()],
         )
         .expect("assembles");
@@ -262,12 +319,79 @@ mod tests {
         let (score, _, placements) = assemble(
             &read(mei).expect("readable"),
             &onsets(timemap).expect("readable"),
+            &[],
+            &BTreeMap::new(),
             &[page.to_owned()],
         )
         .expect("assembles");
 
         assert_eq!(score.measures()[0].positions().len(), 1);
         assert_eq!(placements.len(), 1);
+    }
+
+    /// Two bars, one note each, inside a repeat: `|: a | b :|`. Verovio's
+    /// timemap plays them twice, the second time under copied identifiers.
+    fn repeated(played: &[&str]) -> super::Assembled {
+        let mei = r#"<mei xmlns="http://www.music-encoding.org/ns/mei"><music><body><mdiv><score><section>
+            <measure xml:id="m1" n="1"><staff><layer><note xml:id="a" oct="4" pname="c"/></layer></staff></measure>
+            <measure xml:id="m2" n="2"><staff><layer><note xml:id="b" oct="4" pname="d"/></layer></staff></measure>
+            </section></score></mdiv></body></music></mei>"#;
+        let timemap = r#"[{"on":["a"],"qstamp":0},{"on":["b"],"qstamp":4},
+            {"on":["a-rend2"],"qstamp":8},{"on":["b-rend2"],"qstamp":12}]"#;
+        let expansion = r#"{"a":["a","a-rend2"],"b":["b","b-rend2"],
+            "m1":["m1","m1-rend2"],"m2":["m2","m2-rend2"]}"#;
+        let page = r#"<svg xmlns="http://www.w3.org/2000/svg"><g id="a"/><g id="b"/></svg>"#;
+
+        assemble(
+            &read(mei).expect("readable"),
+            &onsets(timemap).expect("readable"),
+            &played.iter().map(|&id| id.to_owned()).collect::<Vec<_>>(),
+            &crate::timemap::originals(expansion).expect("readable"),
+            &[page.to_owned()],
+        )
+        .expect("assembles")
+    }
+
+    // The repeat is played twice, in playing order, and each pass points at
+    // the same drawn notes.
+    #[test]
+    fn a_repeat_is_expected_twice_in_the_order_it_is_played() {
+        let (score, _, placements) = repeated(&["m1", "m2", "m1-rend2", "m2-rend2"]);
+
+        let reference = hogwash_notation::ReferencePerformance::derived_from(&score);
+        let required: Vec<u8> = reference
+            .iter()
+            .flat_map(|step| step.sounding().map(u8::from))
+            .collect();
+        assert_eq!(required, [60, 62, 60, 62]);
+
+        assert_eq!(score.measures().len(), 2, "written once");
+        assert_eq!(
+            placements
+                .iter()
+                .map(|(at, placement)| (
+                    at.measure().get(),
+                    at.position(),
+                    placement.elements()[0].as_str()
+                ))
+                .collect::<Vec<_>>(),
+            [(1, 0, "a"), (2, 1, "b"), (1, 2, "a"), (2, 3, "b")]
+        );
+    }
+
+    // An order that leaves out a bar with notes in it would silently drop
+    // music. Written order is the safer answer.
+    #[test]
+    fn an_order_missing_a_bar_with_notes_falls_back_to_written_order() {
+        let (score, _, placements) = repeated(&["m1", "m1-rend2"]);
+
+        let played: Vec<u32> = score
+            .performance()
+            .iter()
+            .map(|measure| measure.number().get())
+            .collect();
+        assert_eq!(played, [1, 2]);
+        assert_eq!(placements.len(), 2);
     }
 
     // A chord's placement covers all three glyphs, so a half-played chord can
