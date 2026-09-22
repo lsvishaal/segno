@@ -1,8 +1,7 @@
 //! What happened, compared against what was written.
 //!
-//! `003 §7.6` — Analysis *"is a comparison, and nothing more. It measures; it
-//! does not interpret, judge, or advise."* It names exactly four outcomes,
-//! and so does [`Finding`]: which notes were correct, which were wrong, which
+//! Analysis is a comparison and nothing more: it measures. It names exactly
+//! four outcomes, and so does [`Finding`]: which notes were correct, which were wrong, which
 //! expected notes never arrived, and which unexpected ones did.
 //!
 //! # Reproducibility is not a quality goal here, it is the definition

@@ -6,7 +6,7 @@ rust-version.workspace = true
 authors.workspace = true
 license.workspace = true
 publish = false
-description = "An Analysis in terms a performer can understand. Descriptive only — never advisory."
+description = "An Analysis in terms a performer can understand."
 
 [dependencies]
 hogwash-analysis = { path = "../hogwash-analysis" }

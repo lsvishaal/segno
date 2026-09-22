@@ -20,7 +20,7 @@ verovio_data := env_var_or_default("HOGWASH_VEROVIO_DATA", justfile_directory() 
 run: _require-verovio
     cd app && HOGWASH_VEROVIO_LIB="{{verovio_lib}}" HOGWASH_VEROVIO_DATA="{{verovio_data}}" npx tauri dev
 
-# alias for `run` — kept because STATUS.md and habit both call it this
+# alias for `run`
 [group('run')]
 dev: run
 

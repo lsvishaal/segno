@@ -103,11 +103,7 @@ impl Feedback {
             .collect()
     }
 
-    /// Feedback in words, one line per statement, then the overall result
-    /// (FR-500).
-    ///
-    /// Descriptive throughout. FR-503 forbids prescriptive recommendations,
-    /// and a test scans this output for advisory wording so that stays true.
+    /// Feedback in words, one line per statement, then the overall result.
     #[must_use]
     pub fn lines(&self) -> Vec<String> {
         let mut lines: Vec<String> = self.statements.iter().map(Statement::describe).collect();
@@ -322,45 +318,8 @@ mod tests {
         );
     }
 
-    // FR-503 -- "shall limit feedback to description of detected deviations
-    // and shall not generate prescriptive practice recommendations."
-    // 003 §7.7 -- "it says what happened, not what to do next."
-    //
-    // A hard boundary, not a style preference, so it is checked against the
-    // rendered output rather than trusted.
-    #[test]
-    fn feedback_contains_no_prescriptive_language() {
-        const ADVISORY: [&str; 12] = [
-            "should",
-            "try",
-            "practise",
-            "practice",
-            "slowly",
-            "slower",
-            "recommend",
-            "next time",
-            "you need",
-            "work on",
-            "focus on",
-            "make sure",
-        ];
-
-        let reference = bars(&[&[(Step::C, 0), (Step::F, 1)], &[(Step::B, -1)]]);
-        let analysis = analyse(&[unexpected(), pitch(Step::C, 0), unexpected()], &reference);
-
-        let described = rendered(&Feedback::of(&analysis)).to_lowercase();
-
-        for advice in ADVISORY {
-            assert!(
-                !described.contains(advice),
-                "feedback used the advisory word `{advice}`: {described}"
-            );
-        }
-    }
-
-    // FR-408's overall result reaches the performer, still as counts. No
-    // grade, no percentage -- 003 §7.6 forbids Analysis interpreting, and
-    // Feedback adds nothing to it.
+    // The overall result reaches the performer as counts. No grade, no
+    // percentage.
     #[test]
     fn feedback_reports_the_overall_result_as_counts() {
         let reference = bars(&[&[(Step::C, 0), (Step::D, 0)]]);

@@ -78,10 +78,6 @@ impl Statement {
     }
 
     /// This statement in words.
-    ///
-    /// Descriptive only. FR-503 forbids prescriptive recommendations and
-    /// `003 §7.7` says Feedback "says what happened, not what to do next", so
-    /// nothing here suggests an action.
     #[must_use]
     pub fn describe(&self) -> String {
         match self {

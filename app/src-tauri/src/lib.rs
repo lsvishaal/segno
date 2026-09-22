@@ -13,11 +13,11 @@
 //! - **The frontend draws.** It receives locations and words, and turns them
 //!   into elements and classes. It judges nothing.
 //!
-//! That division is not stylistic. `003 §7.7` forbids Feedback from adding
-//! anything the Analysis did not establish, and the guards that hold it — no
-//! advisory wording, never naming the note that was played — live in the Rust
-//! crates. A frontend that composed its own sentences would route around all
-//! of them, and nothing would notice.
+//! That division is not stylistic. Feedback must not add anything the
+//! Analysis did not establish, and the guards that hold it — such as never
+//! naming the note that was played — live in the Rust crates. A frontend that
+//! composed its own sentences would route around all of them, and nothing
+//! would notice.
 
 use tauri::{Emitter as _, Manager as _};
 

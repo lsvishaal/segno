@@ -191,8 +191,7 @@ fn numbers(notes: &[Note]) -> String {
         .join("+")
 }
 
-/// FR-408 — one overall result. Counts only: no grade, no percentage, no
-/// verdict (`003 §7.6`, FR-503).
+/// One overall result. Counts only: no grade, no percentage, no verdict.
 fn summarise(summary: Summary) -> Vec<String> {
     vec![
         "summary:".to_owned(),

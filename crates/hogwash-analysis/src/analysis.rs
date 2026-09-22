@@ -116,13 +116,11 @@ impl Analysis {
     }
 }
 
-/// One overall result for an Attempt (FR-408).
+/// One overall result for an Attempt.
 ///
-/// **Counts, and nothing else.** No percentage, no grade, no pass or fail.
-/// `003 §7.6` — Analysis *"measures; it does not interpret, judge, or
-/// advise"* — and FR-503 excludes prescriptive output. A figure like "82%"
-/// is an interpretation dressed as a measurement, and it invites exactly the
-/// grading `001 §11` rules out.
+/// **Counts, and nothing else.** No percentage, no grade, no pass or fail. A
+/// figure like "82%" is an interpretation dressed as a measurement, and it
+/// invites exactly the grading this project rules out.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct Summary {
     pub(crate) correct: usize,
@@ -380,10 +378,8 @@ mod tests {
         );
     }
 
-    // 003 §7.6 -- Analysis "measures; it does not interpret, judge, or
-    // advise", and FR-503 excludes prescriptive output. So the summary is the
-    // four counts and whether the end was reached -- no grade, no percentage,
-    // no pass or fail.
+    // The summary is the four counts and whether the end was reached -- no
+    // grade, no percentage, no pass or fail.
     //
     // Asserted by round-trip: a Summary is fully reconstructible from those
     // five values. Add a score field and the round trip cannot carry it.
