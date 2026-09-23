@@ -163,10 +163,15 @@ fn starting_puts_every_provided_piece_on_the_shelf() {
         titles.contains(&"Für Elise (opening, simplified)"),
         "got {titles:?}"
     );
+    assert!(titles.contains(&"Minuet in G Major"), "got {titles:?}");
+    assert!(
+        titles.contains(&"Prelude in C Major, BWV 846"),
+        "got {titles:?}"
+    );
 }
 
-// `PROVENANCE.md` says Für Elise is the only provided piece with a second
-// staff, and the whole point of adding it was to exercise the claim in
+// Für Elise was the first provided piece with a second staff, added to
+// exercise the claim in
 // `translate.rs` that a right-hand and left-hand note sounding together are
 // one Position regardless of which staff wrote them. This is that claim,
 // checked against the real engine rather than trusted from the doc comment.
@@ -278,4 +283,89 @@ fn drawn_elements_pair_with_the_notes_written_at_the_same_position() {
             ("G".to_owned(), 4),
         ]
     );
+}
+
+/// The engraved Reference Performance of one provided piece.
+fn reference_of(file: &str) -> hogwash_notation::ReferencePerformance {
+    let source = std::fs::read(
+        PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+            .join("library")
+            .join(file),
+    )
+    .expect("the piece ships with the application");
+    let drawn = engraver().engrave(&source).expect("engraves");
+
+    hogwash_notation::ReferencePerformance::derived_from(drawn.score())
+}
+
+// Playing exactly what each real piece asks for, in order, is correct from
+// start to finish: nothing wrong, nothing unexpected, the end reached.
+#[test]
+#[ignore = "needs a real libverovio; run `just provided-test`"]
+fn a_perfect_performance_of_each_real_piece_reaches_the_end_cleanly() {
+    for file in ["minuet-in-g.musicxml", "prelude-in-c.musicxml"] {
+        let reference = reference_of(file);
+
+        let mut perfect = hogwash_capture::ObservedPerformance::new();
+        for step in &reference {
+            for pitch in step.sounding() {
+                perfect.record(pitch);
+            }
+        }
+
+        let summary = hogwash_analysis::Analysis::of(&perfect, &reference).summary();
+
+        assert_eq!(summary.incorrect(), 0, "{file}");
+        assert_eq!(summary.unexpected(), 0, "{file}");
+        assert_eq!(summary.omitted(), 0, "{file}");
+        assert!(summary.reached_the_end(), "{file}");
+    }
+}
+
+// The Minuet is |: 1-16 :| |: 17-32 :|. The cursor follows the performed
+// order, so each half is expected twice.
+#[test]
+#[ignore = "needs a real libverovio; run `just provided-test`"]
+fn the_minuets_repeats_are_played_twice() {
+    let mut bars: Vec<u32> = reference_of("minuet-in-g.musicxml")
+        .iter()
+        .map(|step| step.measure().get())
+        .collect();
+    bars.dedup();
+
+    let half = |range: std::ops::RangeInclusive<u32>| range.collect::<Vec<_>>();
+    let expected = [half(1..=16), half(1..=16), half(17..=32), half(17..=32)].concat();
+
+    assert_eq!(bars, expected);
+}
+
+// The Prelude's left hand holds its notes with ties. Counted straight from
+// the MusicXML, independently of Verovio: every pitched note is required
+// once, except those a tie arrives at.
+#[test]
+#[ignore = "needs a real libverovio; run `just provided-test`"]
+fn the_prelude_never_asks_for_a_held_note_again() {
+    let text = std::fs::read_to_string(
+        PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("library/prelude-in-c.musicxml"),
+    )
+    .expect("ships with the application");
+
+    let notes: Vec<&str> = text
+        .split("<note")
+        .skip(1)
+        .filter_map(|rest| rest.split("</note>").next())
+        .filter(|note| note.contains("<pitch>") && !note.contains("<grace"))
+        .collect();
+    let held = notes
+        .iter()
+        .filter(|note| note.contains(r#"<tie type="stop""#))
+        .count();
+
+    let required: usize = reference_of("prelude-in-c.musicxml")
+        .iter()
+        .map(|step| step.notes().len())
+        .sum();
+
+    assert!(held > 0, "the Prelude has tied notes");
+    assert_eq!(required, notes.len() - held);
 }

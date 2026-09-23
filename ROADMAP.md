@@ -9,7 +9,7 @@ struggle with and helps you fix them.
       reset this roadmap, trim the README
 - [x] 0.2 `hogwash-cli replay`: run a MusicXML file and a JSON file of played
       notes through the real practice + analysis path, step by step
-- [ ] 0.3 Real-music verification on Prelude in C and Minuet in G: grand
+- [x] 0.3 Real-music verification on Prelude in C and Minuet in G: grand
       staff, ties, repeats, grace notes and ornaments; bundle both pieces
 - [ ] 0.4 Report: what worked, what was fixed, what is still broken in the UI,
       and a manual test checklist

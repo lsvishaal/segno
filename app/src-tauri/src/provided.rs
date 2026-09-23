@@ -25,11 +25,11 @@ pub struct Provided {
 
 /// Everything in `library/`, in the order a first-time performer meets it.
 ///
-/// Ordered deliberately: the shortest and simplest first, building up to the
-/// first piece with a second staff. `library/PROVENANCE.md` records what
-/// each one exercises, and why all four were encoded by hand rather than
-/// downloaded.
-pub const PROVIDED: [Provided; 4] = [
+/// Ordered deliberately: the shortest and simplest first, then the first
+/// piece with a second staff, then two real published pieces (a Minuet with
+/// repeats, a Prelude full of held notes). `library/PROVENANCE.md` records
+/// where each one came from and under what licence.
+pub const PROVIDED: [Provided; 6] = [
     Provided {
         name: "lightly-row.musicxml",
         source: include_bytes!("../library/lightly-row.musicxml"),
@@ -45,6 +45,14 @@ pub const PROVIDED: [Provided; 4] = [
     Provided {
         name: "fur-elise.musicxml",
         source: include_bytes!("../library/fur-elise.musicxml"),
+    },
+    Provided {
+        name: "minuet-in-g.musicxml",
+        source: include_bytes!("../library/minuet-in-g.musicxml"),
+    },
+    Provided {
+        name: "prelude-in-c.musicxml",
+        source: include_bytes!("../library/prelude-in-c.musicxml"),
     },
 ];
 
@@ -148,7 +156,7 @@ mod tests {
         }
     }
 
-    // Three distinct pieces, three distinct names. A collision here would
+    // Distinct pieces, distinct names. A collision here would
     // silently merge two pieces in the Library.
     #[test]
     fn the_provided_pieces_are_all_distinct() {

@@ -1,0 +1,818 @@
+[
+{
+"pitch": 74,
+"bar": 1
+},
+{
+"pitch": 55,
+"bar": 1
+},
+{
+"pitch": 59,
+"bar": 1
+},
+{
+"pitch": 62,
+"bar": 1
+},
+{
+"pitch": 67,
+"bar": 1
+},
+{
+"pitch": 69,
+"bar": 1
+},
+{
+"pitch": 71,
+"bar": 1
+},
+{
+"pitch": 57,
+"bar": 1
+},
+{
+"pitch": 72,
+"bar": 1
+},
+{
+"pitch": 74,
+"bar": 2
+},
+{
+"pitch": 59,
+"bar": 2
+},
+{
+"pitch": 67,
+"bar": 2
+},
+{
+"pitch": 67,
+"bar": 2
+},
+{
+"pitch": 76,
+"bar": 3
+},
+{
+"pitch": 60,
+"bar": 3
+},
+{
+"pitch": 72,
+"bar": 3
+},
+{
+"pitch": 74,
+"bar": 3
+},
+{
+"pitch": 76,
+"bar": 3
+},
+{
+"pitch": 78,
+"bar": 3
+},
+{
+"pitch": 79,
+"bar": 4
+},
+{
+"pitch": 59,
+"bar": 4
+},
+{
+"pitch": 67,
+"bar": 4
+},
+{
+"pitch": 67,
+"bar": 4
+},
+{
+"pitch": 72,
+"bar": 5
+},
+{
+"pitch": 57,
+"bar": 5
+},
+{
+"pitch": 74,
+"bar": 5
+},
+{
+"pitch": 72,
+"bar": 5
+},
+{
+"pitch": 71,
+"bar": 5
+},
+{
+"pitch": 69,
+"bar": 5
+},
+{
+"pitch": 71,
+"bar": 6
+},
+{
+"pitch": 55,
+"bar": 6
+},
+{
+"pitch": 72,
+"bar": 6
+},
+{
+"pitch": 71,
+"bar": 6
+},
+{
+"pitch": 69,
+"bar": 6
+},
+{
+"pitch": 67,
+"bar": 6
+},
+{
+"pitch": 66,
+"bar": 7
+},
+{
+"pitch": 62,
+"bar": 7
+},
+{
+"pitch": 67,
+"bar": 7
+},
+{
+"pitch": 59,
+"bar": 7
+},
+{
+"pitch": 69,
+"bar": 7
+},
+{
+"pitch": 71,
+"bar": 7
+},
+{
+"pitch": 55,
+"bar": 7
+},
+{
+"pitch": 67,
+"bar": 7
+},
+{
+"pitch": 71,
+"bar": 8
+},
+{
+"pitch": 62,
+"bar": 8
+},
+{
+"pitch": 69,
+"bar": 8
+},
+{
+"pitch": 50,
+"bar": 8
+},
+{
+"pitch": 60,
+"bar": 8
+},
+{
+"pitch": 59,
+"bar": 8
+},
+{
+"pitch": 57,
+"bar": 8
+},
+{
+"pitch": 74,
+"bar": 9
+},
+{
+"pitch": 59,
+"bar": 9
+},
+{
+"pitch": 67,
+"bar": 9
+},
+{
+"pitch": 69,
+"bar": 9
+},
+{
+"pitch": 71,
+"bar": 9
+},
+{
+"pitch": 57,
+"bar": 9
+},
+{
+"pitch": 72,
+"bar": 9
+},
+{
+"pitch": 74,
+"bar": 10
+},
+{
+"pitch": 55,
+"bar": 10
+},
+{
+"pitch": 67,
+"bar": 10
+},
+{
+"pitch": 59,
+"bar": 10
+},
+{
+"pitch": 67,
+"bar": 10
+},
+{
+"pitch": 55,
+"bar": 10
+},
+{
+"pitch": 76,
+"bar": 11
+},
+{
+"pitch": 60,
+"bar": 11
+},
+{
+"pitch": 72,
+"bar": 11
+},
+{
+"pitch": 74,
+"bar": 11
+},
+{
+"pitch": 76,
+"bar": 11
+},
+{
+"pitch": 78,
+"bar": 11
+},
+{
+"pitch": 79,
+"bar": 12
+},
+{
+"pitch": 59,
+"bar": 12
+},
+{
+"pitch": 67,
+"bar": 12
+},
+{
+"pitch": 60,
+"bar": 12
+},
+{
+"pitch": 59,
+"bar": 12
+},
+{
+"pitch": 67,
+"bar": 12
+},
+{
+"pitch": 57,
+"bar": 12
+},
+{
+"pitch": 55,
+"bar": 12
+},
+{
+"pitch": 72,
+"bar": 13
+},
+{
+"pitch": 57,
+"bar": 13
+},
+{
+"pitch": 74,
+"bar": 13
+},
+{
+"pitch": 72,
+"bar": 13
+},
+{
+"pitch": 71,
+"bar": 13
+},
+{
+"pitch": 54,
+"bar": 13
+},
+{
+"pitch": 69,
+"bar": 13
+},
+{
+"pitch": 71,
+"bar": 14
+},
+{
+"pitch": 55,
+"bar": 14
+},
+{
+"pitch": 72,
+"bar": 14
+},
+{
+"pitch": 71,
+"bar": 14
+},
+{
+"pitch": 69,
+"bar": 14
+},
+{
+"pitch": 59,
+"bar": 14
+},
+{
+"pitch": 67,
+"bar": 14
+},
+{
+"pitch": 69,
+"bar": 15
+},
+{
+"pitch": 60,
+"bar": 15
+},
+{
+"pitch": 71,
+"bar": 15
+},
+{
+"pitch": 62,
+"bar": 15
+},
+{
+"pitch": 69,
+"bar": 15
+},
+{
+"pitch": 67,
+"bar": 15
+},
+{
+"pitch": 50,
+"bar": 15
+},
+{
+"pitch": 66,
+"bar": 15
+},
+{
+"pitch": 67,
+"bar": 16
+},
+{
+"pitch": 55,
+"bar": 16
+},
+{
+"pitch": 43,
+"bar": 16
+},
+{
+"pitch": 83,
+"bar": 17
+},
+{
+"pitch": 55,
+"bar": 17
+},
+{
+"pitch": 79,
+"bar": 17
+},
+{
+"pitch": 81,
+"bar": 17
+},
+{
+"pitch": 83,
+"bar": 17
+},
+{
+"pitch": 79,
+"bar": 17
+},
+{
+"pitch": 81,
+"bar": 18
+},
+{
+"pitch": 54,
+"bar": 18
+},
+{
+"pitch": 74,
+"bar": 18
+},
+{
+"pitch": 76,
+"bar": 18
+},
+{
+"pitch": 78,
+"bar": 18
+},
+{
+"pitch": 74,
+"bar": 18
+},
+{
+"pitch": 79,
+"bar": 19
+},
+{
+"pitch": 52,
+"bar": 19
+},
+{
+"pitch": 76,
+"bar": 19
+},
+{
+"pitch": 55,
+"bar": 19
+},
+{
+"pitch": 78,
+"bar": 19
+},
+{
+"pitch": 79,
+"bar": 19
+},
+{
+"pitch": 52,
+"bar": 19
+},
+{
+"pitch": 74,
+"bar": 19
+},
+{
+"pitch": 73,
+"bar": 20
+},
+{
+"pitch": 57,
+"bar": 20
+},
+{
+"pitch": 71,
+"bar": 20
+},
+{
+"pitch": 73,
+"bar": 20
+},
+{
+"pitch": 69,
+"bar": 20
+},
+{
+"pitch": 45,
+"bar": 20
+},
+{
+"pitch": 69,
+"bar": 21
+},
+{
+"pitch": 57,
+"bar": 21
+},
+{
+"pitch": 71,
+"bar": 21
+},
+{
+"pitch": 73,
+"bar": 21
+},
+{
+"pitch": 74,
+"bar": 21
+},
+{
+"pitch": 76,
+"bar": 21
+},
+{
+"pitch": 78,
+"bar": 21
+},
+{
+"pitch": 79,
+"bar": 22
+},
+{
+"pitch": 59,
+"bar": 22
+},
+{
+"pitch": 78,
+"bar": 22
+},
+{
+"pitch": 62,
+"bar": 22
+},
+{
+"pitch": 76,
+"bar": 22
+},
+{
+"pitch": 61,
+"bar": 22
+},
+{
+"pitch": 78,
+"bar": 23
+},
+{
+"pitch": 62,
+"bar": 23
+},
+{
+"pitch": 69,
+"bar": 23
+},
+{
+"pitch": 54,
+"bar": 23
+},
+{
+"pitch": 73,
+"bar": 23
+},
+{
+"pitch": 57,
+"bar": 23
+},
+{
+"pitch": 74,
+"bar": 24
+},
+{
+"pitch": 62,
+"bar": 24
+},
+{
+"pitch": 50,
+"bar": 24
+},
+{
+"pitch": 60,
+"bar": 24
+},
+{
+"pitch": 74,
+"bar": 25
+},
+{
+"pitch": 59,
+"bar": 25
+},
+{
+"pitch": 67,
+"bar": 25
+},
+{
+"pitch": 62,
+"bar": 25
+},
+{
+"pitch": 66,
+"bar": 25
+},
+{
+"pitch": 67,
+"bar": 25
+},
+{
+"pitch": 59,
+"bar": 25
+},
+{
+"pitch": 76,
+"bar": 26
+},
+{
+"pitch": 60,
+"bar": 26
+},
+{
+"pitch": 67,
+"bar": 26
+},
+{
+"pitch": 64,
+"bar": 26
+},
+{
+"pitch": 66,
+"bar": 26
+},
+{
+"pitch": 67,
+"bar": 26
+},
+{
+"pitch": 60,
+"bar": 26
+},
+{
+"pitch": 74,
+"bar": 27
+},
+{
+"pitch": 59,
+"bar": 27
+},
+{
+"pitch": 72,
+"bar": 27
+},
+{
+"pitch": 57,
+"bar": 27
+},
+{
+"pitch": 71,
+"bar": 27
+},
+{
+"pitch": 55,
+"bar": 27
+},
+{
+"pitch": 69,
+"bar": 28
+},
+{
+"pitch": 62,
+"bar": 28
+},
+{
+"pitch": 67,
+"bar": 28
+},
+{
+"pitch": 66,
+"bar": 28
+},
+{
+"pitch": 67,
+"bar": 28
+},
+{
+"pitch": 69,
+"bar": 28
+},
+{
+"pitch": 62,
+"bar": 29
+},
+{
+"pitch": 50,
+"bar": 29
+},
+{
+"pitch": 64,
+"bar": 29
+},
+{
+"pitch": 66,
+"bar": 29
+},
+{
+"pitch": 67,
+"bar": 29
+},
+{
+"pitch": 69,
+"bar": 29
+},
+{
+"pitch": 54,
+"bar": 29
+},
+{
+"pitch": 71,
+"bar": 29
+},
+{
+"pitch": 72,
+"bar": 30
+},
+{
+"pitch": 52,
+"bar": 30
+},
+{
+"pitch": 71,
+"bar": 30
+},
+{
+"pitch": 55,
+"bar": 30
+},
+{
+"pitch": 69,
+"bar": 30
+},
+{
+"pitch": 54,
+"bar": 30
+},
+{
+"pitch": 71,
+"bar": 31
+},
+{
+"pitch": 55,
+"bar": 31
+},
+{
+"pitch": 74,
+"bar": 31
+},
+{
+"pitch": 67,
+"bar": 31
+},
+{
+"pitch": 47,
+"bar": 31
+},
+{
+"pitch": 66,
+"bar": 31
+},
+{
+"pitch": 50,
+"bar": 31
+},
+{
+"pitch": 59,
+"bar": 32
+},
+{
+"pitch": 62,
+"bar": 32
+},
+{
+"pitch": 67,
+"bar": 32
+},
+{
+"pitch": 55,
+"bar": 32
+},
+{
+"pitch": 50,
+"bar": 32
+},
+{
+"pitch": 43,
+"bar": 32
+}
+]
