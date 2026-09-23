@@ -11,7 +11,7 @@ struggle with and helps you fix them.
       notes through the real practice + analysis path, step by step
 - [x] 0.3 Real-music verification on Prelude in C and Minuet in G: grand
       staff, ties, repeats, grace notes and ornaments; bundle both pieces
-- [ ] 0.4 Report: what worked, what was fixed, what is still broken in the UI,
+- [x] 0.4 Report: what worked, what was fixed, what is still broken in the UI,
       and a manual test checklist
 
 ## Phase 1
@@ -24,3 +24,8 @@ struggle with and helps you fix them.
 - An upward-resolving trill (e.g. F trilled with G, then G) advances the
   cursor early on its first G, and the rest of the trill then counts as wrong:
   the ornament tolerance only covers the trilled step and the next one.
+- Stopping early lists every note never played, one line each (517 lines for
+  the Prelude): summarise the untouched tail as a bar range instead.
+- Tied-to notes and grace notes get no note-name label (they are not marks).
+- At a repeat the cursor slides back across the page, and nothing shows
+  which pass (1st / 2nd time) the performer is on.
