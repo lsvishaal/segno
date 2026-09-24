@@ -14,6 +14,14 @@ struggle with and helps you fix them.
 - [x] 0.4 Report: what worked, what was fixed, what is still broken in the UI,
       and a manual test checklist
 
+## Phase 0.5 — score display correctness
+
+- [x] 0.5.1 Geometry extraction from Verovio's SVG + "Show geometry" debug view
+- [ ] 0.5.2 Pitch -> staff position from measured staff lines and clefs
+- [ ] 0.5.3 Overlays inside the SVG: cursor on noteheads, soft played tint
+- [ ] 0.5.4 Wrong-note ghost on the right staff, with ledger lines and label
+- [ ] 0.5.5 Zoom that actually changes size and reflows to the window
+
 ## Phase 1
 
 ## Phase 2
@@ -29,3 +37,5 @@ struggle with and helps you fix them.
 - Tied-to notes and grace notes get no note-name label (they are not marks).
 - At a repeat the cursor slides back across the page, and nothing shows
   which pass (1st / 2nd time) the performer is on.
+- A clef change in the middle of a bar takes effect from the next bar in the
+  score geometry (neither bundled piece has one).

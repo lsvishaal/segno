@@ -24,6 +24,7 @@ async function renderPanel(overrides: Partial<Parameters<typeof SettingsPanel>[0
   const onClose = vi.fn();
   const onSurfaceChange = vi.fn();
   const onShowNoteNamesChange = vi.fn();
+  const onShowGeometryChange = vi.fn();
   const onScaleChange = vi.fn();
   const onExport = vi.fn();
 
@@ -41,6 +42,8 @@ async function renderPanel(overrides: Partial<Parameters<typeof SettingsPanel>[0
           onSurfaceChange={onSurfaceChange}
           showNoteNames={false}
           onShowNoteNamesChange={onShowNoteNamesChange}
+          showGeometry={false}
+          onShowGeometryChange={onShowGeometryChange}
           scale={150}
           onScaleChange={onScaleChange}
           zoomError={null}
@@ -52,7 +55,7 @@ async function renderPanel(overrides: Partial<Parameters<typeof SettingsPanel>[0
     );
   });
 
-  return { onClose, onSurfaceChange, onShowNoteNamesChange, onScaleChange, onExport };
+  return { onClose, onSurfaceChange, onShowNoteNamesChange, onShowGeometryChange, onScaleChange, onExport };
 }
 
 describe("SettingsPanel", () => {
@@ -95,6 +98,14 @@ describe("SettingsPanel", () => {
     fireEvent.click(screen.getByRole("button", { name: "Off" }));
 
     expect(onShowNoteNamesChange).toHaveBeenCalledWith(true);
+  });
+
+  it("calls onShowGeometryChange when the geometry toggle is clicked", async () => {
+    const { onShowGeometryChange } = await renderPanel();
+
+    fireEvent.click(screen.getByRole("button", { name: "Show geometry" }));
+
+    expect(onShowGeometryChange).toHaveBeenCalledWith(true);
   });
 
   it("shows zoomError and exportError when set", async () => {

@@ -1,0 +1,77 @@
+import { describe, expect, it } from "vitest";
+
+import minuet from "./__fixtures__/minuet-in-g.page1.svg?raw";
+import prelude from "./__fixtures__/prelude-in-c.page1.svg?raw";
+import { readPage } from "./scoreGeometry";
+
+const FIXTURES: Record<string, string> = { "minuet-in-g": minuet, "prelude-in-c": prelude };
+
+/** Page 1 of a real bundled piece, as Verovio rendered it (see scripts/score-fixtures.py). */
+function page(piece: string): Element {
+  return new DOMParser().parseFromString(FIXTURES[piece]!, "image/svg+xml").documentElement;
+}
+
+describe.each(["minuet-in-g", "prelude-in-c"])("geometry of %s, page 1", (piece) => {
+  const root = page(piece);
+  const geometry = readPage(root);
+
+  it("finds every system, each a grand staff of five evenly spaced lines", () => {
+    expect(geometry.systems.length).toBe(root.querySelectorAll("g.system").length);
+
+    for (const system of geometry.systems) {
+      expect(system.staves).toHaveLength(2);
+      for (const staff of system.staves) {
+        expect(staff.lines).toHaveLength(5);
+        const gaps = staff.lines.slice(1).map((y, i) => y - staff.lines[i]!);
+        for (const gap of gaps) expect(gap).toBeCloseTo(staff.spacing, 5);
+        expect(staff.spacing).toBeGreaterThan(0);
+      }
+      expect(system.staves[0]!.lines[4]!).toBeLessThan(system.staves[1]!.lines[0]!);
+    }
+  });
+
+  it("reads a treble clef on the second line up and a bass clef on the second line down", () => {
+    for (const bar of geometry.bars) {
+      expect(bar.clefs[0]).toMatchObject({ sign: "G", line: 2, reference: { step: "G", octave: 4 } });
+      expect(bar.clefs[1]).toMatchObject({ sign: "F", line: 4, reference: { step: "F", octave: 3 } });
+    }
+  });
+
+  it("has one bar box per drawn bar, inside its system", () => {
+    expect(geometry.bars.length).toBe(root.querySelectorAll("g.measure").length);
+
+    for (const bar of geometry.bars) {
+      const system = geometry.systems[bar.system]!;
+      expect(bar.top).toBe(system.top);
+      expect(bar.bottom).toBe(system.bottom);
+      expect(bar.x1).toBeGreaterThan(bar.x0);
+    }
+  });
+
+  it("has a notehead for every note, sitting on a line or a space of its own staff", () => {
+    expect(geometry.noteheads.size).toBe(root.querySelectorAll("g.note").length);
+
+    for (const head of geometry.noteheads.values()) {
+      const staff = geometry.systems[head.system]!.staves[head.staff]!;
+      const halfSteps = (head.y - staff.lines[0]!) / (staff.spacing / 2);
+
+      expect(halfSteps).toBeCloseTo(Math.round(halfSteps), 5);
+      expect(head.width).toBeGreaterThan(staff.spacing);
+      expect(head.height).toBe(staff.spacing);
+    }
+  });
+});
+
+describe("key signatures", () => {
+  it("reads the Minuet's one sharp (G major) and the Prelude's none (C major)", () => {
+    for (const bar of readPage(page("minuet-in-g")).bars) {
+      expect(bar.keys).toEqual([
+        { accidental: "sharp", count: 1 },
+        { accidental: "sharp", count: 1 },
+      ]);
+    }
+    for (const bar of readPage(page("prelude-in-c")).bars) {
+      expect(bar.keys.every((key) => key.count === 0)).toBe(true);
+    }
+  });
+});

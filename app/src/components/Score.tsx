@@ -4,6 +4,7 @@ import { AnimatePresence, motion } from "motion/react";
 
 import type { DrawnNote, Mark } from "../bridge";
 import { NoteNames } from "./NoteNames";
+import { showGeometry as drawGeometry } from "./scoreDebug";
 import { nearestSpelling, verticalPositionFor } from "./staffGeometry";
 import type { Spelling } from "./staffGeometry";
 
@@ -61,6 +62,7 @@ export function Score({
   dot,
   followCursor = true,
   showNoteNames = false,
+  showGeometry = false,
 }: {
   readonly pages: readonly string[];
   readonly marks: readonly Mark[];
@@ -68,6 +70,7 @@ export function Score({
   readonly dot: Dot | null;
   readonly followCursor?: boolean;
   readonly showNoteNames?: boolean;
+  readonly showGeometry?: boolean;
 }) {
   const wrapper = useRef<HTMLDivElement>(null);
   const container = useRef<HTMLDivElement>(null);
@@ -137,6 +140,17 @@ export function Score({
       panel.append(holder);
     }
   }, [pages]);
+
+  // What the geometry layer reads from each page, drawn inside the page.
+  // Declared after the injection effect, so it always sees the pages.
+  useEffect(() => {
+    const panel = container.current;
+    if (!panel) return;
+
+    for (const page of panel.querySelectorAll(".hw-page")) {
+      drawGeometry(page, showGeometry);
+    }
+  }, [pages, showGeometry]);
 
   // The cursor bar, measured against whatever is actually on screen.
   useEffect(() => {

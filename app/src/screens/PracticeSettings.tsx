@@ -25,6 +25,8 @@ export function SettingsPanel({
   onSurfaceChange,
   showNoteNames,
   onShowNoteNamesChange,
+  showGeometry,
+  onShowGeometryChange,
   scale,
   onScaleChange,
   zoomError,
@@ -38,6 +40,8 @@ export function SettingsPanel({
   readonly onSurfaceChange: (surface: Surface) => void;
   readonly showNoteNames: boolean;
   readonly onShowNoteNamesChange: (value: boolean) => void;
+  readonly showGeometry: boolean;
+  readonly onShowGeometryChange: (value: boolean) => void;
   readonly scale: number;
   readonly onScaleChange: (scale: number) => void;
   readonly zoomError: string | null;
@@ -121,6 +125,21 @@ export function SettingsPanel({
             }`}
           >
             {showNoteNames ? "On" : "Off"}
+          </button>
+        </div>
+
+        <div className="mt-3 flex items-center justify-between">
+          <span className="text-ink-muted">Show geometry</span>
+          <button
+            type="button"
+            aria-pressed={showGeometry}
+            aria-label="Show geometry"
+            onClick={() => onShowGeometryChange(!showGeometry)}
+            className={`cursor-pointer rounded-full border border-rule-strong px-3 py-1 text-xs font-medium transition-colors focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-accent ${
+              showGeometry ? "bg-ink text-paper" : "text-ink-muted hover:text-ink"
+            }`}
+          >
+            {showGeometry ? "On" : "Off"}
           </button>
         </div>
       </section>

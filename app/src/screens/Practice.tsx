@@ -56,6 +56,8 @@ export function PracticeScreen({
 }) {
   const [surface, setSurface] = useState<Surface>("paper");
   const [showNoteNames, setShowNoteNames] = useState(false);
+  // A developer view: what the geometry layer reads from the page.
+  const [showGeometry, setShowGeometry] = useState(false);
   const [phase, setPhase] = useState<Phase>({ kind: "choosing", refusal: null });
   const [available, setAvailable] = useState<readonly InstrumentSummary[]>([]);
   const [cursor, setCursor] = useState<CursorState>(BEFORE_STARTING);
@@ -317,6 +319,8 @@ export function PracticeScreen({
             onSurfaceChange={setSurface}
             showNoteNames={showNoteNames}
             onShowNoteNamesChange={setShowNoteNames}
+            showGeometry={showGeometry}
+            onShowGeometryChange={setShowGeometry}
             scale={scale}
             onScaleChange={(next) => setScale(clampScale(next))}
             zoomError={zoomError}
@@ -388,6 +392,7 @@ export function PracticeScreen({
           cursor={cursor}
           dot={dot}
           showNoteNames={showNoteNames}
+          showGeometry={showGeometry}
         />
       </div>
     </div>

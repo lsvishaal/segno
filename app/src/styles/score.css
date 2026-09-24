@@ -154,3 +154,31 @@
   font-weight: 600;
   color: var(--hw-note-name);
 }
+
+/*
+  The "Show geometry" developer view (scoreDebug.ts): what the geometry
+  layer reads from the page, drawn in the page's own units.
+*/
+.hw-debug {
+  pointer-events: none;
+}
+.hw-debug-bar {
+  fill: none;
+  stroke: #2563eb;
+  stroke-width: 12;
+  stroke-dasharray: 60 40;
+}
+.hw-debug-line {
+  stroke: #16a34a;
+  stroke-width: 20;
+  opacity: 0.6;
+}
+.hw-debug-head {
+  fill: rgb(219 39 119 / 0.18);
+  stroke: #db2777;
+  stroke-width: 10;
+}
+.hw-debug-label {
+  fill: #16a34a;
+  font-family: ui-monospace, monospace;
+}
