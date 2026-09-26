@@ -232,6 +232,28 @@ fn an_imported_score_is_copied_into_the_library_and_kept_apart_from_history() {
     );
 }
 
+// A restart has to find every imported piece again, from disk alone.
+#[test]
+fn imported_pieces_are_listed_after_a_restart() {
+    let directory = tempfile::tempdir().expect("a temporary directory");
+    let minuet = PieceId::new("b-minuet").expect("usable");
+    let prelude = PieceId::new("a-prelude").expect("usable");
+
+    let records = Records::under(directory.path());
+    assert!(records.imported().is_empty(), "nothing imported yet");
+    records
+        .keep_piece(&minuet, "Minuet in G", None, b"<score-partwise/>")
+        .expect("keeps the minuet");
+    records
+        .keep_piece(&prelude, "Prelude in C", None, b"<score-partwise/>")
+        .expect("keeps the prelude");
+
+    assert_eq!(
+        Records::under(directory.path()).imported(),
+        [prelude, minuet]
+    );
+}
+
 // FR-406 in spirit: a directory's ordering is the filesystem's business, and
 // two runs must not disagree about what order a performer's sessions are in.
 #[test]

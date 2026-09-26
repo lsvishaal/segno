@@ -283,6 +283,28 @@ impl Records {
         Ok(record)
     }
 
+    /// Every Piece imported so far, by name, in a stable order: what the
+    /// Library has to be rebuilt with after a restart. An empty or missing
+    /// folder is simply nothing imported yet.
+    #[must_use]
+    pub fn imported(&self) -> Vec<PieceId> {
+        let Ok(entries) = fs::read_dir(self.scores()) else {
+            return Vec::new();
+        };
+
+        let mut ids: Vec<PieceId> = entries
+            .filter_map(Result::ok)
+            .map(|entry| entry.path())
+            .filter(|path| {
+                path.extension()
+                    .is_some_and(|extension| extension == "musicxml")
+            })
+            .filter_map(|path| PieceId::new(path.file_stem()?.to_str()?))
+            .collect();
+        ids.sort_by(|a, b| a.as_str().cmp(b.as_str()));
+        ids
+    }
+
     /// The score a Piece was imported from, if it is here (FR-701).
     ///
     /// Returns the bytes rather than the path, so a caller cannot be tempted

@@ -146,12 +146,15 @@ pub fn library(state: State<'_, Shared>) -> Result<Vec<PieceSummary>, Refused> {
 
 /// Engraves a Piece and hands over everything needed to draw it (FR-800).
 ///
+/// `async`, like every command that engraves: Tauri then runs it off the
+/// main thread, so the window stays responsive while Verovio works.
+///
 /// # Errors
 ///
 /// If the piece is not in the library, or the engraver refused it. Both are
 /// reported in words the interface can show.
 #[tauri::command]
-pub fn open_piece(id: String, state: State<'_, Shared>) -> Result<OpenedPiece, Refused> {
+pub async fn open_piece(id: String, state: State<'_, Shared>) -> Result<OpenedPiece, Refused> {
     let hogwash = state.inner().0.lock().map_err(|_| POISONED.to_owned())?;
 
     opened_piece(id, hogwash_engraving_verovio::Layout::default(), &hogwash)
@@ -170,7 +173,7 @@ pub fn open_piece(id: String, state: State<'_, Shared>) -> Result<OpenedPiece, R
 ///
 /// As [`open_piece`].
 #[tauri::command]
-pub fn engrave_piece(
+pub async fn engrave_piece(
     id: String,
     zoom: u32,
     width: u32,
@@ -258,10 +261,9 @@ fn opened_piece(
 /// Saves a Piece's original source to a location the performer chooses
 /// (`BFR-1`, the tractable slice of it — `MusicXML` only, this round).
 ///
-/// The dialog is a **blocking** call, so the state lock is released before
-/// showing it: holding it would freeze every other command (the library
-/// listing, the practice thread's commands) for as long as the performer is
-/// looking at a file picker.
+/// `async` so Tauri runs it off the main thread, where the blocking save
+/// dialog would freeze the window (see [`import_musicxml`]). The state lock
+/// is released before the dialog shows, so nothing else waits on it.
 ///
 /// # Errors
 ///
@@ -269,7 +271,7 @@ fn opened_piece(
 /// chosen location could not be written to. A cancelled dialog is **not** an
 /// error — it resolves successfully, having done nothing.
 #[tauri::command]
-pub fn export_musicxml(
+pub async fn export_musicxml(
     id: String,
     app: tauri::AppHandle,
     state: State<'_, Shared>,
@@ -362,11 +364,10 @@ impl Engraver for ImportEngraver<'_> {
 /// Imports a `MusicXML` file the performer chooses, joining it to the
 /// library (FR-100, FR-102, FR-104).
 ///
-/// The dialog is a **blocking** call and happens before anything is looked
-/// up, so nothing needs the state lock while the performer is looking at a
-/// file picker — the same reasoning [`export_musicxml`] documents, applied
-/// the other way around because import has nothing to look up until the
-/// dialog returns.
+/// `async` so Tauri runs it off the main thread: the file dialog blocks
+/// until answered, and its answer arrives through the main thread, so
+/// waiting for it there would freeze the window. The state lock is only
+/// taken after the dialog returns.
 ///
 /// # Errors
 ///
@@ -375,7 +376,7 @@ impl Engraver for ImportEngraver<'_> {
 /// verbatim (`004 §8.2`): this command adds no wording of its own to an
 /// explanation that is already complete.
 #[tauri::command]
-pub fn import_musicxml(
+pub async fn import_musicxml(
     app: tauri::AppHandle,
     state: State<'_, Shared>,
 ) -> Result<Option<ImportedPiece>, Refused> {

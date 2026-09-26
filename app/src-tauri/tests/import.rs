@@ -112,3 +112,76 @@ fn an_unsupported_format_is_refused_with_a_route() {
     assert!(refusal.to_lowercase().contains("pdf"));
     assert_eq!(hogwash.library().count(), before);
 }
+
+// A real compressed MusicXML (.mxl) file as MuseScore exports it: the
+// performer's own Für Elise (easy), imported the way the dialog imports it.
+#[test]
+#[ignore = "needs a real libverovio; run `just provided-test`"]
+fn a_real_compressed_musicxml_file_joins_the_library() {
+    let root = temporary("real-mxl");
+    let mut hogwash = hogwash(&root);
+    let before = hogwash.library().count();
+    let material =
+        std::fs::read(PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("library/Fur_Elise_Easy.mxl"))
+            .expect("the file is in the library folder");
+
+    let imported = accept_offered(&material, &mut hogwash).expect("a real .mxl is supported");
+
+    assert_eq!(hogwash.library().count(), before + 1);
+    assert_eq!(imported.piece.title, "Fur Elise");
+}
+
+// Real files with no <work-title>, only the title and composer printed on the
+// page (MuseScore 1/2 exports): read the way the page reads.
+#[test]
+#[ignore = "needs a real libverovio; run `just provided-test`"]
+fn a_title_printed_only_on_the_page_is_read() {
+    let root = temporary("printed-titles");
+    let mut hogwash = hogwash(&root);
+
+    for (file, title, composer) in [
+        (
+            "Erik_Satie_-_Gymnopedie_No.1.mxl",
+            "Gymnopédie No.1",
+            "Erik Satie",
+        ),
+        (
+            "Ode_to_Joy_Easy_variation.mxl",
+            "Ode to Joy",
+            "Ludwig Van Beethoven",
+        ),
+    ] {
+        let imported = accept_offered(&library_file(file), &mut hogwash).expect("supported");
+
+        assert_eq!(imported.piece.title, title);
+        assert_eq!(imported.piece.composer.as_deref(), Some(composer));
+    }
+}
+
+// An imported piece is still there after a restart: a fresh Hogwash on the
+// same data folder finds it on disk.
+#[test]
+#[ignore = "needs a real libverovio; run `just provided-test`"]
+fn an_imported_piece_survives_a_restart() {
+    let root = temporary("restart");
+    let imported = accept_offered(
+        &library_file("Erik_Satie_-_Gymnopedie_No.1.mxl"),
+        &mut hogwash(&root),
+    )
+    .expect("supported");
+
+    let restarted = hogwash(&root);
+
+    assert!(restarted.library().pieces().into_iter().any(|piece| {
+        piece.id().as_str() == imported.piece.id && piece.title() == "Gymnopédie No.1"
+    }));
+}
+
+fn library_file(name: &str) -> Vec<u8> {
+    std::fs::read(
+        PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+            .join("library")
+            .join(name),
+    )
+    .expect("the file is in the library folder")
+}

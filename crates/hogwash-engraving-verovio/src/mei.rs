@@ -141,6 +141,12 @@ pub(crate) fn read(mei: &str) -> Result<ReadMei, TranslationFailure> {
 /// The composer is a `<persName>` with `@role="composer"`, or failing that a
 /// `<composer>` element; `MusicXML`'s creator types survive transcoding as
 /// either, depending on the exporter.
+///
+/// Many real files (`MuseScore` 1 and 2 exports) carry neither, only the text
+/// printed at the top of the first page, which Verovio keeps as
+/// `<pgHead func="first"><rend halign=…>`. Where the header is silent, that
+/// page is read the way a musician reads it: the centred line is the title,
+/// the right-aligned one the composer.
 fn details_of(document: &Document<'_>) -> Details {
     let text_of = |node: Node<'_, '_>| {
         // Text nodes only. `descendants` yields the element itself as well,
@@ -169,9 +175,31 @@ fn details_of(document: &Document<'_>) -> Details {
         .and_then(text_of)
         .or_else(|| first("composer"));
 
+    // The first page's printed header, in order.
+    let printed = |halign: &str| {
+        document
+            .descendants()
+            .find(|node| node.has_tag_name("pgHead") && node.attribute("func") == Some("first"))
+            .and_then(|head| {
+                head.children()
+                    .filter(|node| {
+                        node.has_tag_name("rend") && node.attribute("halign") == Some(halign)
+                    })
+                    .find_map(text_of)
+            })
+    };
+
     Details {
-        title: first("title"),
-        composer,
+        title: first("title").or_else(|| printed("center")),
+        composer: composer.or_else(|| {
+            printed("right").map(|name| {
+                name.strip_prefix("By ")
+                    .or_else(|| name.strip_prefix("by "))
+                    .unwrap_or(&name)
+                    .trim()
+                    .to_owned()
+            })
+        }),
     }
 }
 
@@ -480,6 +508,83 @@ mod tests {
 
         assert_eq!(read.details().title, None);
         assert_eq!(read.details().composer, None);
+    }
+
+    /// The header Verovio writes for a `MusicXML` file with no `<work-title>`
+    /// or creator, only printed page text: `pgHead` copied from its output
+    /// for the performer's own Gymnopédie No. 1 and Ode to Joy files.
+    fn printed_only(page_head: &str) -> String {
+        format!(
+            r#"<mei xmlns="http://www.music-encoding.org/ns/mei">
+               <meiHead><fileDesc><titleStmt><title/></titleStmt></fileDesc></meiHead>
+               <music><body><mdiv><score><scoreDef>{page_head}</scoreDef><section>
+                 <measure xml:id="m" n="1"/>
+               </section></score></mdiv></body></music></mei>"#
+        )
+    }
+
+    #[test]
+    fn a_title_printed_on_the_page_is_read_when_the_header_has_none() {
+        let read = read(&printed_only(
+            r#"<pgHead xml:id="x1qtaits" func="first">
+                 <rend xml:id="v16ok2te" halign="center" valign="top">Gymnopédie No.1</rend>
+                 <rend xml:id="ybfexq8" halign="right" valign="top">Erik Satie</rend>
+               </pgHead>"#,
+        ))
+        .expect("readable");
+
+        assert_eq!(read.details().title.as_deref(), Some("Gymnopédie No.1"));
+        assert_eq!(read.details().composer.as_deref(), Some("Erik Satie"));
+    }
+
+    #[test]
+    fn a_printed_by_line_names_the_composer() {
+        let read = read(&printed_only(
+            r#"<pgHead xml:id="upbef6r" func="first">
+                 <rend xml:id="s8wdo1n" halign="center" valign="top">Ode to Joy</rend>
+                 <rend xml:id="vc9ps8j" halign="right" valign="bottom">By Ludwig Van Beethoven </rend>
+                 <rend xml:id="a1aoe0yg" halign="center" valign="top">(Easy variation)</rend>
+                 <rend xml:id="c1achc5r" halign="left" valign="bottom">Arranged</rend>
+               </pgHead>"#,
+        ))
+        .expect("readable");
+
+        assert_eq!(read.details().title.as_deref(), Some("Ode to Joy"));
+        assert_eq!(
+            read.details().composer.as_deref(),
+            Some("Ludwig Van Beethoven")
+        );
+    }
+
+    // Canon in D has both; what the file states wins over what it prints.
+    #[test]
+    fn the_header_wins_over_the_printed_page() {
+        let read = read(
+            r#"<mei xmlns="http://www.music-encoding.org/ns/mei">
+               <meiHead><fileDesc><titleStmt>
+                 <title>Canon in D</title>
+                 <respStmt><persName role="composer">Johann Pachelbel</persName></respStmt>
+               </titleStmt></fileDesc></meiHead>
+               <music><body><mdiv><score><scoreDef>
+                 <pgHead func="first"><rend halign="center">Printed title</rend>
+                   <rend halign="right">Printed composer</rend></pgHead>
+               </scoreDef><section><measure xml:id="m" n="1"/></section></score></mdiv></body></music></mei>"#,
+        )
+        .expect("readable");
+
+        assert_eq!(read.details().title.as_deref(), Some("Canon in D"));
+        assert_eq!(read.details().composer.as_deref(), Some("Johann Pachelbel"));
+    }
+
+    // Footers (Für Elise's rights line on every page) are never a title.
+    #[test]
+    fn a_footer_is_never_taken_for_a_title() {
+        let read = read(&printed_only(
+            r#"<pgFoot func="first"><rend halign="center">pianolessenassen.nl/bladmuziek</rend></pgFoot>"#,
+        ))
+        .expect("readable");
+
+        assert_eq!(read.details().title, None);
     }
 
     #[test]

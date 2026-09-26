@@ -73,6 +73,37 @@ impl Hogwash {
             }
         }
 
+        // What the performer imported in earlier runs, read back from disk. A
+        // saved file that no longer reads costs only that piece.
+        for id in records.imported() {
+            // Already bundled (a piece imported before it shipped with Hogwash).
+            if pieces.iter().any(|piece| *piece.id() == id) {
+                continue;
+            }
+            let Some(source) = records.source_of(&id) else {
+                continue;
+            };
+
+            match engraving.engrave(&source, Layout::default()) {
+                Ok(engraved) => {
+                    let details = engraved.details();
+
+                    pieces.push(Piece::new(
+                        id,
+                        details.title.as_deref().unwrap_or_default(),
+                        details.composer.clone(),
+                        engraved.score().clone(),
+                    ));
+                }
+                Err(failure) => {
+                    eprintln!(
+                        "hogwash: imported piece {} could not be read: {failure:?}",
+                        id.as_str()
+                    );
+                }
+            }
+        }
+
         let mut pieces = pieces.into_iter();
 
         // FR-207 expressed as a signature: `opened_with` needs a first Piece
