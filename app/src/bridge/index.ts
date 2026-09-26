@@ -59,6 +59,11 @@ export function engravePiece(id: string, zoom: number, width: number): Promise<O
   return invoke<OpenedPiece>("engrave_piece", { id, zoom, width });
 }
 
+/** Gives an imported Piece a new title, kept across restarts. */
+export function renamePiece(id: string, title: string): Promise<PieceSummary> {
+  return invoke<PieceSummary>("rename_piece", { id, title });
+}
+
 /** Why the application cannot work, or `null` if it can. */
 export function startupFailure(): Promise<Unavailable | null> {
   return invoke<Unavailable | null>("startup_failure");

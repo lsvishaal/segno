@@ -109,13 +109,22 @@ impl Hogwash {
                 Ok(engraved) => {
                     let details = engraved.details();
 
-                    let file_name = records
-                        .piece_record(&id)
-                        .and_then(|record| record.file_name);
+                    // A title the performer chose wins; otherwise the file's
+                    // own, then its name.
+                    let record = records.piece_record(&id);
+                    let title = match &record {
+                        Some(record) if record.renamed => record.title.clone(),
+                        _ => title_from(
+                            details.title.as_deref(),
+                            record
+                                .as_ref()
+                                .and_then(|record| record.file_name.as_deref()),
+                        ),
+                    };
 
                     pieces.push(Piece::new(
                         id,
-                        &title_from(details.title.as_deref(), file_name.as_deref()),
+                        &title,
                         details.composer.clone(),
                         engraved.score().clone(),
                     ));
@@ -168,6 +177,11 @@ impl Hogwash {
     /// cost of that design, not a reason to work around it.
     pub fn accept_piece(&mut self, piece: Piece) {
         self.library = self.library.clone().with(piece);
+    }
+
+    /// Gives a Piece in the session's Library a new title.
+    pub fn retitle_piece(&mut self, id: &PieceId, title: &str) {
+        self.library = self.library.clone().retitled(id, title);
     }
 
     /// The engraver, for reading a score the performer offers.

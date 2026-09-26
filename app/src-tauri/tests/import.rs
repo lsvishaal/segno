@@ -11,7 +11,7 @@
 
 use std::path::PathBuf;
 
-use hogwash_app_lib::commands::accept_offered;
+use hogwash_app_lib::commands::{accept_offered, retitle};
 
 /// A fresh directory for one test. Emptied first: imported files are kept
 /// read-only, so a previous run's copy would refuse to be written again.
@@ -299,4 +299,41 @@ fn cut_all(text: &str, start: &str, end: &str) -> String {
         out.replace_range(from..from + length + end.len(), "");
     }
     out
+}
+
+// A title the performer chose is kept across a restart, and wins over the
+// one in the file; a bundled piece keeps its own.
+#[test]
+#[ignore = "needs a real libverovio; run `just provided-test`"]
+fn a_renamed_piece_keeps_its_title_after_a_restart() {
+    let root = temporary("rename");
+    let mut running = hogwash(&root);
+    let canon = accept_offered(
+        &library_file("Canon_in_D.mxl"),
+        Some("Canon_in_D.mxl"),
+        &mut running,
+    )
+    .expect("supported")
+    .piece;
+    let minuet = running.library().pieces()[0].id().as_str().to_owned();
+
+    let renamed = retitle(&mut running, &canon.id, "  Pachelbel's Canon ").expect("renames it");
+    assert_eq!(renamed.title, "Pachelbel's Canon");
+    assert!(
+        retitle(&mut running, &canon.id, "   ").is_err(),
+        "blank is refused"
+    );
+    assert!(
+        retitle(&mut running, &minuet, "Mine now").is_err(),
+        "bundled keeps its title"
+    );
+
+    let restarted = hogwash(&root);
+    assert!(
+        restarted
+            .library()
+            .pieces()
+            .into_iter()
+            .any(|piece| piece.id().as_str() == canon.id && piece.title() == "Pachelbel's Canon")
+    );
 }

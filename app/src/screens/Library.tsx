@@ -55,6 +55,7 @@ const LIST = {
 export function LibraryScreen({
   pieces,
   onOpen,
+  onRename,
   onImport,
   importing,
   importError,
@@ -62,6 +63,7 @@ export function LibraryScreen({
 }: {
   readonly pieces: readonly PieceSummary[];
   readonly onOpen: (id: string) => void;
+  readonly onRename: (id: string, title: string) => Promise<string | null>;
   readonly onImport: () => void;
   readonly importing: boolean;
   readonly importError: string | null;
@@ -122,7 +124,13 @@ export function LibraryScreen({
         className="mt-6 grid grid-cols-1 gap-4 lg:grid-cols-2 lg:gap-5 xl:grid-cols-3"
       >
         {pieces.map((piece) => (
-          <PieceCard key={piece.id} piece={piece} note={notes.get(piece.id)} onOpen={onOpen} />
+          <PieceCard
+            key={piece.id}
+            piece={piece}
+            note={notes.get(piece.id)}
+            onOpen={onOpen}
+            onRename={onRename}
+          />
         ))}
       </motion.ul>
     </div>

@@ -5,18 +5,20 @@ import type { PieceSummary } from "../bridge";
 import { LibraryScreen, distinguishing } from "./Library";
 
 const PIECES: PieceSummary[] = [
-  { id: "a1", title: "Ode to Joy", composer: "Beethoven", bars: 8, notes: 24, fileName: null },
+  { id: "a1", title: "Ode to Joy", composer: "Beethoven", bars: 8, notes: 24, fileName: null, imported: false },
 ];
 
 function renderScreen(overrides: Partial<Parameters<typeof LibraryScreen>[0]> = {}) {
   const onOpen = vi.fn();
   const onImport = vi.fn();
   const onDismissError = vi.fn();
+  const onRename = vi.fn(async () => null as string | null);
 
   render(
     <LibraryScreen
       pieces={PIECES}
       onOpen={onOpen}
+      onRename={onRename}
       onImport={onImport}
       importing={false}
       importError={null}
@@ -25,7 +27,7 @@ function renderScreen(overrides: Partial<Parameters<typeof LibraryScreen>[0]> = 
     />,
   );
 
-  return { onOpen, onImport, onDismissError };
+  return { onOpen, onImport, onDismissError, onRename };
 }
 
 describe("LibraryScreen import", () => {
@@ -70,7 +72,7 @@ describe("LibraryScreen import", () => {
 });
 
 function summary(id: string, title: string, composer: string | null, fileName: string | null): PieceSummary {
-  return { id, title, composer, bars: 1, notes: 1, fileName };
+  return { id, title, composer, bars: 1, notes: 1, fileName, imported: fileName !== null };
 }
 
 describe("telling alike pieces apart", () => {
@@ -106,5 +108,48 @@ describe("telling alike pieces apart", () => {
 
     expect(screen.getByText("Fur_Elise_Easy.mxl")).toBeInTheDocument();
     expect(screen.queryByText("Fur_Elise.mxl")).toBeNull();
+  });
+});
+
+describe("renaming a piece", () => {
+  const MOONLIGHT = summary("moon", "Sonate No. 14", "Ludwig van Beethoven", "Moonlight.mxl");
+  const MINUET = summary("minuet", "Minuet in G Major", "Christian Petzold", null);
+
+  it("is offered for imported pieces only", () => {
+    renderScreen({ pieces: [MOONLIGHT, MINUET] });
+
+    expect(screen.getByRole("button", { name: "Rename Sonate No. 14" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Rename Minuet in G Major" })).toBeNull();
+  });
+
+  it("saves the new title on Enter", async () => {
+    const { onRename } = renderScreen({ pieces: [MOONLIGHT] });
+
+    fireEvent.click(screen.getByRole("button", { name: "Rename Sonate No. 14" }));
+    fireEvent.change(screen.getByLabelText("Title"), { target: { value: "Moonlight Sonata" } });
+    fireEvent.submit(screen.getByLabelText("Title").closest("form")!);
+
+    await vi.waitFor(() => expect(onRename).toHaveBeenCalledWith("moon", "Moonlight Sonata"));
+  });
+
+  it("refuses a blank title without asking", () => {
+    const { onRename } = renderScreen({ pieces: [MOONLIGHT] });
+
+    fireEvent.click(screen.getByRole("button", { name: "Rename Sonate No. 14" }));
+    fireEvent.change(screen.getByLabelText("Title"), { target: { value: "   " } });
+    fireEvent.submit(screen.getByLabelText("Title").closest("form")!);
+
+    expect(screen.getByText("A title cannot be blank.")).toBeInTheDocument();
+    expect(onRename).not.toHaveBeenCalled();
+  });
+
+  it("puts everything back on Escape", () => {
+    renderScreen({ pieces: [MOONLIGHT] });
+
+    fireEvent.click(screen.getByRole("button", { name: "Rename Sonate No. 14" }));
+    fireEvent.keyDown(screen.getByLabelText("Title"), { key: "Escape" });
+
+    expect(screen.queryByLabelText("Title")).toBeNull();
+    expect(screen.getByText("Sonate No. 14")).toBeInTheDocument();
   });
 });

@@ -37,6 +37,64 @@ use crate::practice::AttemptSummary;
 use crate::startup::Unavailable;
 use crate::state::{Failed, Hogwash, Shared};
 
+/// The longest title a piece can be given.
+const LONGEST_TITLE: usize = 200;
+
+/// Renames an imported Piece; the new title is kept across restarts.
+///
+/// # Errors
+///
+/// If the title is blank or too long, the piece is not in the library, it
+/// shipped with Hogwash (those keep their own titles), or the record could
+/// not be written.
+#[tauri::command]
+pub fn rename_piece(
+    id: String,
+    title: String,
+    state: State<'_, Shared>,
+) -> Result<PieceSummary, Refused> {
+    let mut hogwash = state.inner().0.lock().map_err(|_| POISONED.to_owned())?;
+
+    retitle(&mut hogwash, &id, &title)
+}
+
+/// The body of [`rename_piece`], public so an integration test can drive it.
+///
+/// # Errors
+///
+/// As [`rename_piece`].
+pub fn retitle(hogwash: &mut Hogwash, id: &str, title: &str) -> Result<PieceSummary, Refused> {
+    let title = title.trim();
+    if title.is_empty() {
+        return Err("A title cannot be blank.".to_owned());
+    }
+    if title.chars().count() > LONGEST_TITLE {
+        return Err(format!(
+            "A title can be at most {LONGEST_TITLE} characters."
+        ));
+    }
+
+    let piece_id = hogwash_domain::PieceId::new(id)
+        .ok_or_else(|| format!("`{id}` is not a usable piece name."))?;
+
+    if hogwash.records().piece_record(&piece_id).is_none() {
+        return Err("Pieces that come with Hogwash keep their own titles.".to_owned());
+    }
+    hogwash
+        .records()
+        .rename_piece(&piece_id, title)
+        .map_err(|failure| format!("Could not save the new title: {failure:?}"))?;
+    hogwash.retitle_piece(&piece_id, title);
+
+    hogwash
+        .library()
+        .pieces()
+        .into_iter()
+        .find(|piece| *piece.id() == piece_id)
+        .map(|piece| summarise(piece, hogwash))
+        .ok_or_else(|| format!("There is no piece called `{id}` in the library."))
+}
+
 /// A Piece, as the library screen needs it.
 #[derive(Debug, Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -55,6 +113,9 @@ pub struct PieceSummary {
     /// What the performer's file was called, for an imported piece: shown
     /// only to tell apart two pieces with the same title.
     pub file_name: Option<String>,
+    /// Whether the performer imported it, rather than it shipping with
+    /// Hogwash: only imported pieces can be renamed or deleted.
+    pub imported: bool,
 }
 
 /// A Piece, engraved and ready to practise from.
@@ -471,6 +532,7 @@ fn summarise(piece: &hogwash_library::Piece, hogwash: &Hogwash) -> PieceSummary 
         composer: piece.composer().map(str::to_owned),
         bars: piece.score().measures().len(),
         notes: piece.reference().len(),
+        imported: record.is_some(),
         file_name: record.and_then(|record| record.file_name),
     }
 }

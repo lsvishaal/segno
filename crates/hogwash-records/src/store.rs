@@ -55,6 +55,8 @@ pub struct PieceRecord {
     pub source: PathBuf,
     /// What the performer's own file was called, where known.
     pub file_name: Option<String>,
+    /// Whether the performer renamed it: `title` is then theirs.
+    pub renamed: bool,
 }
 
 /// Why a record could not be kept or read back.
@@ -260,6 +262,7 @@ impl Records {
             composer: composer.map(str::to_owned),
             source: score,
             file_name: file_name.map(str::to_owned),
+            renamed: false,
         };
 
         let stored = StoredPiece {
@@ -274,6 +277,7 @@ impl Records {
                 .to_string_lossy()
                 .into_owned(),
             file_name: record.file_name.clone(),
+            renamed: false,
         };
 
         let written = serde_json::to_string_pretty(&stored).map_err(|failure| {
@@ -300,7 +304,34 @@ impl Records {
             composer: stored.composer,
             source: self.scores().join(stored.source),
             file_name: stored.file_name,
+            renamed: stored.renamed,
         })
+    }
+
+    /// Gives an imported piece the title the performer chose, kept across
+    /// restarts.
+    ///
+    /// # Errors
+    ///
+    /// [`RecordsFailure::Unreadable`] if there is no record of that piece
+    /// (bundled pieces have none), or [`RecordsFailure::Storage`] if it
+    /// could not be written.
+    pub fn rename_piece(&self, id: &PieceId, title: &str) -> Result<(), RecordsFailure> {
+        let path = self.piece_path(id);
+        let unreadable = |detail: String| RecordsFailure::Unreadable {
+            path: path.clone(),
+            detail,
+        };
+
+        let mut stored: StoredPiece = serde_json::from_str(&fs::read_to_string(&path)?)
+            .map_err(|failure| unreadable(failure.to_string()))?;
+        title.clone_into(&mut stored.title);
+        stored.renamed = true;
+
+        let written = serde_json::to_string_pretty(&stored)
+            .map_err(|failure| unreadable(failure.to_string()))?;
+        atomic::write(&path, &written)?;
+        Ok(())
     }
 
     /// Every Piece imported so far, by name, in a stable order: what the

@@ -25,7 +25,8 @@ export interface PieceSummary {
   /** How many notes are expected in total. */
   readonly notes: number;
   /** What the performer's file was called, for an imported piece. */
-  readonly fileName: string | null;
+  readonly fileName: string | null;  /** Imported by the performer (only those can be renamed or deleted). */
+  readonly imported: boolean;
 }
 
 /** The written letter name of a note — `"C"` through `"B"`. */

@@ -89,6 +89,10 @@ pub(crate) struct StoredPiece {
     /// records written before it was kept.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub(crate) file_name: Option<String>,
+    /// Whether `title` is one the performer chose, which then wins over
+    /// whatever the file says when it is read again.
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub(crate) renamed: bool,
 }
 
 /// A played note, as stored.

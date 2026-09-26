@@ -3,8 +3,8 @@ import { describe, expect, it } from "vitest";
 import { afterImport } from "./App";
 import type { PieceSummary } from "./bridge";
 
-const CANON: PieceSummary = { id: "23762273abf1d6bd", title: "Canon in D", composer: "Johann Pachelbel", bars: 57, notes: 1604, fileName: "Canon_in_D.mxl" };
-const MINUET: PieceSummary = { id: "minuet", title: "Minuet in G Major", composer: "Christian Petzold", bars: 32, notes: 209, fileName: null };
+const CANON: PieceSummary = { id: "23762273abf1d6bd", title: "Canon in D", composer: "Johann Pachelbel", bars: 57, notes: 1604, fileName: "Canon_in_D.mxl", imported: true };
+const MINUET: PieceSummary = { id: "minuet", title: "Minuet in G Major", composer: "Christian Petzold", bars: 32, notes: 209, fileName: null, imported: false };
 
 describe("the shelf after an import", () => {
   it("gains a new piece", () => {

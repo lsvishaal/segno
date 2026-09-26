@@ -1,5 +1,7 @@
 //! The set of Pieces available to practise (`003 §7.11`, `004 §8.1`).
 
+use hogwash_domain::PieceId;
+
 use crate::piece::Piece;
 
 /// The Pieces the performer can choose from.
@@ -48,6 +50,24 @@ impl Library {
     pub fn with(mut self, piece: Piece) -> Self {
         self.rest.push(piece);
         self
+    }
+
+    /// The same Library with the Piece named `id` retitled; unchanged if
+    /// there is no such Piece.
+    #[must_use]
+    pub fn retitled(self, id: &PieceId, title: &str) -> Self {
+        let retitle = |piece: Piece| {
+            if piece.id() == id {
+                piece.retitled(title)
+            } else {
+                piece
+            }
+        };
+
+        Self {
+            first: retitle(self.first),
+            rest: self.rest.into_iter().map(retitle).collect(),
+        }
     }
 
     /// Every Piece available, in the order they became available.
@@ -124,6 +144,18 @@ mod tests {
 
         assert!(library.count() >= 1);
         assert!(library.at(0).is_some());
+    }
+
+    #[test]
+    fn a_piece_can_be_retitled_and_nothing_else_changes() {
+        let library = Library::opened_with(piece("Provided"), vec![piece("Sonate No 14")]);
+        let id = PieceId::new("Sonate-No-14").expect("usable");
+
+        let renamed = library.retitled(&id, "  Moonlight Sonata ");
+
+        let titles: Vec<&str> = renamed.pieces().iter().map(|piece| piece.title()).collect();
+        assert_eq!(titles, ["Provided", "Moonlight Sonata"]);
+        assert_eq!(renamed.pieces()[1].id(), &id);
     }
 
     // FR-203 — "given two or more imported pieces, when the piece library is

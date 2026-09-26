@@ -77,6 +77,20 @@ impl Piece {
         }
     }
 
+    /// The same Piece under another title, as the performer chose to call
+    /// it. A blank title becomes "Untitled", as in [`new`](Self::new).
+    #[must_use]
+    pub fn retitled(self, title: &str) -> Self {
+        Self {
+            title: if title.trim().is_empty() {
+                "Untitled".to_owned()
+            } else {
+                title.trim().to_owned()
+            },
+            ..self
+        }
+    }
+
     /// Its durable name, for a Practice Record to refer to.
     #[must_use]
     pub const fn id(&self) -> &PieceId {

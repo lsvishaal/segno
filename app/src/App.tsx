@@ -3,7 +3,7 @@ import type { ReactNode } from "react";
 
 import { AnimatePresence, motion, MotionConfig } from "motion/react";
 
-import { importMusicXml, library, openPiece, startupFailure } from "./bridge";
+import { importMusicXml, library, openPiece, renamePiece, startupFailure } from "./bridge";
 import type { ImportedPiece, OpenedPiece, PieceSummary, Unavailable } from "./bridge";
 import { LibraryScreen } from "./screens/Library";
 import { PracticeScreen } from "./screens/Practice";
@@ -163,6 +163,25 @@ export function App() {
     })();
   }, [open]);
 
+  // A refusal goes back to the card being edited, which shows it there.
+  const rename = useCallback(async (id: string, title: string): Promise<string | null> => {
+    try {
+      const renamed = await renamePiece(id, title);
+      setScreen((current) =>
+        current.kind === "library"
+          ? {
+              kind: "library",
+              pieces: current.pieces.map((piece) => (piece.id === id ? renamed : piece)),
+            }
+          : current,
+      );
+      setNotice("Renamed");
+      return null;
+    } catch (error) {
+      return String(error);
+    }
+  }, []);
+
   const dismissImportError = useCallback(() => setImportError(null), []);
 
   // `reducedMotion="user"` makes every `motion.*` component below honour
@@ -191,6 +210,7 @@ export function App() {
                   <LibraryScreen
                     pieces={screen.pieces}
                     onOpen={open}
+                    onRename={rename}
                     onImport={importPiece}
                     importing={importing}
                     importError={importError}

@@ -242,6 +242,44 @@ fn an_imported_score_is_copied_into_the_library_and_kept_apart_from_history() {
     );
 }
 
+// A title the performer chose outlives a restart.
+#[test]
+fn a_renamed_piece_keeps_its_new_title() {
+    let directory = tempfile::tempdir().expect("a temporary directory");
+    let records = Records::under(directory.path());
+    records
+        .keep_piece(
+            &piece(),
+            "Sonate No. 14",
+            None,
+            Some("Moonlight.mxl"),
+            b"<score-partwise/>",
+        )
+        .expect("keeps the piece");
+
+    records
+        .rename_piece(&piece(), "Moonlight Sonata, 1st movement")
+        .expect("renames it");
+
+    let record = Records::under(directory.path())
+        .piece_record(&piece())
+        .expect("still recorded");
+    assert_eq!(record.title, "Moonlight Sonata, 1st movement");
+    assert!(record.renamed);
+    assert_eq!(record.file_name.as_deref(), Some("Moonlight.mxl"));
+}
+
+#[test]
+fn a_piece_that_was_never_imported_cannot_be_renamed() {
+    let directory = tempfile::tempdir().expect("a temporary directory");
+
+    assert!(
+        Records::under(directory.path())
+            .rename_piece(&piece(), "Anything")
+            .is_err()
+    );
+}
+
 // A restart has to find every imported piece again, from disk alone.
 #[test]
 fn imported_pieces_are_listed_after_a_restart() {
