@@ -67,3 +67,10 @@ struggle with and helps you fix them.
 - A keyboard's octave up/down buttons shift every note it sends, so
   everything reads as wrong: detect a whole-performance octave offset and say so.
 - The wrong-note mark's accidental ignores accidentals earlier in the same bar.
+- "Replace a piece's file": re-importing an edited file is a new piece
+  today (new fingerprint), and the old practice history stays with the old
+  version. Offer to replace the file and carry the history over.
+- Leaving the practice screen does not end the attempt; it keeps running in
+  the background until another command ends it (issue 4: session handling).
+- A zip damaged *inside* an entry (not cut short) could still reach Verovio
+  and crash it; only the container's structure is checked before loading.
