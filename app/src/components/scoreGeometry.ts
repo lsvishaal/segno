@@ -277,6 +277,39 @@ function notehead(
   return { x: at.x, y: at.y, width, height: spacing };
 }
 
+/** The cursor's band, in the same drawing units as the page. */
+export interface Band {
+  readonly system: number;
+  readonly x: number;
+  readonly y: number;
+  readonly width: number;
+  readonly height: number;
+}
+
+/**
+ * The cursor for the notes at one position: as wide as their noteheads, and
+ * always the full height of their system, so a note still held in the other
+ * hand is covered too. Null if none of the notes is drawn on this page.
+ */
+export function cursorBand(geometry: PageGeometry, elementIds: readonly string[]): Band | null {
+  const heads = elementIds.flatMap((id) => {
+    const head = geometry.noteheads.get(id);
+    return head ? [head] : [];
+  });
+  const system = geometry.systems.find((candidate) => candidate.index === heads[0]?.system);
+  if (!system) return null;
+
+  const spacing = system.staves[0]!.spacing;
+  const onSystem = heads.filter((head) => head.system === system.index);
+  const x0 = Math.min(...onSystem.map((head) => head.x)) - spacing / 2;
+  const x1 = Math.max(...onSystem.map((head) => head.x + head.width)) + spacing / 2;
+  // Reach past ledger-line notes as well as the staves themselves.
+  const y0 = Math.min(system.top, ...onSystem.map((head) => head.y - head.height / 2)) - spacing;
+  const y1 = Math.max(system.bottom, ...onSystem.map((head) => head.y + head.height / 2)) + spacing;
+
+  return { system: system.index, x: x0, y: y0, width: x1 - x0, height: y1 - y0 };
+}
+
 /** The inner drawing surface of a page, where every coordinate above lives. */
 export function drawingSurface(page: Element): SVGSVGElement | null {
   return page.querySelector("svg.definition-scale");

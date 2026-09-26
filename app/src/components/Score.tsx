@@ -1,14 +1,17 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 
 import { AnimatePresence, motion } from "motion/react";
 
 import type { DrawnNote, Mark } from "../bridge";
 import { NoteNames } from "./NoteNames";
 import { showGeometry as drawGeometry } from "./scoreDebug";
+import { cursorBand, drawingSurface, readPage } from "./scoreGeometry";
+import type { PageGeometry } from "./scoreGeometry";
 import { nearestSpelling, verticalPositionFor } from "./staffGeometry";
 import type { Spelling } from "./staffGeometry";
 
-/** Where the cursor bar sits. */
+/** Which position the cursor is on. */
 export interface CursorState {
   readonly position: number;
 }
@@ -30,7 +33,7 @@ export interface Box {
 }
 
 /**
- * The engraved score, with a cursor bar and correctness dots drawn over it.
+ * The engraved score, with a cursor and correctness dots drawn on it.
  *
  * # Why the SVG is not React's business
  *
@@ -38,8 +41,8 @@ export interface Box {
  * would put all of them through reconciliation every time something moved —
  * ten times a second while someone is playing. So the markup is injected
  * once, imperatively, into its own node; React never touches what is inside
- * it. The cursor and the dots are a *separate* layer, one React fully owns,
- * sitting on top.
+ * it. The cursor is portalled into a layer inside the page, behind the ink;
+ * the dots are a separate layer on top.
  *
  * # Correct notes recolor real ink; wrong notes cannot
  *
@@ -51,9 +54,7 @@ export interface Box {
  * still drawn as an overlay, positioned from real measurements
  * (`getBoundingClientRect()` on whatever *was* actually drawn — trustworthy,
  * unlike the static-file geometry bug `ADR-0012` records) rather than from
- * anything Verovio drew for the pitch that was actually played. The cursor
- * bar is an overlay for the same reason a wrong note is: it marks a position
- * on the staff, not a specific drawn element.
+ * anything Verovio drew for the pitch that was actually played.
  */
 export function Score({
   pages,
@@ -74,7 +75,8 @@ export function Score({
 }) {
   const wrapper = useRef<HTMLDivElement>(null);
   const container = useRef<HTMLDivElement>(null);
-  const [cursorBox, setCursorBox] = useState<Box | null>(null);
+  // Per page: its geometry, and a layer drawn behind the ink for the cursor.
+  const [surfaces, setSurfaces] = useState<readonly { layer: SVGGElement; geometry: PageGeometry }[]>([]);
   const [dotBox, setDotBox] = useState<Box | null>(null);
   const [noteLabels, setNoteLabels] = useState<readonly { elementId: string; step: string; box: Box }[]>([]);
   // Bumped by the `ResizeObserver` below — its value is never read, only its
@@ -139,6 +141,17 @@ export function Score({
       holder.innerHTML = sanitise(page);
       panel.append(holder);
     }
+
+    setSurfaces(
+      [...panel.querySelectorAll(".hw-page")].flatMap((page) => {
+        const surface = drawingSurface(page);
+        if (!surface) return [];
+        const layer = document.createElementNS("http://www.w3.org/2000/svg", "g");
+        layer.setAttribute("class", "hw-under");
+        surface.prepend(layer);
+        return [{ layer, geometry: readPage(page) }];
+      }),
+    );
   }, [pages]);
 
   // What the geometry layer reads from each page, drawn inside the page.
@@ -152,13 +165,12 @@ export function Score({
     }
   }, [pages, showGeometry]);
 
-  // The cursor bar, measured against whatever is actually on screen.
-  useEffect(() => {
-    const root = wrapper.current;
-    if (!root) return;
-
-    setCursorBox(unionBox(root, notesAt.get(cursor.position)));
-  }, [cursor, notesAt, pages, layoutTick]);
+  // The cursor, in the page's own units: it scales with the page, so no
+  // zoom, resize or scroll can pull it off its notes.
+  const cursorIds = (notesAt.get(cursor.position) ?? []).map((note) => note.elementId);
+  const cursorOn = surfaces
+    .map((surface) => ({ layer: surface.layer, band: cursorBand(surface.geometry, cursorIds) }))
+    .find((candidate) => candidate.band);
 
   // A correct note recolors the real notehead — there is one, so there is
   // nothing to position (`ADR-0001` only forces an overlay for a *wrong*
@@ -249,17 +261,18 @@ export function Score({
       <div className="pointer-events-none absolute inset-0">
         <NoteNames labels={noteLabels} />
 
-        {cursorBox && (
-          <motion.div
-            className="hw-cursor-bar"
-            animate={{
-              left: cursorBox.left + cursorBox.width / 2,
-              top: cursorBox.top,
-              height: cursorBox.height,
-            }}
-            transition={{ type: "spring", stiffness: 300, damping: 30 }}
-          />
-        )}
+        {cursorOn?.band &&
+          createPortal(
+            // Keyed by system: it glides along a line, and jumps to the next.
+            <rect
+              key={cursorOn.band.system}
+              className="hw-cursor-band"
+              width={cursorOn.band.width}
+              height={cursorOn.band.height}
+              style={{ transform: `translate(${cursorOn.band.x}px, ${cursorOn.band.y}px)` }}
+            />,
+            cursorOn.layer,
+          )}
 
         <AnimatePresence>
           {dotBox && (

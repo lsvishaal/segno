@@ -68,61 +68,18 @@
 }
 
 /*
-  The cursor: a thin bar, not a highlight on a notehead — there is no
-  notehead to highlight once a wrong note can appear anywhere. Centred on
-  its target by `transform`, so `Score.tsx` only ever has to animate a
-  single point (`left`) rather than a width that would fight the transform.
+  The cursor: a band behind the ink, across the whole system, drawn inside
+  the page's SVG in its own units (`Score.tsx`).
 */
-.hw-cursor-bar {
-  position: absolute;
-  width: 3px;
-  border-radius: 2px;
-  background: var(--hw-cursor);
-  transform: translateX(-50%);
-}
-
-/*
-  A small circular cap at the cursor's top — the note-shaped detail a bare
-  bar was missing. It breathes: a slow, gentle pulse rather than a static
-  dot, the same unhurried "still alive" motion a waiting cursor deserves
-  (cf. Material 3 Expressive's breathing indicators) — noticeable, but never
-  urgent. Purely decorative: it takes its colour from `--hw-cursor` like the
-  bar itself, and asserts nothing about correctness (`004 §8.8`) — the
-  wrong-note ghost dot below is what does that.
-*/
-.hw-cursor-bar::before {
-  content: "";
-  position: absolute;
-  top: -3px;
-  left: 50%;
-  width: 11px;
-  height: 11px;
-  border-radius: 50%;
-  background: var(--hw-cursor);
-  transform: translate(-50%, -50%);
-  animation: hw-cursor-breathe 3.2s ease-in-out infinite;
-}
-
-@keyframes hw-cursor-breathe {
-  0%,
-  100% {
-    transform: translate(-50%, -50%) scale(1);
-    opacity: 0.75;
-  }
-  50% {
-    transform: translate(-50%, -50%) scale(1.35);
-    opacity: 1;
-  }
+.hw-cursor-band {
+  fill: var(--hw-cursor);
+  fill-opacity: 0.45;
+  transition: transform 150ms ease-out;
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .hw-cursor-bar {
+  .hw-cursor-band {
     transition: none;
-  }
-
-  .hw-cursor-bar::before {
-    animation: none;
-    opacity: 1;
   }
 }
 

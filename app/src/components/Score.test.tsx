@@ -2,6 +2,7 @@ import { act, render } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import type { Mark } from "../bridge";
+import minuet from "./__fixtures__/minuet-in-g.page1.svg?raw";
 import { Score, unionBox, wrongNoteBox } from "./Score";
 
 /**
@@ -322,5 +323,41 @@ describe("resize-driven re-measurement", () => {
     });
 
     expect(label().style.left).toBe("148px");
+  });
+});
+
+describe("the cursor, on the Minuet", () => {
+  // Bar 1, beat 1: D5 over G3.
+  const MARKS: readonly Mark[] = [
+    {
+      measure: 1,
+      position: 0,
+      page: 0,
+      notes: [
+        { elementId: "b37hn12", step: "D", octave: 5 },
+        { elementId: "j14qhuvu", step: "G", octave: 3 },
+      ],
+    },
+  ];
+
+  it("is a band inside the page's own drawing, behind the music", () => {
+    const { container } = render(
+      <Score pages={[minuet]} marks={MARKS} cursor={{ position: 0 }} dot={null} followCursor={false} />,
+    );
+
+    const surface = container.querySelector("svg.definition-scale")!;
+    const band = surface.querySelector("rect.hw-cursor-band");
+
+    expect(band).not.toBeNull();
+    expect(surface.firstElementChild).toHaveClass("hw-under");
+    expect(surface.firstElementChild!.contains(band)).toBe(true);
+  });
+
+  it("draws nothing for a position with no drawn notes", () => {
+    const { container } = render(
+      <Score pages={[minuet]} marks={MARKS} cursor={{ position: 5 }} dot={null} followCursor={false} />,
+    );
+
+    expect(container.querySelector(".hw-cursor-band")).toBeNull();
   });
 });
