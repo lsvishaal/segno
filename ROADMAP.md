@@ -17,10 +17,32 @@ struggle with and helps you fix them.
 ## Phase 0.5 — score display correctness
 
 - [x] 0.5.1 Geometry extraction from Verovio's SVG + "Show geometry" debug view
-- [ ] 0.5.2 Pitch -> staff position from measured staff lines and clefs
-- [ ] 0.5.3 Overlays inside the SVG: cursor on noteheads, soft played tint
-- [ ] 0.5.4 Wrong-note ghost on the right staff, with ledger lines and label
-- [ ] 0.5.5 Zoom that actually changes size and reflows to the window
+- [x] 0.5.2 Pitch -> staff position from measured staff lines and clefs
+- [x] 0.5.3 Cursor inside the SVG: a line through the notes, both staves
+- [x] 0.5.4 Wrong-note mark on the right staff, with ledger lines, accidental
+      and label; notes under an 8va line expected at the pitch they sound
+- [x] 0.5.5 Zoom that actually changes size and reflows to the window
+
+## Order to v1
+
+1. A real Für Elise (with its pickup bar) through MuseScore Studio and
+   imported; fix bar numbering if it is refused
+2. Timestamps on every played note
+3. "Slowest bars" readout after a session (a plain list)
+4. Seven practice sessions (Minuet + Für Elise), writing down every annoyance
+5. Fix the top annoyances from that list
+6. Publish (below)
+
+## Before public release
+
+- Licences of bundled pieces: every file clearly public domain or open;
+  swap unclear ones for OpenScore / Open Well-Tempered Clavier files
+- README for a stranger: what it does, a screenshot, installing on Linux
+- Remove the references to deleted specs (§7.4, ADR-, FR-)
+- Helpful messages for MIDI and PDF files (point to MuseScore Studio and
+  Audiveris)
+- Keyboard-range note (fits / doesn't fit 61 keys)
+- A 60-second screen recording
 
 ## Phase 1
 

@@ -157,47 +157,35 @@ pub fn open_piece(id: String, state: State<'_, Shared>) -> Result<OpenedPiece, R
     opened_piece(id, hogwash_engraving_verovio::Layout::default(), &hogwash)
 }
 
-/// Re-engraves a Piece at a different staff size (`BFR-4`).
+/// Re-engraves a Piece to fit the score's width on screen, `width` pixels,
+/// at `zoom` percent: the music reflows, so zooming in means fewer bars per
+/// line. Zoom is clamped to the supported range here, not trusted from the
+/// interface.
 ///
-/// Stateless with respect to `Practice`'s session: a Piece's `Attempt` is
-/// keyed on `Location`/pitch, never on an element id, so re-engraving at a
-/// new scale never disturbs one in progress. The frontend gets a full fresh
-/// `OpenedPiece` — new `pages` and new `marks` together, atomically — rather
-/// than being asked to patch anything in place.
+/// A practice session is keyed on position and pitch, never on an element
+/// id, so re-engraving mid-attempt disturbs nothing. The interface gets new
+/// `pages` and `marks` together and replaces both.
 ///
 /// # Errors
 ///
 /// As [`open_piece`].
 #[tauri::command]
-pub fn rescale_piece(
+pub fn engrave_piece(
     id: String,
-    scale: u32,
+    zoom: u32,
+    width: u32,
     state: State<'_, Shared>,
 ) -> Result<OpenedPiece, Refused> {
     let hogwash = state.inner().0.lock().map_err(|_| POISONED.to_owned())?;
 
-    let layout = hogwash_engraving_verovio::Layout {
-        scale: clamp_scale(scale),
-        ..hogwash_engraving_verovio::Layout::default()
-    };
-
-    opened_piece(id, layout, &hogwash)
+    opened_piece(
+        id,
+        hogwash_engraving_verovio::Layout::fitting(width, zoom),
+        &hogwash,
+    )
 }
 
-/// Keeps a requested staff size within what is actually usable — not trusting
-/// the frontend's arithmetic (a rapid Ctrl+scroll, or a slider dragged past
-/// its own visual ends) any more than any other boundary input.
-const fn clamp_scale(requested: u32) -> u32 {
-    if requested < 50 {
-        50
-    } else if requested > 400 {
-        400
-    } else {
-        requested
-    }
-}
-
-/// The body [`open_piece`] and [`rescale_piece`] share: everything about
+/// The body [`open_piece`] and [`engrave_piece`] share: everything about
 /// engraving a Piece except which [`Layout`](hogwash_engraving_verovio::Layout)
 /// to engrave it at.
 fn opened_piece(
@@ -632,7 +620,7 @@ const POISONED: &str = "Hogwash got into a state it cannot recover from. Restart
 
 #[cfg(test)]
 mod tests {
-    use super::{clamp_scale, extension_of};
+    use super::extension_of;
 
     #[test]
     fn plain_musicxml_has_no_zip_signature() {
@@ -645,20 +633,5 @@ mod tests {
     #[test]
     fn a_zip_signature_means_compressed_musicxml() {
         assert_eq!(extension_of(b"PK\x03\x04rest of the archive"), "mxl");
-    }
-
-    #[test]
-    fn a_usable_scale_passes_through_unchanged() {
-        assert_eq!(clamp_scale(150), 150);
-    }
-
-    #[test]
-    fn too_small_is_clamped_up() {
-        assert_eq!(clamp_scale(0), 50);
-    }
-
-    #[test]
-    fn too_large_is_clamped_down() {
-        assert_eq!(clamp_scale(10_000), 400);
     }
 }

@@ -54,9 +54,9 @@ export function openPiece(id: string): Promise<OpenedPiece> {
   return invoke<OpenedPiece>("open_piece", { id });
 }
 
-/** Re-engraves a Piece at a different staff size (`BFR-4`). */
-export function rescalePiece(id: string, scale: number): Promise<OpenedPiece> {
-  return invoke<OpenedPiece>("rescale_piece", { id, scale });
+/** Re-engraves a Piece to fit `width` pixels at `zoom` percent: the music reflows. */
+export function engravePiece(id: string, zoom: number, width: number): Promise<OpenedPiece> {
+  return invoke<OpenedPiece>("engrave_piece", { id, zoom, width });
 }
 
 /** Why the application cannot work, or `null` if it can. */

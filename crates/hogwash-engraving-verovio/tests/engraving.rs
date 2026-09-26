@@ -448,3 +448,33 @@ fn a_note_under_an_octave_line_is_expected_at_the_pitch_it_sounds() {
 
     assert_eq!(required(&engraved).first(), Some(&vec![74, 55, 59, 62]));
 }
+
+// Zoom reflows: a page fitted to a narrower window (or a bigger zoom) breaks
+// the same music into more lines, and every note keeps its id.
+#[test]
+#[ignore = "needs a real libverovio; run `just engraving-test`"]
+fn a_narrower_window_reflows_into_more_lines() {
+    let minuet = include_bytes!("../../../app/src-tauri/library/minuet-in-g.musicxml");
+    let mut engraver = engraver();
+    let systems = |engraved: &EngravedScore| -> usize {
+        engraved
+            .pages()
+            .iter()
+            .map(|page| page.matches(r#"class="system""#).count())
+            .sum()
+    };
+    let ids = |engraved: &EngravedScore| -> Vec<_> {
+        engraved
+            .placements()
+            .map(|(_, placement)| placement.elements().to_vec())
+            .collect()
+    };
+
+    engraver.lay_out(Layout::fitting(1600, 100));
+    let wide = engraver.engrave(minuet).expect("engraves wide");
+    engraver.lay_out(Layout::fitting(1600, 200));
+    let zoomed = engraver.engrave(minuet).expect("engraves zoomed in");
+
+    assert!(systems(&zoomed) > systems(&wide));
+    assert_eq!(ids(&zoomed), ids(&wide));
+}

@@ -1,6 +1,17 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { MAX_SCALE, MIN_SCALE, SCALE_STEP, clampScale, stepScale } from "./zoom";
+import {
+  DEFAULT_SCALE,
+  MAX_SCALE,
+  MIN_SCALE,
+  SCALE_STEP,
+  SCORE_MAX_WIDTH,
+  clampScale,
+  loadZoom,
+  saveZoom,
+  scoreWidth,
+  stepScale,
+} from "./zoom";
 
 describe("clampScale", () => {
   it("passes a usable value through unchanged", () => {
@@ -31,5 +42,40 @@ describe("stepScale", () => {
 
   it("does not step past the minimum", () => {
     expect(stepScale(MIN_SCALE, 1)).toBe(MIN_SCALE);
+  });
+});
+
+describe("the score's width", () => {
+  it("is the room available, up to a readable maximum", () => {
+    expect(scoreWidth(900.4)).toBe(900);
+    expect(scoreWidth(4000)).toBe(SCORE_MAX_WIDTH);
+  });
+});
+
+describe("remembered zoom", () => {
+  beforeEach(() => {
+    const stored = new Map<string, string>();
+    vi.stubGlobal("localStorage", {
+      getItem: (key: string) => stored.get(key) ?? null,
+      setItem: (key: string, value: string) => void stored.set(key, value),
+    });
+  });
+  afterEach(() => vi.unstubAllGlobals());
+
+  it("starts at the default", () => {
+    expect(loadZoom()).toBe(DEFAULT_SCALE);
+  });
+
+  it("falls back to the default when storage is unavailable", () => {
+    vi.stubGlobal("localStorage", undefined);
+    saveZoom(150);
+    expect(loadZoom()).toBe(DEFAULT_SCALE);
+  });
+
+  it("comes back as it was saved, within range", () => {
+    saveZoom(150);
+    expect(loadZoom()).toBe(150);
+    saveZoom(9000);
+    expect(loadZoom()).toBe(MAX_SCALE);
   });
 });

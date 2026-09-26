@@ -27,44 +27,47 @@ use crate::{mei, timemap, translate};
 /// several — the view stacks them. Fighting that would mean asking for one
 /// enormous page, and an enormous page is an enormous texture.
 ///
-/// The width is **not** the window's width. Re-engraving on every resize
-/// would mean re-parsing the file to answer a question about a window, and
-/// `MVP §6.4` only asks that all of the music be reachable. `svgViewBox`
-/// makes the SVG's own `viewBox` carry its dimensions instead of a fixed
-/// pixel size, so the interface can size it responsively in the DOM with
-/// plain CSS (`ADR-0012`) rather than re-engraving for every window size.
+/// Zoom reflows rather than magnifies: [`fitting`](Self::fitting) makes the
+/// page as wide as the window at the chosen size, so a bigger zoom means
+/// fewer bars per line, never sideways scrolling. `svgViewBox` lets the page
+/// then be sized in the DOM with plain CSS.
 ///
 /// [`EngravedScore`]: hogwash_engraving::EngravedScore
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct Layout {
-    /// Page width, in tenths of a millimetre. Verovio's own unit.
+    /// Page width in Verovio's units: one pixel each at 100%.
     pub width: u32,
-    /// Staff size as a percentage. Larger is easier to read from a distance,
-    /// which is where a performer sits.
+    /// Staff size as a percentage; 100 is Verovio's natural size.
     pub scale: u32,
 }
 
+/// The zoom range, in percent.
+const ZOOM: std::ops::RangeInclusive<u32> = 50..=200;
+/// The narrowest page, in Verovio's units: enough for one bar with its clefs
+/// and key signature. A narrower window shrinks the page instead.
+const NARROWEST: u32 = 500;
+
 impl Default for Layout {
+    /// A typical window at natural size, for engraving before a window has
+    /// been measured.
     fn default() -> Self {
-        // 2100 is A4's width in Verovio's units, and is wide enough to hold
-        // several bars per system without crowding. 300% rather than
-        // Verovio's own default of 100%, and well above this crate's earlier
-        // 110% and then 150%: a performer reading a screen at arm's length,
-        // on a score that may well be the only thing on that screen,
-        // benefits from noteheads and staff lines that are unmistakable
-        // rather than merely legible — closer to a beginner's method book
-        // held open on a music stand than a page of dense orchestral
-        // engraving. Still well inside the zoom control's own range
-        // (`commands.rs`'s `clamp_scale`, 50–400), so nothing about the
-        // ceiling needed to move to make room for this.
-        Self {
-            width: 2100,
-            scale: 300,
-        }
+        Self::fitting(1200, 100)
     }
 }
 
 impl Layout {
+    /// A page `width_px` pixels wide on screen at `zoom` percent: Verovio's
+    /// own recipe for a responsive layout (`pageWidth = width × 100 / zoom`,
+    /// `scale = zoom`). Zoom is kept within 50-200%.
+    #[must_use]
+    pub fn fitting(width_px: u32, zoom: u32) -> Self {
+        let scale = zoom.clamp(*ZOOM.start(), *ZOOM.end());
+        Self {
+            width: (width_px.saturating_mul(100) / scale).max(NARROWEST),
+            scale,
+        }
+    }
+
     /// The options Verovio is given, as JSON.
     ///
     /// `header` and `footer` are turned off: Verovio prints a title and page
@@ -229,5 +232,46 @@ fn describe(error: ToolkitError) -> String {
         ToolkitError::Unavailable(detail)
         | ToolkitError::NotText(detail)
         | ToolkitError::Refused(detail) => detail,
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::Layout;
+
+    #[test]
+    fn a_fitted_page_is_the_window_width_at_the_zoom() {
+        assert_eq!(
+            Layout::fitting(1200, 100),
+            Layout {
+                width: 1200,
+                scale: 100
+            }
+        );
+        assert_eq!(
+            Layout::fitting(1200, 200),
+            Layout {
+                width: 600,
+                scale: 200
+            }
+        );
+        assert_eq!(
+            Layout::fitting(1200, 50),
+            Layout {
+                width: 2400,
+                scale: 50
+            }
+        );
+    }
+
+    #[test]
+    fn zoom_stays_in_range() {
+        assert_eq!(Layout::fitting(1200, 400).scale, 200);
+        assert_eq!(Layout::fitting(1200, 10).scale, 50);
+    }
+
+    #[test]
+    fn a_page_is_never_narrower_than_one_bar() {
+        assert_eq!(Layout::fitting(300, 200).width, 500);
     }
 }

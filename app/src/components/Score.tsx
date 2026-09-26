@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 
 import type { DrawnNote, Mark } from "../bridge";
+import { SCORE_MAX_WIDTH } from "../screens/zoom";
 import { NoteNames } from "./NoteNames";
 import { showGeometry as drawGeometry } from "./scoreDebug";
 import { cursorLine, drawingSurface, readPage } from "./scoreGeometry";
@@ -58,6 +59,7 @@ export function Score({
   cursor,
   dot,
   followCursor = true,
+  hidden = false,
   showNoteNames = false,
   showGeometry = false,
 }: {
@@ -66,6 +68,8 @@ export function Score({
   readonly cursor: CursorState;
   readonly dot: Dot | null;
   readonly followCursor?: boolean;
+  /** Laid out but not shown: while the music is being fitted to the window. */
+  readonly hidden?: boolean;
   readonly showNoteNames?: boolean;
   readonly showGeometry?: boolean;
 }) {
@@ -233,21 +237,25 @@ export function Score({
     setNoteLabels(labels);
   }, [showNoteNames, marks, pages, layoutTick]);
 
-  // Keep the cursor in view. `block: "center"` rather than "nearest" so the
-  // performer reads with music above and below, not pinned to an edge.
+  // Keep the cursor's line of music in view: scrolled to when the cursor
+  // reaches a new line, or the music reflows, and not on every note. The
+  // scroll container's `scroll-padding` puts it in the upper third, with
+  // the next line visible below.
+  const cursorSystem = cursorOn?.line?.system;
   useEffect(() => {
-    if (!followCursor) return;
+    if (!followCursor || cursorSystem === undefined) return;
 
-    const first = notesAt.get(cursor.position)?.[0];
-    const element = first
-      ? container.current?.querySelector(`#${CSS.escape(first.elementId)}`)
-      : null;
-
-    element?.scrollIntoView({ behavior: "smooth", block: "center" });
-  }, [cursor, notesAt, followCursor]);
+    wrapper.current
+      ?.querySelector(".hw-cursor-line")
+      ?.scrollIntoView({ behavior: "smooth", block: "start" });
+  }, [cursorSystem, surfaces, followCursor]);
 
   return (
-    <div ref={wrapper} className="relative mx-auto w-full max-w-[1600px]">
+    <div
+      ref={wrapper}
+      className="relative mx-auto w-full"
+      style={{ maxWidth: SCORE_MAX_WIDTH, visibility: hidden ? "hidden" : undefined }}
+    >
       <div ref={container} className="py-6" />
 
       <div className="pointer-events-none absolute inset-0">

@@ -80,7 +80,7 @@ pub fn run() -> Result<(), tauri::Error> {
         .invoke_handler(tauri::generate_handler![
             commands::library,
             commands::open_piece,
-            commands::rescale_piece,
+            commands::engrave_piece,
             commands::startup_failure,
             commands::instruments,
             commands::start_attempt,

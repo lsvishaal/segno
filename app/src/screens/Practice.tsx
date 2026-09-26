@@ -4,10 +4,10 @@ import { AnimatePresence, motion } from "motion/react";
 
 import {
   endAttempt,
+  engravePiece,
   exportMusicXml,
   instruments as fetchInstruments,
   listenToPractice,
-  rescalePiece,
   startAttempt,
 } from "../bridge";
 import type { AttemptSummary, InstrumentSummary, Mark, OpenedPiece, PracticeEvent } from "../bridge";
@@ -15,12 +15,11 @@ import { Score } from "../components/Score";
 import type { CursorState, Dot } from "../components/Score";
 import { BEFORE_STARTING, cursorFor, dotFor } from "./overlayEvents";
 import { SettingsPanel } from "./PracticeSettings";
-import { clampScale, stepScale } from "./zoom";
+import { REFLOW_THRESHOLD, clampScale, loadZoom, saveZoom, scoreWidth, stepScale } from "./zoom";
 
-/** How long to wait after the last zoom change before re-engraving — a real
- * Verovio parse, not a CSS transform, so firing on every wheel tick would
- * visibly lag. */
-const RESCALE_DEBOUNCE_MS = 200;
+/** How long to wait after the last zoom or width change before re-engraving —
+ * a real Verovio pass, so not on every wheel tick or resize frame. */
+const REFLOW_DEBOUNCE_MS = 250;
 
 /** Whether the score is drawn on paper or inverted. */
 export type Surface = "paper" | "dark";
@@ -69,20 +68,20 @@ export function PracticeScreen({
   const [zoomError, setZoomError] = useState<string | null>(null);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const gearRef = useRef<HTMLButtonElement>(null);
-  // 300 matches Rust's `Layout::default().scale` — the size a piece opens
-  // at before anyone has touched the zoom control. Large by default: a
-  // performer reading from arm's length benefits from noteheads that are
-  // unmistakable rather than merely legible.
-  const [scale, setScale] = useState(300);
+  // Zoom, remembered across pieces and restarts.
+  const [scale, setScale] = useState(loadZoom);
   const [engraving, setEngraving] = useState<{
     pages: readonly string[];
     marks: readonly Mark[];
   }>({ pages: piece.pages, marks: piece.marks });
+  // The piece arrives engraved for no particular window; it stays hidden
+  // until it has been engraved for this one, so the music never visibly jumps.
+  const [fitted, setFitted] = useState(false);
+  const fittedRef = useRef(false);
+  fittedRef.current = fitted;
+  // The width the score is engraved for, in pixels, once measured.
+  const [width, setWidth] = useState<number | null>(null);
   const scoreRef = useRef<HTMLDivElement>(null);
-  // A rescale is triggered by a *change* to `scale`, not by mounting with
-  // one — otherwise every piece-open would fire a redundant re-engrave at
-  // the scale it was already opened at.
-  const skipNextRescale = useRef(true);
 
   // A refusal is transient — it says its piece and then gets out of the way.
   useEffect(() => {
@@ -107,42 +106,60 @@ export function PracticeScreen({
     setDot(null);
     setLost(null);
     setEngraving({ pages: piece.pages, marks: piece.marks });
-    setScale(300);
-    skipNextRescale.current = true;
+    setFitted(false);
   }, [pieceId, piece.pages, piece.marks]);
 
-  // Re-engraves at the new scale, debounced so a rapid Ctrl+scroll doesn't
-  // fire a real Verovio parse per wheel tick. Replaces `pages`/`marks`
-  // together, atomically — never patched in place — because nothing here
-  // assumes element ids survive a rescale (`crates/hogwash-engraving-verovio/
-  // tests/engraving.rs` checks that they do, but the design doesn't depend
-  // on it).
+  useEffect(() => saveZoom(scale), [scale]);
+
+  // The room the score has. Small changes (a scrollbar coming and going) are
+  // ignored, or they could re-engrave back and forth.
   useEffect(() => {
-    if (skipNextRescale.current) {
-      skipNextRescale.current = false;
-      return;
-    }
+    const element = scoreRef.current;
+    if (!element) return;
+
+    const observer = new ResizeObserver(([entry]) => {
+      if (!entry) return;
+      const next = scoreWidth(entry.contentRect.width);
+      setWidth((current) =>
+        current === null || Math.abs(current - next) >= REFLOW_THRESHOLD ? next : current,
+      );
+    });
+
+    observer.observe(element);
+    return () => observer.disconnect();
+  }, []);
+
+  // Re-engraves to fit the width at the zoom, so the music reflows: at once
+  // for a newly opened piece, debounced after that. Pages and marks are
+  // replaced together, never patched.
+  useEffect(() => {
+    if (width === null) return;
 
     let live = true;
 
-    const timeout = window.setTimeout(() => {
-      void rescalePiece(pieceId, scale)
-        .then((opened) => {
-          if (live) setEngraving({ pages: opened.pages, marks: opened.marks });
-        })
-        .catch((error: unknown) => {
-          // Previously silent: a rejected rescale left the score exactly as
-          // it was, indistinguishable from the control doing nothing at all.
-          console.error("rescale_piece failed:", error);
-          if (live) setZoomError(String(error));
-        });
-    }, RESCALE_DEBOUNCE_MS);
+    const timeout = window.setTimeout(
+      () => {
+        void engravePiece(pieceId, scale, width)
+          .then((opened) => {
+            if (live) setEngraving({ pages: opened.pages, marks: opened.marks });
+          })
+          .catch((error: unknown) => {
+            console.error("engrave_piece failed:", error);
+            if (live) setZoomError(String(error));
+          })
+          .finally(() => {
+            // Shown either way: a failed reflow still leaves a readable score.
+            if (live) setFitted(true);
+          });
+      },
+      fittedRef.current ? REFLOW_DEBOUNCE_MS : 0,
+    );
 
     return () => {
       live = false;
       window.clearTimeout(timeout);
     };
-  }, [scale, pieceId]);
+  }, [scale, width, pieceId]);
 
   // Ctrl+scroll zooms. A native listener with `{ passive: false }` rather
   // than JSX's `onWheel`: React may attach wheel listeners as passive by
@@ -387,6 +404,7 @@ export function PracticeScreen({
         data-surface={surface}
       >
         <Score
+          hidden={!fitted}
           pages={engraving.pages}
           marks={engraving.marks}
           cursor={cursor}
