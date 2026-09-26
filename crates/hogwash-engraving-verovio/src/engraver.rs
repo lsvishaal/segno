@@ -157,6 +157,14 @@ impl Engraver for VerovioEngraver {
         // This is a *format*, not a *validation*: deciding whether a file is
         // acceptable at all belongs to Acquisition & Validation (`004 §8.2`),
         // which arrives at M6.
+        // A damaged file never reaches Verovio: a broken zip would abort the
+        // whole application, and half a MusicXML file would read as a piece.
+        if let Some(reason) = crate::intact::damage(source) {
+            return Err(EngravingFailure::Unreadable {
+                detail: reason.to_owned(),
+            });
+        }
+
         // Before loading, not after: these options change how the music is
         // laid out, and Verovio lays it out while parsing.
         self.toolkit

@@ -85,16 +85,20 @@ fn the_imported_source_can_be_read_back() {
 #[ignore = "needs a real libverovio; run `just provided-test`"]
 fn importing_the_same_bytes_twice_does_not_duplicate() {
     let root = temporary("dedup");
-    let mut hogwash = hogwash(&root);
+    let mut running = hogwash(&root);
     let material = fixture();
 
-    accept_offered(&material, None, &mut hogwash).expect("the fixture is supported");
-    let before = hogwash.library().count();
+    accept_offered(&material, None, &mut running).expect("the fixture is supported");
+    let before = running.library().count();
 
-    let second = accept_offered(&material, None, &mut hogwash).expect("re-import is not a refusal");
+    let second = accept_offered(&material, None, &mut running).expect("re-import is not a refusal");
 
-    assert_eq!(hogwash.library().count(), before);
+    assert_eq!(running.library().count(), before);
     assert_eq!(second.lines, ["This piece is already in your library."]);
+    assert!(second.already);
+
+    // Still one piece after a restart: identical bytes are stored once.
+    assert_eq!(hogwash(&root).library().count(), before);
 }
 
 // FR-104 — content in an unsupported format is refused, not partially
@@ -112,6 +116,37 @@ fn an_unsupported_format_is_refused_with_a_route() {
 
     assert!(refusal.to_lowercase().contains("pdf"));
     assert_eq!(hogwash.library().count(), before);
+    assert!(
+        hogwash.records().imported().is_empty(),
+        "a refused file is never stored"
+    );
+}
+
+// A file that looks like MusicXML but cannot be read (the performer's real
+// Canon in D, cut off half way, as a failed download would be) is refused
+// before anything is copied into the data folder.
+#[test]
+#[ignore = "needs a real libverovio; run `just provided-test`"]
+fn a_broken_file_is_refused_and_never_stored() {
+    let root = temporary("broken");
+    let mut running = hogwash(&root);
+    let canon = library_file("Canon_in_D.mxl");
+
+    let refusal = accept_offered(
+        &canon[..canon.len() / 2],
+        Some("Canon_in_D.mxl"),
+        &mut running,
+    )
+    .expect_err("half a file is not music");
+
+    assert!(refusal.contains("incomplete or damaged"), "{refusal}");
+    assert!(
+        running.records().imported().is_empty(),
+        "nothing was stored"
+    );
+
+    // And the engine is still fine for the next file.
+    accept_offered(&canon, Some("Canon_in_D.mxl"), &mut running).expect("the whole file imports");
 }
 
 // A real compressed MusicXML (.mxl) file as MuseScore exports it: the

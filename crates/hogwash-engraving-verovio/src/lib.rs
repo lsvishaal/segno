@@ -9,6 +9,7 @@
 
 mod engraver;
 mod failure;
+mod intact;
 mod mei;
 mod timemap;
 mod translate;
