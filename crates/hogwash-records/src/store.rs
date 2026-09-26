@@ -305,6 +305,37 @@ impl Records {
         ids
     }
 
+    /// Removes an imported score and its record, nothing else: practice
+    /// history is kept. Missing files are not an error.
+    ///
+    /// # Errors
+    ///
+    /// [`RecordsFailure::Storage`] if a file that is there could not be removed.
+    pub fn discard_score(&self, id: &PieceId) -> Result<(), RecordsFailure> {
+        for path in [
+            self.scores().join(format!("{}.musicxml", id.as_str())),
+            self.piece_path(id),
+        ] {
+            // Scores are kept read-only; that guards against edits, not removal.
+            if let Ok(metadata) = fs::metadata(&path) {
+                let mut permissions = metadata.permissions();
+                #[expect(
+                    clippy::permissions_set_readonly_false,
+                    reason = "about to delete the file, on the performer's behalf"
+                )]
+                permissions.set_readonly(false);
+                drop(fs::set_permissions(&path, permissions));
+            }
+            match fs::remove_file(&path) {
+                Err(failure) if failure.kind() != std::io::ErrorKind::NotFound => {
+                    return Err(failure.into());
+                }
+                _ => {}
+            }
+        }
+        Ok(())
+    }
+
     /// The score a Piece was imported from, if it is here (FR-701).
     ///
     /// Returns the bytes rather than the path, so a caller cannot be tempted

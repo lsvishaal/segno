@@ -339,6 +339,9 @@ pub struct ImportedPiece {
     /// sentence per loss otherwise. Carried here because nothing later can
     /// reconstruct it: this is the one reading of the file that produced it.
     pub lines: Vec<String>,
+    /// The file was identical to a piece already in the library, bundled or
+    /// imported: nothing was added, and `piece` is that one.
+    pub already: bool,
 }
 
 /// Adapts [`Engraving`]'s channel handle to the [`Engraver`] port
@@ -424,6 +427,7 @@ pub fn accept_offered(material: &[u8], hogwash: &mut Hogwash) -> Result<Imported
         return Ok(ImportedPiece {
             piece: summarise(already),
             lines: vec!["This piece is already in your library.".to_owned()],
+            already: true,
         });
     }
 
@@ -445,6 +449,7 @@ pub fn accept_offered(material: &[u8], hogwash: &mut Hogwash) -> Result<Imported
             Ok(ImportedPiece {
                 piece: summary,
                 lines: report.lines(),
+                already: false,
             })
         }
     }

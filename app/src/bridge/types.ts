@@ -103,6 +103,8 @@ export interface Unavailable {
 export interface ImportedPiece {
   readonly piece: PieceSummary;
   readonly lines: readonly string[];
+  /** Identical to a piece already in the library; nothing was added. */
+  readonly already: boolean;
 }
 
 /** A MIDI instrument the performer could play (FR-307). */

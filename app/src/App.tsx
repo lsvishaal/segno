@@ -4,7 +4,7 @@ import type { ReactNode } from "react";
 import { AnimatePresence, motion, MotionConfig } from "motion/react";
 
 import { importMusicXml, library, openPiece, startupFailure } from "./bridge";
-import type { OpenedPiece, PieceSummary, Unavailable } from "./bridge";
+import type { ImportedPiece, OpenedPiece, PieceSummary, Unavailable } from "./bridge";
 import { LibraryScreen } from "./screens/Library";
 import { PracticeScreen } from "./screens/Practice";
 import { UnavailableScreen } from "./screens/Unavailable";
@@ -47,10 +47,33 @@ type Screen =
       readonly piece: OpenedPiece;
     };
 
+/** How long a notice stays before it fades. */
+const NOTICE_MS = 4000;
+
+/**
+ * The shelf after an import: the new piece added once, and nothing added
+ * for a file identical to one already there.
+ */
+export function afterImport(
+  pieces: readonly PieceSummary[],
+  imported: ImportedPiece,
+): readonly PieceSummary[] {
+  if (imported.already || pieces.some((piece) => piece.id === imported.piece.id)) return pieces;
+  return [...pieces, imported.piece];
+}
+
 export function App() {
   const [screen, setScreen] = useState<Screen>({ kind: "starting" });
   const [importing, setImporting] = useState(false);
   const [importError, setImportError] = useState<string | null>(null);
+  // A short word about something that just happened ("Already in your library").
+  const [notice, setNotice] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!notice) return;
+    const timeout = window.setTimeout(() => setNotice(null), NOTICE_MS);
+    return () => window.clearTimeout(timeout);
+  }, [notice]);
 
   useEffect(() => {
     let live = true;
@@ -122,12 +145,15 @@ export function App() {
         if (imported) {
           setScreen((current) =>
             current.kind === "library"
-              ? {
-                  kind: "library",
-                  pieces: [...current.pieces, imported.piece],
-                }
+              ? { kind: "library", pieces: afterImport(current.pieces, imported) }
               : current,
           );
+
+          // The same music is already here: go to it rather than add a copy.
+          if (imported.already) {
+            setNotice("Already in your library");
+            open(imported.piece.id);
+          }
         }
       } catch (error) {
         setImportError(String(error));
@@ -135,7 +161,7 @@ export function App() {
         setImporting(false);
       }
     })();
-  }, []);
+  }, [open]);
 
   const dismissImportError = useCallback(() => setImportError(null), []);
 
@@ -181,6 +207,21 @@ export function App() {
               );
           }
         })()}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {notice && (
+          <motion.p
+            key={notice}
+            role="status"
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 8 }}
+            className="panel fixed bottom-6 left-1/2 -translate-x-1/2 rounded-full px-5 py-2 text-sm text-ink shadow-lg"
+          >
+            {notice}
+          </motion.p>
+        )}
       </AnimatePresence>
     </MotionConfig>
   );

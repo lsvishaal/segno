@@ -13,6 +13,7 @@
 //! the session, which is exactly the "one owner" the ADR asked for — arrived
 //! at by a different route, since a webview has no frame loop to be the owner.
 
+use std::collections::BTreeSet;
 use std::sync::Mutex;
 
 use hogwash_domain::PieceId;
@@ -73,17 +74,37 @@ impl Hogwash {
             }
         }
 
-        // What the performer imported in earlier runs, read back from disk. A
-        // saved file that no longer reads costs only that piece.
-        for id in records.imported() {
-            // Already bundled (a piece imported before it shipped with Hogwash).
-            if pieces.iter().any(|piece| *piece.id() == id) {
-                continue;
-            }
-            let Some(source) = records.source_of(&id) else {
-                continue;
-            };
+        // What the performer imported in earlier runs, read back from disk,
+        // with identical copies collapsed first. A saved file that no longer
+        // reads costs only that piece.
+        let stored: Vec<(PieceId, Vec<u8>)> = records
+            .imported()
+            .into_iter()
+            .filter_map(|id| records.source_of(&id).map(|source| (id, source)))
+            .collect();
+        let practised: BTreeSet<PieceId> = records
+            .sessions()
+            .map(|(sessions, _)| sessions.into_iter().map(|session| session.piece).collect())
+            .unwrap_or_default();
+        let bundled: BTreeSet<PieceId> = pieces.iter().map(|piece| piece.id().clone()).collect();
+        let (kept, surplus) = collapse(
+            stored
+                .iter()
+                .map(|(id, source)| (id.clone(), identify(source))),
+            &bundled,
+            &practised,
+        );
 
+        for id in surplus {
+            if let Err(failure) = records.discard_score(&id) {
+                eprintln!(
+                    "hogwash: a duplicate of {} could not be removed: {failure:?}",
+                    id.as_str()
+                );
+            }
+        }
+
+        for (id, source) in stored.into_iter().filter(|(id, _)| kept.contains(id)) {
             match engraving.engrave(&source, Layout::default()) {
                 Ok(engraved) => {
                     let details = engraved.details();
@@ -195,3 +216,140 @@ pub struct Shared(pub Mutex<Hogwash>);
 /// (`004 §8.2`).
 #[derive(Debug)]
 pub struct Failed(pub Unavailable);
+
+/// Which stored imports to list and which are surplus copies, given each
+/// one's stored name and the fingerprint of its bytes.
+///
+/// A stored file is normally named by its fingerprint, so copies cannot
+/// happen, but a file copied into the data folder by hand, or a piece
+/// imported before it was bundled, breaks that. Among identical copies every
+/// one with practice history is kept (history is never lost to tidying);
+/// if none has any, one is kept, unless a bundled piece already is that
+/// music, in which case none is needed.
+fn collapse(
+    stored: impl Iterator<Item = (PieceId, PieceId)>,
+    bundled: &BTreeSet<PieceId>,
+    practised: &BTreeSet<PieceId>,
+) -> (BTreeSet<PieceId>, Vec<PieceId>) {
+    let mut groups: std::collections::BTreeMap<PieceId, Vec<PieceId>> =
+        std::collections::BTreeMap::new();
+    for (name, fingerprint) in stored {
+        groups.entry(fingerprint).or_default().push(name);
+    }
+
+    let mut kept = BTreeSet::new();
+    let mut surplus = Vec::new();
+
+    for (fingerprint, mut copies) in groups {
+        // The copy named by its own fingerprint is the canonical one.
+        copies.sort_by_key(|name| *name != fingerprint);
+        // A copy under a bundled piece's own name shares that piece's history
+        // already, so it is never needed on the shelf a second time.
+        let with_history: Vec<PieceId> = copies
+            .iter()
+            .filter(|name| practised.contains(*name) && !bundled.contains(*name))
+            .cloned()
+            .collect();
+
+        let keep: Vec<PieceId> = if !with_history.is_empty() {
+            with_history
+        } else if bundled.contains(&fingerprint) {
+            Vec::new()
+        } else {
+            copies.first().cloned().into_iter().collect()
+        };
+
+        for name in copies {
+            if keep.contains(&name) {
+                kept.insert(name);
+            } else {
+                surplus.push(name);
+            }
+        }
+    }
+
+    (kept, surplus)
+}
+
+#[cfg(test)]
+mod tests {
+    use std::collections::BTreeSet;
+
+    use hogwash_domain::PieceId;
+
+    use super::collapse;
+
+    fn id(name: &str) -> PieceId {
+        PieceId::new(name).expect("usable")
+    }
+
+    fn set(names: &[&str]) -> BTreeSet<PieceId> {
+        names.iter().map(|name| id(name)).collect()
+    }
+
+    #[test]
+    fn distinct_imports_are_all_kept() {
+        let (kept, surplus) = collapse(
+            [(id("aa"), id("aa")), (id("bb"), id("bb"))].into_iter(),
+            &set(&[]),
+            &set(&[]),
+        );
+        assert_eq!(kept, set(&["aa", "bb"]));
+        assert!(surplus.is_empty());
+    }
+
+    #[test]
+    fn identical_copies_without_history_collapse_to_the_canonical_one() {
+        let (kept, surplus) = collapse(
+            [(id("copy"), id("aa")), (id("aa"), id("aa"))].into_iter(),
+            &set(&[]),
+            &set(&[]),
+        );
+        assert_eq!(kept, set(&["aa"]));
+        assert_eq!(surplus, [id("copy")]);
+    }
+
+    #[test]
+    fn the_copy_with_history_is_the_one_kept() {
+        let (kept, surplus) = collapse(
+            [(id("copy"), id("aa")), (id("aa"), id("aa"))].into_iter(),
+            &set(&[]),
+            &set(&["copy"]),
+        );
+        assert_eq!(kept, set(&["copy"]));
+        assert_eq!(surplus, [id("aa")]);
+    }
+
+    #[test]
+    fn every_copy_with_history_is_kept() {
+        let (kept, surplus) = collapse(
+            [(id("copy"), id("aa")), (id("aa"), id("aa"))].into_iter(),
+            &set(&[]),
+            &set(&["copy", "aa"]),
+        );
+        assert_eq!(kept, set(&["aa", "copy"]));
+        assert!(surplus.is_empty());
+    }
+
+    #[test]
+    fn a_copy_under_a_bundled_name_is_surplus_even_with_history() {
+        let (kept, surplus) = collapse(
+            [(id("minuet"), id("minuet"))].into_iter(),
+            &set(&["minuet"]),
+            &set(&["minuet"]),
+        );
+        assert!(kept.is_empty());
+        assert_eq!(surplus, [id("minuet")]);
+    }
+
+    #[test]
+    fn a_copy_of_a_bundled_piece_is_not_listed_twice() {
+        let (kept, surplus) = collapse(
+            [(id("minuet"), id("minuet"))].into_iter(),
+            &set(&["minuet"]),
+            &set(&[]),
+        );
+        assert!(kept.is_empty());
+        assert_eq!(surplus, [id("minuet")]);
+    }
+}

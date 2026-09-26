@@ -185,3 +185,46 @@ fn library_file(name: &str) -> Vec<u8> {
     )
     .expect("the file is in the library folder")
 }
+
+// A file identical to a bundled piece is that piece: nothing is added and
+// nothing is stored.
+#[test]
+#[ignore = "needs a real libverovio; run `just provided-test`"]
+fn a_file_identical_to_a_bundled_piece_adds_nothing() {
+    let root = temporary("bundled-twin");
+    let mut hogwash = hogwash(&root);
+    let before = hogwash.library().count();
+
+    let imported = accept_offered(&library_file("minuet-in-g.musicxml"), &mut hogwash)
+        .expect("the Minuet is supported");
+
+    assert!(imported.already);
+    assert_eq!(imported.piece.title, "Minuet in G Major");
+    assert_eq!(hogwash.library().count(), before);
+    assert!(
+        hogwash.records().imported().is_empty(),
+        "nothing was stored"
+    );
+}
+
+// Identical files that got into the data folder under two names (copied by
+// hand, say) are one piece after a restart, and the spare copy is removed.
+#[test]
+#[ignore = "needs a real libverovio; run `just provided-test`"]
+fn identical_stored_copies_collapse_at_startup() {
+    let root = temporary("collapse");
+    let before = hogwash(&root).library().count();
+    let imported =
+        accept_offered(&library_file("Canon_in_D.mxl"), &mut hogwash(&root)).expect("supported");
+    let scores = root.join("scores");
+    std::fs::copy(
+        scores.join(format!("{}.musicxml", imported.piece.id)),
+        scores.join("hand-copied.musicxml"),
+    )
+    .expect("copies the file");
+
+    let restarted = hogwash(&root);
+
+    assert_eq!(restarted.library().count(), before + 1);
+    assert!(!scores.join("hand-copied.musicxml").exists());
+}
