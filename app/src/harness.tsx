@@ -38,6 +38,8 @@ if (query.get("screen") === "library") {
       pieces={SHELF}
       onOpen={() => {}}
       onRename={async () => null}
+      onCountHistory={async () => 3}
+      onDelete={async () => null}
       onImport={() => {}}
       importing={false}
       importError={null}

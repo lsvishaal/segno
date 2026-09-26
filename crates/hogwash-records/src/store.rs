@@ -387,6 +387,39 @@ impl Records {
         Ok(())
     }
 
+    /// How many practice sessions are kept for a piece.
+    #[must_use]
+    pub fn sessions_of(&self, id: &PieceId) -> usize {
+        self.sessions()
+            .map(|(sessions, _)| {
+                sessions
+                    .iter()
+                    .filter(|session| session.piece == *id)
+                    .count()
+            })
+            .unwrap_or_default()
+    }
+
+    /// Forgets an imported piece entirely: its score, its record, and every
+    /// practice session kept for it. Returns how many sessions went.
+    ///
+    /// # Errors
+    ///
+    /// [`RecordsFailure::Storage`] if a file could not be removed; anything
+    /// removed before that stays removed.
+    pub fn forget_piece(&self, id: &PieceId) -> Result<usize, RecordsFailure> {
+        let (sessions, _) = self.sessions()?;
+        let mut forgotten = 0;
+
+        for session in sessions.iter().filter(|session| session.piece == *id) {
+            fs::remove_file(self.session_path(&session.id))?;
+            forgotten += 1;
+        }
+
+        self.discard_score(id)?;
+        Ok(forgotten)
+    }
+
     /// The score a Piece was imported from, if it is here (FR-701).
     ///
     /// Returns the bytes rather than the path, so a caller cannot be tempted

@@ -179,6 +179,11 @@ impl Hogwash {
         self.library = self.library.clone().with(piece);
     }
 
+    /// Takes an imported Piece out of the session's Library.
+    pub fn remove_piece(&mut self, id: &PieceId) {
+        self.library = self.library.clone().without(id);
+    }
+
     /// Gives a Piece in the session's Library a new title.
     pub fn retitle_piece(&mut self, id: &PieceId, title: &str) {
         self.library = self.library.clone().retitled(id, title);

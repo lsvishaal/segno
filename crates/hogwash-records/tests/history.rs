@@ -242,6 +242,35 @@ fn an_imported_score_is_copied_into_the_library_and_kept_apart_from_history() {
     );
 }
 
+// Deleting a piece takes its score, its record and its practice history, and
+// leaves every other piece's history alone.
+#[test]
+fn a_forgotten_piece_takes_its_history_with_it() {
+    let directory = tempfile::tempdir().expect("a temporary directory");
+    let records = Records::under(directory.path());
+    let other = PieceId::new("prelude-in-c").expect("usable");
+    records
+        .keep_piece(&piece(), "Minuet in G", None, None, b"<score-partwise/>")
+        .expect("keeps the piece");
+    records.keep(&session("s1")).expect("keeps a session");
+    records.keep(&session("s2")).expect("keeps a session");
+    records
+        .keep(&SessionRecord {
+            piece: other.clone(),
+            ..session("s3")
+        })
+        .expect("keeps another piece's session");
+    assert_eq!(records.sessions_of(&piece()), 2);
+
+    assert_eq!(records.forget_piece(&piece()).expect("forgets it"), 2);
+
+    let reopened = Records::under(directory.path());
+    assert!(reopened.imported().is_empty());
+    assert!(reopened.piece_record(&piece()).is_none());
+    assert_eq!(reopened.sessions_of(&piece()), 0);
+    assert_eq!(reopened.sessions_of(&other), 1);
+}
+
 // A title the performer chose outlives a restart.
 #[test]
 fn a_renamed_piece_keeps_its_new_title() {

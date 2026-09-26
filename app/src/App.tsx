@@ -3,7 +3,15 @@ import type { ReactNode } from "react";
 
 import { AnimatePresence, motion, MotionConfig } from "motion/react";
 
-import { importMusicXml, library, openPiece, renamePiece, startupFailure } from "./bridge";
+import {
+  deletePiece,
+  historyCount,
+  importMusicXml,
+  library,
+  openPiece,
+  renamePiece,
+  startupFailure,
+} from "./bridge";
 import type { ImportedPiece, OpenedPiece, PieceSummary, Unavailable } from "./bridge";
 import { LibraryScreen } from "./screens/Library";
 import { PracticeScreen } from "./screens/Practice";
@@ -182,6 +190,21 @@ export function App() {
     }
   }, []);
 
+  const remove = useCallback(async (id: string): Promise<string | null> => {
+    try {
+      await deletePiece(id);
+      setScreen((current) =>
+        current.kind === "library"
+          ? { kind: "library", pieces: current.pieces.filter((piece) => piece.id !== id) }
+          : current,
+      );
+      setNotice("Deleted");
+      return null;
+    } catch (error) {
+      return String(error);
+    }
+  }, []);
+
   const dismissImportError = useCallback(() => setImportError(null), []);
 
   // `reducedMotion="user"` makes every `motion.*` component below honour
@@ -211,6 +234,8 @@ export function App() {
                     pieces={screen.pieces}
                     onOpen={open}
                     onRename={rename}
+                    onCountHistory={historyCount}
+                    onDelete={remove}
                     onImport={importPiece}
                     importing={importing}
                     importError={importError}

@@ -11,7 +11,7 @@
 
 use std::path::PathBuf;
 
-use hogwash_app_lib::commands::{accept_offered, retitle};
+use hogwash_app_lib::commands::{accept_offered, forget, retitle};
 
 /// A fresh directory for one test. Emptied first: imported files are kept
 /// read-only, so a previous run's copy would refuse to be written again.
@@ -336,4 +336,40 @@ fn a_renamed_piece_keeps_its_title_after_a_restart() {
             .into_iter()
             .any(|piece| piece.id().as_str() == canon.id && piece.title() == "Pachelbel's Canon")
     );
+}
+
+// Deleting an imported piece removes it and its practice history for good;
+// a bundled piece cannot be deleted.
+#[test]
+#[ignore = "needs a real libverovio; run `just provided-test`"]
+fn a_deleted_piece_and_its_history_are_gone_after_a_restart() {
+    let root = temporary("delete");
+    let mut running = hogwash(&root);
+    let before = running.library().count();
+    let canon = accept_offered(&library_file("Canon_in_D.mxl"), None, &mut running)
+        .expect("supported")
+        .piece;
+    let canon_id = hogwash_domain::PieceId::new(&canon.id).expect("usable");
+    running
+        .records()
+        .keep(&hogwash_records::SessionRecord {
+            id: "practised-once".to_owned(),
+            piece: canon_id.clone(),
+            started: "1".to_owned(),
+            closed: true,
+            attempts: Vec::new(),
+        })
+        .expect("keeps a session");
+    let minuet = running.library().pieces()[0].id().as_str().to_owned();
+
+    assert!(
+        forget(&mut running, &minuet).is_err(),
+        "bundled pieces stay"
+    );
+    assert_eq!(forget(&mut running, &canon.id).expect("deletes it"), 1);
+    assert_eq!(running.library().count(), before);
+
+    let restarted = hogwash(&root);
+    assert_eq!(restarted.library().count(), before);
+    assert_eq!(restarted.records().sessions_of(&canon_id), 0);
 }

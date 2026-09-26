@@ -95,6 +95,63 @@ pub fn retitle(hogwash: &mut Hogwash, id: &str, title: &str) -> Result<PieceSumm
         .ok_or_else(|| format!("There is no piece called `{id}` in the library."))
 }
 
+/// How many practice sessions are kept for a piece: what deleting it would
+/// take with it.
+///
+/// # Errors
+///
+/// If the state is unreadable, or `id` is not a usable name.
+#[tauri::command]
+pub fn history_count(id: String, state: State<'_, Shared>) -> Result<usize, Refused> {
+    let hogwash = state.inner().0.lock().map_err(|_| POISONED.to_owned())?;
+    let piece_id = hogwash_domain::PieceId::new(&id)
+        .ok_or_else(|| format!("`{id}` is not a usable piece name."))?;
+
+    Ok(hogwash.records().sessions_of(&piece_id))
+}
+
+/// Deletes an imported Piece: its copy of the file, and every practice
+/// session kept for it.
+///
+/// # Errors
+///
+/// As [`forget`].
+#[tauri::command]
+pub fn delete_piece(id: String, state: State<'_, Shared>) -> Result<usize, Refused> {
+    let mut hogwash = state.inner().0.lock().map_err(|_| POISONED.to_owned())?;
+
+    forget(&mut hogwash, &id)
+}
+
+/// The body of [`delete_piece`], public so an integration test can drive it.
+/// Returns how many practice sessions went with the piece.
+///
+/// # Errors
+///
+/// If the piece shipped with Hogwash (those cannot be deleted), or its
+/// files could not be removed.
+pub fn forget(hogwash: &mut Hogwash, id: &str) -> Result<usize, Refused> {
+    let piece_id = hogwash_domain::PieceId::new(id)
+        .ok_or_else(|| format!("`{id}` is not a usable piece name."))?;
+
+    if hogwash.records().piece_record(&piece_id).is_none() {
+        return Err("Pieces that come with Hogwash cannot be deleted.".to_owned());
+    }
+
+    // An attempt left running in the background (leaving the practice screen
+    // does not end one yet) would otherwise save history for a piece that no
+    // longer exists. Nothing running is the ordinary case.
+    drop(hogwash.practice().end_attempt());
+
+    let forgotten = hogwash
+        .records()
+        .forget_piece(&piece_id)
+        .map_err(|failure| format!("Could not delete that piece: {failure:?}"))?;
+    hogwash.remove_piece(&piece_id);
+
+    Ok(forgotten)
+}
+
 /// A Piece, as the library screen needs it.
 #[derive(Debug, Clone, Serialize)]
 #[serde(rename_all = "camelCase")]

@@ -13,12 +13,16 @@ function renderScreen(overrides: Partial<Parameters<typeof LibraryScreen>[0]> = 
   const onImport = vi.fn();
   const onDismissError = vi.fn();
   const onRename = vi.fn(async () => null as string | null);
+  const onCountHistory = vi.fn(async () => 3);
+  const onDelete = vi.fn(async () => null as string | null);
 
   render(
     <LibraryScreen
       pieces={PIECES}
       onOpen={onOpen}
       onRename={onRename}
+      onCountHistory={onCountHistory}
+      onDelete={onDelete}
       onImport={onImport}
       importing={false}
       importError={null}
@@ -27,7 +31,7 @@ function renderScreen(overrides: Partial<Parameters<typeof LibraryScreen>[0]> = 
     />,
   );
 
-  return { onOpen, onImport, onDismissError, onRename };
+  return { onOpen, onImport, onDismissError, onRename, onCountHistory, onDelete };
 }
 
 describe("LibraryScreen import", () => {
@@ -151,5 +155,40 @@ describe("renaming a piece", () => {
 
     expect(screen.queryByLabelText("Title")).toBeNull();
     expect(screen.getByText("Sonate No. 14")).toBeInTheDocument();
+  });
+});
+
+describe("deleting a piece", () => {
+  const MOONLIGHT = summary("moon", "Sonate No. 14", "Ludwig van Beethoven", "Moonlight.mxl");
+  const MINUET = summary("minuet", "Minuet in G Major", "Christian Petzold", null);
+
+  it("is offered for imported pieces only", () => {
+    renderScreen({ pieces: [MOONLIGHT, MINUET] });
+
+    expect(screen.getByRole("button", { name: "Delete Sonate No. 14" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Delete Minuet in G Major" })).toBeNull();
+  });
+
+  it("says how much practice history goes with it before deleting", async () => {
+    const { onDelete } = renderScreen({ pieces: [MOONLIGHT] });
+
+    fireEvent.click(screen.getByRole("button", { name: "Delete Sonate No. 14" }));
+
+    const confirmation = await screen.findByRole("alertdialog");
+    expect(confirmation).toHaveTextContent("Its practice history (3 sessions) will be deleted too.");
+    expect(onDelete).not.toHaveBeenCalled();
+
+    fireEvent.click(screen.getByRole("button", { name: "Delete" }));
+    await vi.waitFor(() => expect(onDelete).toHaveBeenCalledWith("moon"));
+  });
+
+  it("does nothing if cancelled", async () => {
+    const { onDelete } = renderScreen({ pieces: [MOONLIGHT] });
+
+    fireEvent.click(screen.getByRole("button", { name: "Delete Sonate No. 14" }));
+    fireEvent.click(await screen.findByRole("button", { name: "Cancel" }));
+
+    expect(screen.queryByRole("alertdialog")).toBeNull();
+    expect(onDelete).not.toHaveBeenCalled();
   });
 });

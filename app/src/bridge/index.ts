@@ -64,6 +64,16 @@ export function renamePiece(id: string, title: string): Promise<PieceSummary> {
   return invoke<PieceSummary>("rename_piece", { id, title });
 }
 
+/** How many practice sessions are kept for a Piece. */
+export function historyCount(id: string): Promise<number> {
+  return invoke<number>("history_count", { id });
+}
+
+/** Deletes an imported Piece and its practice history; resolves to how many sessions went. */
+export function deletePiece(id: string): Promise<number> {
+  return invoke<number>("delete_piece", { id });
+}
+
 /** Why the application cannot work, or `null` if it can. */
 export function startupFailure(): Promise<Unavailable | null> {
   return invoke<Unavailable | null>("startup_failure");

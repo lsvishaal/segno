@@ -17,7 +17,7 @@ use crate::piece::Piece;
 ///
 /// A runtime check would report the problem after it occurred. Instead the
 /// only way to build a Library takes a first Piece **by value**
-/// ([`opened_with`](Self::opened_with)), and nothing removes one, so
+/// ([`opened_with`](Self::opened_with)), and nothing removes that one, so
 /// emptiness is not a state this type has. FR-207 is then a fact about the
 /// program rather than a rule someone has to remember.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -68,6 +68,17 @@ impl Library {
             first: retitle(self.first),
             rest: self.rest.into_iter().map(retitle).collect(),
         }
+    }
+
+    /// The same Library without the imported Piece named `id`.
+    ///
+    /// The first Piece is never removed, so the Library still cannot be
+    /// empty; it is bundled material, which is not the performer's to
+    /// delete.
+    #[must_use]
+    pub fn without(mut self, id: &PieceId) -> Self {
+        self.rest.retain(|piece| piece.id() != id);
+        self
     }
 
     /// Every Piece available, in the order they became available.
@@ -156,6 +167,17 @@ mod tests {
         let titles: Vec<&str> = renamed.pieces().iter().map(|piece| piece.title()).collect();
         assert_eq!(titles, ["Provided", "Moonlight Sonata"]);
         assert_eq!(renamed.pieces()[1].id(), &id);
+    }
+
+    #[test]
+    fn an_imported_piece_can_be_removed_but_the_first_never_is() {
+        let library = Library::opened_with(piece("Provided"), vec![piece("Imported")]);
+
+        let removed = library.without(&PieceId::new("Imported").expect("usable"));
+        assert_eq!(removed.count(), 1);
+
+        let still = removed.without(&PieceId::new("Provided").expect("usable"));
+        assert_eq!(still.count(), 1, "never empty");
     }
 
     // FR-203 — "given two or more imported pieces, when the piece library is

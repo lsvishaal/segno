@@ -56,6 +56,8 @@ export function LibraryScreen({
   pieces,
   onOpen,
   onRename,
+  onCountHistory,
+  onDelete,
   onImport,
   importing,
   importError,
@@ -64,6 +66,8 @@ export function LibraryScreen({
   readonly pieces: readonly PieceSummary[];
   readonly onOpen: (id: string) => void;
   readonly onRename: (id: string, title: string) => Promise<string | null>;
+  readonly onCountHistory: (id: string) => Promise<number>;
+  readonly onDelete: (id: string) => Promise<string | null>;
   readonly onImport: () => void;
   readonly importing: boolean;
   readonly importError: string | null;
@@ -130,6 +134,8 @@ export function LibraryScreen({
             note={notes.get(piece.id)}
             onOpen={onOpen}
             onRename={onRename}
+            onCountHistory={onCountHistory}
+            onDelete={onDelete}
           />
         ))}
       </motion.ul>
