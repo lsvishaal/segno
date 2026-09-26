@@ -3,6 +3,34 @@
 use hogwash_domain::PieceId;
 use hogwash_notation::{ReferencePerformance, Score};
 
+/// The best title there is: the score's own, or failing that the name of the
+/// file it came from, tidied (`Canon_in_D.mxl` becomes "Canon in D"). Empty
+/// when there is neither, which [`Piece::new`] turns into "Untitled".
+#[must_use]
+pub fn title_from(score_title: Option<&str>, file_name: Option<&str>) -> String {
+    if let Some(title) = score_title.map(str::trim).filter(|title| !title.is_empty()) {
+        return title.to_owned();
+    }
+
+    let Some(name) = file_name else {
+        return String::new();
+    };
+    let name = name.rsplit(['/', '\\']).next().unwrap_or(name);
+    let stem = match name.rsplit_once('.') {
+        Some((stem, extension))
+            if ["mxl", "musicxml", "xml"].contains(&extension.to_ascii_lowercase().as_str()) =>
+        {
+            stem
+        }
+        _ => name,
+    };
+
+    stem.replace('_', " ")
+        .split_whitespace()
+        .collect::<Vec<_>>()
+        .join(" ")
+}
+
 /// A musical work the performer can practise.
 ///
 /// Holds its notation, a durable name, and enough about itself to be told
@@ -124,6 +152,35 @@ mod tests {
             Piece::new(named(), "   ", None, score()).title(),
             "Untitled"
         );
+    }
+
+    #[test]
+    fn a_score_title_wins_over_the_file_name() {
+        assert_eq!(
+            super::title_from(Some(" Canon in D "), Some("x.mxl")),
+            "Canon in D"
+        );
+    }
+
+    #[test]
+    fn with_no_score_title_the_file_name_is_tidied_into_one() {
+        for (file, title) in [
+            ("Canon_in_D.mxl", "Canon in D"),
+            (
+                "Erik_Satie_-_Gymnopedie_No.1.mxl",
+                "Erik Satie - Gymnopedie No.1",
+            ),
+            ("/home/me/Downloads/Fur_Elise.musicxml", "Fur Elise"),
+            ("minuet  in   g.XML", "minuet in g"),
+            ("Sonata No. 14", "Sonata No. 14"),
+        ] {
+            assert_eq!(super::title_from(Some("  "), Some(file)), title, "{file}");
+        }
+    }
+
+    #[test]
+    fn with_neither_there_is_no_title_to_give() {
+        assert_eq!(super::title_from(None, None), "");
     }
 
     // FR-201 — the composer is "where available", so its absence is ordinary.

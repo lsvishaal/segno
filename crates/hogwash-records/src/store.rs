@@ -53,6 +53,8 @@ pub struct PieceRecord {
     pub composer: Option<String>,
     /// The score file, beside the record.
     pub source: PathBuf,
+    /// What the performer's own file was called, where known.
+    pub file_name: Option<String>,
 }
 
 /// Why a record could not be kept or read back.
@@ -235,6 +237,7 @@ impl Records {
         id: &PieceId,
         title: &str,
         composer: Option<&str>,
+        file_name: Option<&str>,
         source: &[u8],
     ) -> Result<PieceRecord, RecordsFailure> {
         let score = self.scores().join(format!("{}.musicxml", id.as_str()));
@@ -256,6 +259,7 @@ impl Records {
             title: title.to_owned(),
             composer: composer.map(str::to_owned),
             source: score,
+            file_name: file_name.map(str::to_owned),
         };
 
         let stored = StoredPiece {
@@ -269,6 +273,7 @@ impl Records {
                 .unwrap_or_default()
                 .to_string_lossy()
                 .into_owned(),
+            file_name: record.file_name.clone(),
         };
 
         let written = serde_json::to_string_pretty(&stored).map_err(|failure| {
@@ -281,6 +286,21 @@ impl Records {
         atomic::write(&self.piece_path(id), &written)?;
 
         Ok(record)
+    }
+
+    /// What was recorded about an imported piece, if anything was.
+    #[must_use]
+    pub fn piece_record(&self, id: &PieceId) -> Option<PieceRecord> {
+        let stored: StoredPiece =
+            serde_json::from_str(&fs::read_to_string(self.piece_path(id)).ok()?).ok()?;
+
+        Some(PieceRecord {
+            id: id.clone(),
+            title: stored.title,
+            composer: stored.composer,
+            source: self.scores().join(stored.source),
+            file_name: stored.file_name,
+        })
     }
 
     /// Every Piece imported so far, by name, in a stable order: what the

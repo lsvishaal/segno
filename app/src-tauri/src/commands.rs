@@ -52,6 +52,9 @@ pub struct PieceSummary {
     pub bars: usize,
     /// How many notes are expected in total.
     pub notes: usize,
+    /// What the performer's file was called, for an imported piece: shown
+    /// only to tell apart two pieces with the same title.
+    pub file_name: Option<String>,
 }
 
 /// A Piece, engraved and ready to practise from.
@@ -134,13 +137,7 @@ pub fn library(state: State<'_, Shared>) -> Result<Vec<PieceSummary>, Refused> {
         .library()
         .pieces()
         .into_iter()
-        .map(|piece| PieceSummary {
-            id: piece.id().as_str().to_owned(),
-            title: piece.title().to_owned(),
-            composer: piece.composer().map(str::to_owned),
-            bars: piece.score().measures().len(),
-            notes: piece.reference().len(),
-        })
+        .map(|piece| summarise(piece, &hogwash))
         .collect())
 }
 
@@ -401,7 +398,11 @@ pub async fn import_musicxml(
 
     let mut hogwash = state.inner().0.lock().map_err(|_| POISONED.to_owned())?;
 
-    accept_offered(&material, &mut hogwash).map(Some)
+    let file_name = path
+        .file_name()
+        .map(|name| name.to_string_lossy().into_owned());
+
+    accept_offered(&material, file_name.as_deref(), &mut hogwash).map(Some)
 }
 
 /// The body [`import_musicxml`] runs once it has bytes and a locked
@@ -412,7 +413,11 @@ pub async fn import_musicxml(
 ///
 /// As [`import_musicxml`]: the offered material was refused, verbatim from
 /// [`hogwash_acquisition::assess`].
-pub fn accept_offered(material: &[u8], hogwash: &mut Hogwash) -> Result<ImportedPiece, Refused> {
+pub fn accept_offered(
+    material: &[u8],
+    file_name: Option<&str>,
+    hogwash: &mut Hogwash,
+) -> Result<ImportedPiece, Refused> {
     let id = crate::provided::identify(material);
 
     // Re-offering the same bytes is not a second piece: `PieceId` is the
@@ -425,7 +430,7 @@ pub fn accept_offered(material: &[u8], hogwash: &mut Hogwash) -> Result<Imported
         .find(|piece| *piece.id() == id)
     {
         return Ok(ImportedPiece {
-            piece: summarise(already),
+            piece: summarise(already, hogwash),
             lines: vec!["This piece is already in your library.".to_owned()],
             already: true,
         });
@@ -433,17 +438,17 @@ pub fn accept_offered(material: &[u8], hogwash: &mut Hogwash) -> Result<Imported
 
     let mut engraver = ImportEngraver(hogwash.engraving());
 
-    match hogwash_acquisition::assess(material, id.clone(), &mut engraver) {
+    match hogwash_acquisition::assess(material, id.clone(), file_name, &mut engraver) {
         hogwash_acquisition::Outcome::NotAccepted(refused) => {
             Err(format!("{}\n\n{}", refused.reason(), refused.route()))
         }
         hogwash_acquisition::Outcome::Accepted { piece, report } => {
             hogwash
                 .records()
-                .keep_piece(&id, piece.title(), piece.composer(), material)
+                .keep_piece(&id, piece.title(), piece.composer(), file_name, material)
                 .map_err(|failure| format!("Could not keep that piece: {failure:?}"))?;
 
-            let summary = summarise(&piece);
+            let summary = summarise(&piece, hogwash);
             hogwash.accept_piece(*piece);
 
             Ok(ImportedPiece {
@@ -457,13 +462,16 @@ pub fn accept_offered(material: &[u8], hogwash: &mut Hogwash) -> Result<Imported
 
 /// A Piece, as the library screen needs it — the same shape [`library`]
 /// produces, so an import and a startup listing agree on what a summary is.
-fn summarise(piece: &hogwash_library::Piece) -> PieceSummary {
+fn summarise(piece: &hogwash_library::Piece, hogwash: &Hogwash) -> PieceSummary {
+    let record = hogwash.records().piece_record(piece.id());
+
     PieceSummary {
         id: piece.id().as_str().to_owned(),
         title: piece.title().to_owned(),
         composer: piece.composer().map(str::to_owned),
         bars: piece.score().measures().len(),
         notes: piece.reference().len(),
+        file_name: record.and_then(|record| record.file_name),
     }
 }
 

@@ -186,6 +186,13 @@ fn details_of(document: &Document<'_>) -> Details {
                         node.has_tag_name("rend") && node.attribute("halign") == Some(halign)
                     })
                     .find_map(text_of)
+                    // A title set in several styled pieces reaches here cut
+                    // short ("Sonate No. 14, " before an italic "Moonlight").
+                    .map(|text| {
+                        text.trim_end_matches([',', ';', ':', '-', '–', '—', ' '])
+                            .to_owned()
+                    })
+                    .filter(|text| !text.is_empty())
             })
     };
 
@@ -553,6 +560,26 @@ mod tests {
         assert_eq!(
             read.details().composer.as_deref(),
             Some("Ludwig Van Beethoven")
+        );
+    }
+
+    // Beethoven's "Sonate No. 14, *Moonlight*" as Verovio keeps it: only the
+    // first styled piece, ending in a comma.
+    #[test]
+    fn a_printed_title_cut_short_loses_its_dangling_punctuation() {
+        let read = read(&printed_only(
+            r#"<pgHead xml:id="o1fct1ci" func="first">
+                 <rend xml:id="m1c31gxz" halign="center" valign="top">Sonate No. 14, </rend>
+                 <rend xml:id="snkm232" halign="center" valign="top">1 </rend>
+                 <rend xml:id="a10n7sni" halign="right" valign="bottom">Ludwig van Beethoven </rend>
+               </pgHead>"#,
+        ))
+        .expect("readable");
+
+        assert_eq!(read.details().title.as_deref(), Some("Sonate No. 14"));
+        assert_eq!(
+            read.details().composer.as_deref(),
+            Some("Ludwig van Beethoven")
         );
     }
 

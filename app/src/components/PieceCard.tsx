@@ -20,9 +20,12 @@ const VARIANTS = {
  */
 export function PieceCard({
   piece,
+  note,
   onOpen,
 }: {
   readonly piece: PieceSummary;
+  /** What tells it apart from a piece that looks the same, if one does. */
+  readonly note?: string | undefined;
   readonly onOpen: (id: string) => void;
 }) {
   return (
@@ -39,6 +42,8 @@ export function PieceCard({
         {piece.composer && (
           <p className="mt-0.5 text-sm text-ink-muted">{piece.composer}</p>
         )}
+
+        {note && <p className="mt-0.5 truncate font-mono text-xs text-ink-muted">{note}</p>}
 
         <p className="mt-3 font-mono text-xs tracking-wide text-ink-muted tabular-nums">
           {piece.bars} {piece.bars === 1 ? "bar" : "bars"}

@@ -85,6 +85,10 @@ pub(crate) struct StoredPiece {
     pub(crate) composer: Option<String>,
     /// The file the score was read from, beside this record.
     pub(crate) source: String,
+    /// What the performer's own file was called when imported. Absent from
+    /// records written before it was kept.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub(crate) file_name: Option<String>,
 }
 
 /// A played note, as stored.

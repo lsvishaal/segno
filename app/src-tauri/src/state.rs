@@ -18,7 +18,7 @@ use std::sync::Mutex;
 
 use hogwash_domain::PieceId;
 use hogwash_engraving_verovio::Layout;
-use hogwash_library::{Library, Piece};
+use hogwash_library::{Library, Piece, title_from};
 use hogwash_records::Records;
 
 use crate::engraving::Engraving;
@@ -109,9 +109,13 @@ impl Hogwash {
                 Ok(engraved) => {
                     let details = engraved.details();
 
+                    let file_name = records
+                        .piece_record(&id)
+                        .and_then(|record| record.file_name);
+
                     pieces.push(Piece::new(
                         id,
-                        details.title.as_deref().unwrap_or_default(),
+                        &title_from(details.title.as_deref(), file_name.as_deref()),
                         details.composer.clone(),
                         engraved.score().clone(),
                     ));

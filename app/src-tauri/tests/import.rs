@@ -49,7 +49,8 @@ fn a_supported_file_joins_the_library() {
     let mut hogwash = hogwash(&root);
     let before = hogwash.library().count();
 
-    let imported = accept_offered(&fixture(), &mut hogwash).expect("the fixture is supported");
+    let imported =
+        accept_offered(&fixture(), None, &mut hogwash).expect("the fixture is supported");
 
     assert_eq!(hogwash.library().count(), before + 1);
     assert!(
@@ -71,7 +72,7 @@ fn the_imported_source_can_be_read_back() {
     let mut hogwash = hogwash(&root);
     let material = fixture();
 
-    let imported = accept_offered(&material, &mut hogwash).expect("the fixture is supported");
+    let imported = accept_offered(&material, None, &mut hogwash).expect("the fixture is supported");
 
     let id = hogwash_domain::PieceId::new(&imported.piece.id).expect("a usable name");
     assert_eq!(hogwash.source_of(&id), Some(material));
@@ -87,10 +88,10 @@ fn importing_the_same_bytes_twice_does_not_duplicate() {
     let mut hogwash = hogwash(&root);
     let material = fixture();
 
-    accept_offered(&material, &mut hogwash).expect("the fixture is supported");
+    accept_offered(&material, None, &mut hogwash).expect("the fixture is supported");
     let before = hogwash.library().count();
 
-    let second = accept_offered(&material, &mut hogwash).expect("re-import is not a refusal");
+    let second = accept_offered(&material, None, &mut hogwash).expect("re-import is not a refusal");
 
     assert_eq!(hogwash.library().count(), before);
     assert_eq!(second.lines, ["This piece is already in your library."]);
@@ -106,8 +107,8 @@ fn an_unsupported_format_is_refused_with_a_route() {
     let mut hogwash = hogwash(&root);
     let before = hogwash.library().count();
 
-    let refusal =
-        accept_offered(b"%PDF-1.7 not music", &mut hogwash).expect_err("a PDF is not supported");
+    let refusal = accept_offered(b"%PDF-1.7 not music", None, &mut hogwash)
+        .expect_err("a PDF is not supported");
 
     assert!(refusal.to_lowercase().contains("pdf"));
     assert_eq!(hogwash.library().count(), before);
@@ -125,7 +126,7 @@ fn a_real_compressed_musicxml_file_joins_the_library() {
         std::fs::read(PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("library/Fur_Elise_Easy.mxl"))
             .expect("the file is in the library folder");
 
-    let imported = accept_offered(&material, &mut hogwash).expect("a real .mxl is supported");
+    let imported = accept_offered(&material, None, &mut hogwash).expect("a real .mxl is supported");
 
     assert_eq!(hogwash.library().count(), before + 1);
     assert_eq!(imported.piece.title, "Fur Elise");
@@ -151,7 +152,7 @@ fn a_title_printed_only_on_the_page_is_read() {
             "Ludwig Van Beethoven",
         ),
     ] {
-        let imported = accept_offered(&library_file(file), &mut hogwash).expect("supported");
+        let imported = accept_offered(&library_file(file), None, &mut hogwash).expect("supported");
 
         assert_eq!(imported.piece.title, title);
         assert_eq!(imported.piece.composer.as_deref(), Some(composer));
@@ -166,6 +167,7 @@ fn an_imported_piece_survives_a_restart() {
     let root = temporary("restart");
     let imported = accept_offered(
         &library_file("Erik_Satie_-_Gymnopedie_No.1.mxl"),
+        None,
         &mut hogwash(&root),
     )
     .expect("supported");
@@ -195,7 +197,7 @@ fn a_file_identical_to_a_bundled_piece_adds_nothing() {
     let mut hogwash = hogwash(&root);
     let before = hogwash.library().count();
 
-    let imported = accept_offered(&library_file("minuet-in-g.musicxml"), &mut hogwash)
+    let imported = accept_offered(&library_file("minuet-in-g.musicxml"), None, &mut hogwash)
         .expect("the Minuet is supported");
 
     assert!(imported.already);
@@ -214,8 +216,8 @@ fn a_file_identical_to_a_bundled_piece_adds_nothing() {
 fn identical_stored_copies_collapse_at_startup() {
     let root = temporary("collapse");
     let before = hogwash(&root).library().count();
-    let imported =
-        accept_offered(&library_file("Canon_in_D.mxl"), &mut hogwash(&root)).expect("supported");
+    let imported = accept_offered(&library_file("Canon_in_D.mxl"), None, &mut hogwash(&root))
+        .expect("supported");
     let scores = root.join("scores");
     std::fs::copy(
         scores.join(format!("{}.musicxml", imported.piece.id)),
@@ -227,4 +229,74 @@ fn identical_stored_copies_collapse_at_startup() {
 
     assert_eq!(restarted.library().count(), before + 1);
     assert!(!scores.join("hand-copied.musicxml").exists());
+}
+
+// The performer's two real Für Elise files are different music, so both are
+// kept, each with what its file says about itself.
+#[test]
+#[ignore = "needs a real libverovio; run `just provided-test`"]
+fn two_real_fur_elise_files_are_two_pieces() {
+    let root = temporary("two-fur-elise");
+    let mut hogwash = hogwash(&root);
+    let before = hogwash.library().count();
+
+    let full = accept_offered(
+        &library_file("Fur_Elise.mxl"),
+        Some("Fur_Elise.mxl"),
+        &mut hogwash,
+    );
+    let easy = accept_offered(
+        &library_file("Fur_Elise_Easy.mxl"),
+        Some("Fur_Elise_Easy.mxl"),
+        &mut hogwash,
+    )
+    .expect("supported");
+
+    // Its pickup bar is numbered 0, which is refused until pickup bars are
+    // supported; flip this when they are.
+    assert!(full.is_err_and(|refusal| refusal.contains("numbered `0`")));
+    assert_eq!(hogwash.library().count(), before + 1);
+    assert_eq!(easy.piece.title, "Fur Elise");
+    assert_eq!(easy.piece.composer, None);
+    assert_eq!(easy.piece.file_name.as_deref(), Some("Fur_Elise_Easy.mxl"));
+}
+
+// A score that names itself nowhere (the Minuet with its title, composer and
+// printed credits taken out) is named after the performer's file.
+#[test]
+#[ignore = "needs a real libverovio; run `just provided-test`"]
+fn a_score_with_no_title_anywhere_is_named_after_its_file() {
+    let root = temporary("file-title");
+    let mut hogwash = hogwash(&root);
+    let minuet = String::from_utf8(library_file("minuet-in-g.musicxml")).expect("text");
+    let nameless = cut_all(
+        &cut_all(
+            &cut_all(&minuet, "<work>", "</work>"),
+            "<credit ",
+            "</credit>",
+        ),
+        "<identification>",
+        "</identification>",
+    );
+
+    let imported = accept_offered(
+        nameless.as_bytes(),
+        Some("Petzold_Minuet_in_G.musicxml"),
+        &mut hogwash,
+    )
+    .expect("still music");
+
+    assert_eq!(imported.piece.title, "Petzold Minuet in G");
+}
+
+/// `text` with every span from `start` to `end` (inclusive) removed.
+fn cut_all(text: &str, start: &str, end: &str) -> String {
+    let mut out = text.to_owned();
+    while let Some(from) = out.find(start) {
+        let Some(length) = out[from..].find(end) else {
+            break;
+        };
+        out.replace_range(from..from + length + end.len(), "");
+    }
+    out
 }

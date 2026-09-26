@@ -212,6 +212,7 @@ fn an_imported_score_is_copied_into_the_library_and_kept_apart_from_history() {
             &piece(),
             "Minuet in G",
             Some("Petzold"),
+            Some("Minuet_in_G.musicxml"),
             b"<score-partwise/>",
         )
         .expect("keeps the piece");
@@ -221,6 +222,15 @@ fn an_imported_score_is_copied_into_the_library_and_kept_apart_from_history() {
     assert_eq!(
         std::fs::read(&kept.source).expect("reads the score"),
         b"<score-partwise/>"
+    );
+
+    // What the performer's file was called survives a restart.
+    assert_eq!(
+        Records::under(directory.path())
+            .piece_record(&piece())
+            .and_then(|record| record.file_name)
+            .as_deref(),
+        Some("Minuet_in_G.musicxml")
     );
 
     // FR-701 — "in read-only form".
@@ -242,10 +252,10 @@ fn imported_pieces_are_listed_after_a_restart() {
     let records = Records::under(directory.path());
     assert!(records.imported().is_empty(), "nothing imported yet");
     records
-        .keep_piece(&minuet, "Minuet in G", None, b"<score-partwise/>")
+        .keep_piece(&minuet, "Minuet in G", None, None, b"<score-partwise/>")
         .expect("keeps the minuet");
     records
-        .keep_piece(&prelude, "Prelude in C", None, b"<score-partwise/>")
+        .keep_piece(&prelude, "Prelude in C", None, None, b"<score-partwise/>")
         .expect("keeps the prelude");
 
     assert_eq!(

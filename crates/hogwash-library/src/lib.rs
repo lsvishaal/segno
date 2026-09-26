@@ -9,4 +9,4 @@ mod library;
 mod piece;
 
 pub use library::Library;
-pub use piece::Piece;
+pub use piece::{Piece, title_from};
