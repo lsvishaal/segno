@@ -99,6 +99,11 @@ ui-test:
 clean:
     cargo clean
 
+# the real score component on the bundled Minuet and Prelude pages, outside Tauri:
+# open http://localhost:1421/harness.html?piece=minuet-in-g&step=0 (add &debug=1, &names=1)
+harness:
+    cd app && npx vite --port 1421
+
 # --- Verovio -------------------------------------------------------------
 #
 # ADR-0005 loads Verovio at run time, so building and testing the rest of

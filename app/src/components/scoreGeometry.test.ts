@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import minuet from "./__fixtures__/minuet-in-g.page1.svg?raw";
 import prelude from "./__fixtures__/prelude-in-c.page1.svg?raw";
-import { cursorBand, readPage } from "./scoreGeometry";
+import { cursorLine, readPage } from "./scoreGeometry";
 
 const FIXTURES: Record<string, string> = { "minuet-in-g": minuet, "prelude-in-c": prelude };
 
@@ -76,7 +76,7 @@ describe("key signatures", () => {
   });
 });
 
-describe("the cursor band, on the Minuet's first bar", () => {
+describe("the cursor line, on the Minuet's first bar", () => {
   const geometry = readPage(page("minuet-in-g"));
   // Bar 1: D5 in the right hand over G3 in the left; then the right hand's G4
   // while the left hand is still held.
@@ -84,35 +84,35 @@ describe("the cursor band, on the Minuet's first bar", () => {
   const G3 = "j14qhuvu";
   const G4 = "d1eyoooy";
 
-  it("covers both staves even where only the right hand starts a note", () => {
-    const band = cursorBand(geometry, [G4])!;
-    const system = geometry.systems[band.system]!;
+  it("spans both staves even where only the right hand starts a note", () => {
+    const line = cursorLine(geometry, [G4])!;
+    const system = geometry.systems[line.system]!;
 
-    expect(band.y).toBeLessThan(system.top);
-    expect(band.y + band.height).toBeGreaterThan(system.bottom);
+    expect(line.y1).toBeLessThan(system.top);
+    expect(line.y2).toBeGreaterThan(system.bottom);
   });
 
-  it("is centred on its notehead", () => {
-    const band = cursorBand(geometry, [G4])!;
+  it("goes through the middle of its notehead", () => {
+    const line = cursorLine(geometry, [G4])!;
     const head = geometry.noteheads.get(G4)!;
 
-    expect(band.x + band.width / 2).toBeCloseTo(head.x + head.width / 2, 5);
+    expect(line.x).toBeCloseTo(head.x + head.width / 2, 5);
   });
 
-  it("covers the noteheads of both hands", () => {
-    const band = cursorBand(geometry, [D5, G3])!;
+  it("goes through the noteheads of both hands", () => {
+    const line = cursorLine(geometry, [D5, G3])!;
 
     for (const id of [D5, G3]) {
       const head = geometry.noteheads.get(id)!;
-      expect(head.x).toBeGreaterThanOrEqual(band.x);
-      expect(head.x + head.width).toBeLessThanOrEqual(band.x + band.width);
-      expect(head.y).toBeGreaterThan(band.y);
-      expect(head.y).toBeLessThan(band.y + band.height);
+      expect(line.x).toBeGreaterThan(head.x);
+      expect(line.x).toBeLessThan(head.x + head.width);
+      expect(head.y).toBeGreaterThan(line.y1);
+      expect(head.y).toBeLessThan(line.y2);
     }
   });
 
   it("is nothing for notes not on the page", () => {
-    expect(cursorBand(geometry, ["not-a-note"])).toBeNull();
-    expect(cursorBand(geometry, [])).toBeNull();
+    expect(cursorLine(geometry, ["not-a-note"])).toBeNull();
+    expect(cursorLine(geometry, [])).toBeNull();
   });
 });

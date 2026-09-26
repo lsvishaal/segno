@@ -277,21 +277,21 @@ function notehead(
   return { x: at.x, y: at.y, width, height: spacing };
 }
 
-/** The cursor's band, in the same drawing units as the page. */
-export interface Band {
+/** The cursor's line, in the same drawing units as the page. */
+export interface CursorLine {
   readonly system: number;
   readonly x: number;
-  readonly y: number;
-  readonly width: number;
-  readonly height: number;
+  readonly y1: number;
+  readonly y2: number;
 }
 
 /**
- * The cursor for the notes at one position: as wide as their noteheads, and
- * always the full height of their system, so a note still held in the other
- * hand is covered too. Null if none of the notes is drawn on this page.
+ * The cursor for the notes at one position: a vertical line through the
+ * centre of the leftmost notehead, always the full height of the system, so
+ * a note still held in the other hand is covered too. Null if none of the
+ * notes is drawn on this page.
  */
-export function cursorBand(geometry: PageGeometry, elementIds: readonly string[]): Band | null {
+export function cursorLine(geometry: PageGeometry, elementIds: readonly string[]): CursorLine | null {
   const heads = elementIds.flatMap((id) => {
     const head = geometry.noteheads.get(id);
     return head ? [head] : [];
@@ -301,16 +301,19 @@ export function cursorBand(geometry: PageGeometry, elementIds: readonly string[]
 
   const spacing = system.staves[0]!.spacing;
   const onSystem = heads.filter((head) => head.system === system.index);
-  const x0 = Math.min(...onSystem.map((head) => head.x)) - spacing / 2;
-  const x1 = Math.max(...onSystem.map((head) => head.x + head.width)) + spacing / 2;
+  const leftmost = onSystem.reduce((a, b) => (b.x < a.x ? b : a));
   // Reach past ledger-line notes as well as the staves themselves.
-  const y0 = Math.min(system.top, ...onSystem.map((head) => head.y - head.height / 2)) - spacing;
-  const y1 = Math.max(system.bottom, ...onSystem.map((head) => head.y + head.height / 2)) + spacing;
+  const y1 = Math.min(system.top, ...onSystem.map((head) => head.y - head.height / 2)) - spacing;
+  const y2 = Math.max(system.bottom, ...onSystem.map((head) => head.y + head.height / 2)) + spacing;
 
-  return { system: system.index, x: x0, y: y0, width: x1 - x0, height: y1 - y0 };
+  return { system: system.index, x: leftmost.x + leftmost.width / 2, y1, y2 };
 }
 
-/** The inner drawing surface of a page, where every coordinate above lives. */
-export function drawingSurface(page: Element): SVGSVGElement | null {
-  return page.querySelector("svg.definition-scale");
+/**
+ * The group every coordinate above lives in. Verovio shifts the music by its
+ * page margin (`g.page-margin`, translated), so anything drawn from these
+ * coordinates has to go inside that group, not beside it.
+ */
+export function drawingSurface(page: Element): SVGGElement | SVGSVGElement | null {
+  return page.querySelector("svg.definition-scale > g.page-margin") ?? page.querySelector("svg.definition-scale");
 }

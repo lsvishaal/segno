@@ -340,17 +340,19 @@ describe("the cursor, on the Minuet", () => {
     },
   ];
 
-  it("is a band inside the page's own drawing, behind the music", () => {
+  it("is a line inside the shifted music group, behind the music", () => {
     const { container } = render(
       <Score pages={[minuet]} marks={MARKS} cursor={{ position: 0 }} dot={null} followCursor={false} />,
     );
 
-    const surface = container.querySelector("svg.definition-scale")!;
-    const band = surface.querySelector("rect.hw-cursor-band");
+    // Inside Verovio's page-margin group: its translate is what puts the
+    // notehead coordinates where the noteheads are drawn.
+    const surface = container.querySelector("svg.definition-scale > g.page-margin")!;
+    const line = container.querySelector("line.hw-cursor-line");
 
-    expect(band).not.toBeNull();
+    expect(line).not.toBeNull();
     expect(surface.firstElementChild).toHaveClass("hw-under");
-    expect(surface.firstElementChild!.contains(band)).toBe(true);
+    expect(surface.firstElementChild!.contains(line)).toBe(true);
   });
 
   it("draws nothing for a position with no drawn notes", () => {
@@ -358,6 +360,6 @@ describe("the cursor, on the Minuet", () => {
       <Score pages={[minuet]} marks={MARKS} cursor={{ position: 5 }} dot={null} followCursor={false} />,
     );
 
-    expect(container.querySelector(".hw-cursor-band")).toBeNull();
+    expect(container.querySelector(".hw-cursor-line")).toBeNull();
   });
 });

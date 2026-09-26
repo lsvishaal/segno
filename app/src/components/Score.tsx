@@ -6,7 +6,7 @@ import { AnimatePresence, motion } from "motion/react";
 import type { DrawnNote, Mark } from "../bridge";
 import { NoteNames } from "./NoteNames";
 import { showGeometry as drawGeometry } from "./scoreDebug";
-import { cursorBand, drawingSurface, readPage } from "./scoreGeometry";
+import { cursorLine, drawingSurface, readPage } from "./scoreGeometry";
 import type { PageGeometry } from "./scoreGeometry";
 import { nearestSpelling, verticalPositionFor } from "./staffGeometry";
 import type { Spelling } from "./staffGeometry";
@@ -169,8 +169,8 @@ export function Score({
   // zoom, resize or scroll can pull it off its notes.
   const cursorIds = (notesAt.get(cursor.position) ?? []).map((note) => note.elementId);
   const cursorOn = surfaces
-    .map((surface) => ({ layer: surface.layer, band: cursorBand(surface.geometry, cursorIds) }))
-    .find((candidate) => candidate.band);
+    .map((surface) => ({ layer: surface.layer, line: cursorLine(surface.geometry, cursorIds) }))
+    .find((candidate) => candidate.line);
 
   // A correct note recolors the real notehead — there is one, so there is
   // nothing to position (`ADR-0001` only forces an overlay for a *wrong*
@@ -261,15 +261,17 @@ export function Score({
       <div className="pointer-events-none absolute inset-0">
         <NoteNames labels={noteLabels} />
 
-        {cursorOn?.band &&
+        {cursorOn?.line &&
           createPortal(
             // Keyed by system: it glides along a line, and jumps to the next.
-            <rect
-              key={cursorOn.band.system}
-              className="hw-cursor-band"
-              width={cursorOn.band.width}
-              height={cursorOn.band.height}
-              style={{ transform: `translate(${cursorOn.band.x}px, ${cursorOn.band.y}px)` }}
+            <line
+              key={cursorOn.line.system}
+              className="hw-cursor-line"
+              x1={0}
+              x2={0}
+              y1={cursorOn.line.y1}
+              y2={cursorOn.line.y2}
+              style={{ transform: `translateX(${cursorOn.line.x}px)` }}
             />,
             cursorOn.layer,
           )}

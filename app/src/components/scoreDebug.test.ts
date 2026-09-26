@@ -10,11 +10,11 @@ function page(): Element {
 }
 
 describe("Show geometry", () => {
-  it("draws notehead, staff-line, label and bar layers inside the page's drawing surface", () => {
+  it("draws notehead, staff-line, label and bar layers inside the page's shifted music group", () => {
     const holder = page();
     showGeometry(holder, true);
 
-    const layer = holder.querySelector("svg.definition-scale > g.hw-debug")!;
+    const layer = holder.querySelector("svg.definition-scale > g.page-margin > g.hw-debug")!;
     expect(layer).not.toBeNull();
     expect(layer.querySelectorAll(".hw-debug-head")).toHaveLength(holder.querySelectorAll("g.note").length);
     expect(layer.querySelectorAll(".hw-debug-bar")).toHaveLength(holder.querySelectorAll("g.measure").length);

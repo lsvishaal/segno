@@ -68,17 +68,18 @@
 }
 
 /*
-  The cursor: a band behind the ink, across the whole system, drawn inside
-  the page's SVG in its own units (`Score.tsx`).
+  The cursor: a thin line behind the ink, across the whole system, placed in
+  the page's own units (`Score.tsx`) but always 3px wide on screen.
 */
-.hw-cursor-band {
-  fill: var(--hw-cursor);
-  fill-opacity: 0.45;
+.hw-cursor-line {
+  stroke: var(--hw-cursor);
+  stroke-width: 3px;
+  vector-effect: non-scaling-stroke;
   transition: transform 150ms ease-out;
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .hw-cursor-band {
+  .hw-cursor-line {
     transition: none;
   }
 }
