@@ -1,151 +1,169 @@
-import type { Step } from "../bridge";
+import type { DrawnNote, Mark, Step } from "../bridge";
+import { cursorLine } from "./scoreGeometry";
+import type { Key, PageGeometry } from "./scoreGeometry";
 
 /**
- * Placing a note that was never written.
+ * Where a wrong note would be written.
  *
- * A wrong note has no position of its own — a MIDI keyboard reports a
- * struck key's sound, never its spelling (`ADR-0001`), and nothing was
- * drawn for it. Everything in this module answers one question only:
- * *where would that sound sit on the staff, if it had been written?* —
- * for the wrong-note dot to appear in a sensible place, and nowhere else.
- * A spelling produced here (`nearestSpelling`) is a display artefact. It
- * must never reach `Analysis`, `Feedback`, or the `Cursor` — those already
- * work from the chromatic pitch alone, exactly as `ADR-0001` requires, and
- * nothing in this module changes that.
- *
- * Pure, and deliberately ignorant of the DOM: every position here comes
- * from real, already-measured points (an actually-drawn note's spelling
- * and its on-screen `y`), never from assumed Verovio internals or
- * hard-coded staff geometry. Two real points are enough to know how many
- * pixels one diatonic step is worth, on whatever staff was actually drawn.
+ * A keyboard reports a sound, never a spelling, and nothing was drawn for a
+ * wrong note. So it is placed relative to something that *was* drawn on the
+ * same staff: an expected note, a nearby note, or failing both the clef's own
+ * line. Heights come from where Verovio drew that reference, in the page's
+ * own units, so an 8va line or a clef change moves the mark exactly as it
+ * moved the reference. The spelling made here is for drawing only; nothing
+ * that judges a performance ever sees it.
  */
 
 const STEPS: readonly Step[] = ["C", "D", "E", "F", "G", "A", "B"];
+const NATURAL: Record<Step, number> = { C: 0, D: 2, E: 4, F: 5, G: 7, A: 9, B: 11 };
+const SHARPS: readonly Step[] = ["F", "C", "G", "D", "A", "E", "B"];
+const FLATS: readonly Step[] = ["B", "E", "A", "D", "G", "C", "F"];
+/** A black notehead's width, in staff spaces (SMuFL). */
+const NOTEHEAD_WIDTH = 1.18;
+/** How far a ledger line reaches beyond its notehead, each side, in spaces. */
+const LEDGER_OVERHANG = 0.27;
 
-const SEMITONES_ABOVE_C: Record<Step, number> = {
-  C: 0,
-  D: 2,
-  E: 4,
-  F: 5,
-  G: 7,
-  A: 9,
-  B: 11,
-};
-
-/** A written position: letter name and octave, nothing else. */
+/** A letter, octave and accidental (-2..2 semitones). */
 export interface Spelling {
   readonly step: Step;
   readonly octave: number;
+  readonly alter?: number;
 }
 
-/** A real, measured point: a drawn note's spelling and its on-screen `y`. */
-export interface Calibration {
-  readonly spelling: Spelling;
-  readonly y: number;
-}
-
-/**
- * Where `spelling` sits on a staff, counted in diatonic steps rather than
- * pixels or semitones — two adjacent letters are one step apart, one
- * octave is seven. This is staff position, not sound: C and C-sharp are
- * the same step, which is exactly why an accidental never moves a note.
- */
+/** Staff position in diatonic steps: adjacent letters are one apart, an octave seven. */
 export function diatonicIndex(spelling: Spelling): number {
   return spelling.octave * STEPS.length + STEPS.indexOf(spelling.step);
 }
 
-/** The chromatic (MIDI) pitch of a natural letter in `octave`, no accidental. */
-function naturalPitch(step: Step, octave: number): number {
-  return (octave + 1) * 12 + SEMITONES_ABOVE_C[step];
+/** The alteration a key signature gives a letter. */
+function keyAlter(step: Step, key: Key): number {
+  if (key.accidental === "sharp") return SHARPS.slice(0, key.count).includes(step) ? 1 : 0;
+  if (key.accidental === "flat") return FLATS.slice(0, key.count).includes(step) ? -1 : 0;
+  return 0;
 }
 
 /**
- * The spelling closest to `near` that sounds as `midiPitch` — a guess,
- * made only so a wrong note's dot has *some* sensible vertical position.
- *
- * Tries every letter within a step of `near`'s octave, keeping only those
- * reachable with a double-flat-to-double-sharp accidental (any real
- * pitch always has one), and prefers the smallest jump from `near` on the
- * staff, breaking ties toward the smaller accidental — the reading a
- * performer would find least surprising next to the note they were
- * expecting.
+ * How a MIDI pitch would be spelled in `key`: a white key natural, a black
+ * key with a flat in a flat key and a sharp otherwise.
  */
-export function nearestSpelling(midiPitch: number, near: Spelling): Spelling {
-  let best: { spelling: Spelling; distance: number; alterMagnitude: number } | null = null;
+export function spellingFor(pitch: number, key: Key): Spelling & { alter: number } {
+  const octave = Math.floor(pitch / 12) - 1;
+  const pitchClass = pitch % 12;
+  const natural = STEPS.find((step) => NATURAL[step] === pitchClass);
+  if (natural) return { step: natural, octave, alter: 0 };
 
-  for (let octaveOffset = -1; octaveOffset <= 1; octaveOffset += 1) {
-    for (const step of STEPS) {
-      const octave = near.octave + octaveOffset;
-      const alter = midiPitch - naturalPitch(step, octave);
-      if (alter < -2 || alter > 2) continue;
+  // ponytail: no key signature spells black keys sharp; spell from context if that reads wrong.
+  const flat = key.accidental === "flat";
+  const step = STEPS.find((candidate) => NATURAL[candidate] === pitchClass + (flat ? 1 : -1))!;
+  return { step, octave, alter: flat ? -1 : 1 };
+}
 
-      const distance = Math.abs(diatonicIndex({ step, octave }) - diatonicIndex(near));
-      const alterMagnitude = Math.abs(alter);
-
-      if (
-        !best ||
-        distance < best.distance ||
-        (distance === best.distance && alterMagnitude < best.alterMagnitude)
-      ) {
-        best = { spelling: { step, octave }, distance, alterMagnitude };
-      }
-    }
-  }
-
-  // Unreachable in practice — every real pitch has a spelling within an
-  // octave of any reference — but `near` itself is an honest fallback.
-  return best?.spelling ?? near;
+/** Everything needed to draw a wrong note, in the page's drawing units. */
+export interface WrongNoteMark {
+  readonly system: number;
+  readonly staff: number;
+  /** The notehead's centre: the cursor's x, and the staff position's y. */
+  readonly x: number;
+  readonly y: number;
+  readonly width: number;
+  readonly spacing: number;
+  /** The height of each ledger line to draw, between the staff and the note. */
+  readonly ledgers: readonly number[];
+  readonly ledgerWidth: number;
+  readonly accidental: "sharp" | "flat" | "natural" | null;
+  /** The key that was pressed, e.g. "C♯5". */
+  readonly label: string;
 }
 
 /**
- * The pair of calibration points furthest apart on the staff, for the
- * least noise-sensitive estimate of pixels-per-step.
+ * The wrong-note mark for `pitch`, played while the cursor is on
+ * `expected`. `marks` is every position in the piece, for finding a nearby
+ * note on a staff the cursor has nothing on. Null if the cursor's notes are
+ * not on this page.
  */
-function widestPair(
-  calibration: readonly Calibration[],
-): readonly [Calibration, Calibration] | null {
-  let best: readonly [Calibration, Calibration] | null = null;
-  let widest = 0;
+export function wrongNoteMark(
+  geometry: PageGeometry,
+  expected: readonly DrawnNote[],
+  marks: readonly Mark[],
+  pitch: number,
+): WrongNoteMark | null {
+  const cursor = cursorLine(
+    geometry,
+    expected.map((note) => note.elementId),
+  );
+  if (!cursor) return null;
 
-  for (let i = 0; i < calibration.length; i += 1) {
-    for (let j = i + 1; j < calibration.length; j += 1) {
-      const a = calibration[i]!;
-      const b = calibration[j]!;
-      const spread = Math.abs(diatonicIndex(a.spelling) - diatonicIndex(b.spelling));
+  const system = geometry.systems.find((candidate) => candidate.index === cursor.system)!;
+  const drawn = (notes: readonly DrawnNote[]) =>
+    notes.flatMap((note) => {
+      const head = geometry.noteheads.get(note.elementId);
+      return head && head.system === system.index ? [{ note, head }] : [];
+    });
+  const here = drawn(expected);
+  const bar = geometry.bars.find((candidate) => candidate.id === here[0]!.head.bar)!;
+  const byDistance = (a: { note: DrawnNote }, b: { note: DrawnNote }) =>
+    Math.abs(a.note.pitch - pitch) - Math.abs(b.note.pitch - pitch);
 
-      if (spread > widest) {
-        widest = spread;
-        best = [a, b];
-      }
-    }
-  }
+  // Which staff: that of the closest expected note within an octave, else
+  // treble from middle C up and bass below.
+  const closest = [...here].sort(byDistance)[0]!;
+  const staff =
+    Math.abs(closest.note.pitch - pitch) <= 12
+      ? closest.head.staff
+      : staffForRegister(bar.clefs.map((clef) => clef?.sign ?? null), pitch);
+  const lines = system.staves[staff]!.lines;
+  const spacing = system.staves[staff]!.spacing;
 
-  return best;
+  // What to measure from: an expected note on that staff, else the nearest
+  // drawn note on it in this system, else the clef's own line.
+  const onStaff = here.filter(({ head }) => head.staff === staff).sort(byDistance);
+  const nearby = drawn(marks.flatMap((mark) => mark.notes))
+    .filter(({ head }) => head.staff === staff)
+    .sort((a, b) => Math.abs(a.head.x - cursor.x) - Math.abs(b.head.x - cursor.x));
+  const clef = bar.clefs[staff];
+  const reference = onStaff[0] ?? nearby[0];
+  const from = reference
+    ? { y: reference.head.y, spelling: reference.note as Spelling }
+    : clef
+      ? { y: lines[5 - clef.line]!, spelling: clef.reference }
+      : { y: lines[2]!, spelling: { step: "B", octave: 4 } as Spelling };
+
+  const key = bar.keys[staff] ?? { accidental: null, count: 0 };
+  const spelling = spellingFor(pitch, key);
+  const y = from.y - ((diatonicIndex(spelling) - diatonicIndex(from.spelling)) * spacing) / 2;
+  const width = NOTEHEAD_WIDTH * spacing;
+
+  return {
+    system: system.index,
+    staff,
+    x: cursor.x,
+    y,
+    width,
+    spacing,
+    ledgers: ledgersFor(y, lines[0]!, lines[4]!, spacing),
+    ledgerWidth: width + 2 * LEDGER_OVERHANG * spacing,
+    accidental: accidentalFor(spelling, key),
+    label: `${spelling.step}${spelling.alter > 0 ? "♯" : spelling.alter < 0 ? "♭" : ""}${spelling.octave}`,
+  };
 }
 
-/**
- * The pixel `y` a written `target` would sit at, extrapolated from real
- * measured points on the same staff.
- *
- * Returns `null` when there is nothing to extrapolate from — fewer than
- * two calibration points, or points that do not differ in staff position
- * (a single repeated pitch, or a chord with no other note to compare
- * against). A caller sees that as "nothing to calibrate against" and
- * falls back to a fixed position — an honest degradation, not a defect.
- */
-export function verticalPositionFor(
-  target: Spelling,
-  calibration: readonly Calibration[],
-): number | null {
-  const pair = widestPair(calibration);
-  if (!pair) return null;
+function staffForRegister(clefs: readonly (string | null)[], pitch: number): number {
+  const wanted = clefs.indexOf(pitch >= 60 ? "G" : "F");
+  if (wanted >= 0) return wanted;
+  return pitch >= 60 ? 0 : clefs.length - 1;
+}
 
-  const [a, b] = pair;
-  const stepSpread = diatonicIndex(b.spelling) - diatonicIndex(a.spelling);
-  if (stepSpread === 0) return null;
+/** Ledger lines from the staff out to a note at `y`, one per line position passed. */
+export function ledgersFor(y: number, top: number, bottom: number, spacing: number): number[] {
+  const ledgers: number[] = [];
+  const reach = spacing / 4; // tolerance, so rounding never drops a ledger
+  for (let line = top - spacing; line >= y - reach; line -= spacing) ledgers.push(line);
+  for (let line = bottom + spacing; line <= y + reach; line += spacing) ledgers.push(line);
+  return ledgers;
+}
 
-  const pixelsPerStep = (b.y - a.y) / stepSpread;
-  if (!Number.isFinite(pixelsPerStep)) return null;
-
-  return a.y + pixelsPerStep * (diatonicIndex(target) - diatonicIndex(a.spelling));
+// ponytail: ignores accidentals earlier in the bar; read them from the page's g.accid if that misleads.
+function accidentalFor(spelling: Spelling & { alter: number }, key: Key): WrongNoteMark["accidental"] {
+  if (spelling.alter === keyAlter(spelling.step, key)) return null;
+  return spelling.alter > 0 ? "sharp" : spelling.alter < 0 ? "flat" : "natural";
 }

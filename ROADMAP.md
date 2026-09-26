@@ -39,3 +39,9 @@ struggle with and helps you fix them.
   which pass (1st / 2nd time) the performer is on.
 - A clef change in the middle of a bar takes effect from the next bar in the
   score geometry (neither bundled piece has one).
+- A piece that needs keys the connected keyboard doesn't have can never be
+  finished (the cursor waits forever): warn when it is opened, "This piece
+  uses keys your keyboard can't reach."
+- A keyboard's octave up/down buttons shift every note it sends, so
+  everything reads as wrong: detect a whole-performance octave offset and say so.
+- The wrong-note mark's accidental ignores accidentals earlier in the same bar.

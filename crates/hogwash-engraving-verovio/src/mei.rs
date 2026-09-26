@@ -249,9 +249,12 @@ fn spelling_of(note: Node<'_, '_>) -> Result<PitchSpelling, TranslationFailure> 
 
     let step = step_of(name)?;
 
+    // Under an octave line (8va, 8vb) `@oct` is where the note is drawn and
+    // `@oct.ges` where it sounds; the sounding octave is what is played.
     let octave: i8 = note
-        .attribute("oct")
-        .and_then(|written| written.parse().ok())
+        .attribute("oct.ges")
+        .or_else(|| note.attribute("oct"))
+        .and_then(|octave| octave.parse().ok())
         .ok_or_else(|| {
             TranslationFailure::UnreadableNote(format!("{name} is in no readable octave"))
         })?;
@@ -362,6 +365,21 @@ mod tests {
         assert_eq!(note.spelling.octave(), 4);
         assert_eq!(note.spelling.alter(), 0);
         assert_eq!(note.measure.get(), 1);
+    }
+
+    // Real Verovio output for a note drawn as D4 under an 8va line.
+    #[test]
+    fn a_note_under_an_octave_line_is_read_at_the_octave_it_sounds() {
+        let mei = TWO_BARS.replacen(r#"oct="4""#, r#"oct="4" oct.ges="5""#, 1);
+        let read = read(&mei).expect("readable");
+
+        assert_eq!(
+            read.note("yv3lqdm")
+                .expect("the first note")
+                .spelling
+                .octave(),
+            5
+        );
     }
 
     // MEI writes an accidental as a child <accid> element, not an attribute

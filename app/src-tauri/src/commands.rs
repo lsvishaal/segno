@@ -89,32 +89,26 @@ pub struct Mark {
     pub position: usize,
     /// Which page it was drawn on, counting from zero.
     pub page: usize,
-    /// Every note drawn here, paired with what was written. Several for a
-    /// chord.
+    /// Every note drawn here. Several for a chord.
     ///
-    /// Carrying the written spelling — not just the element id — is what
-    /// lets the interface measure real staff geometry from real points: a
-    /// wrong note has no position of its own to draw at (a keyboard reports
-    /// a sound, never a spelling, `ADR-0001`), so placing anything for it
-    /// has to be computed from where notes that *were* written actually
-    /// ended up on screen.
+    /// Each carries what it sounds as, which is what lets the interface place
+    /// a wrong note: relative to a note that was drawn, in the same staff.
     pub notes: Vec<DrawnNote>,
 }
 
-/// One drawn notehead, and the spelling Verovio drew it from.
+/// One drawn notehead, and the note it sounds.
 #[derive(Debug, Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct DrawnNote {
     /// The identifier Verovio gave this notehead.
     pub element_id: String,
-    /// The written letter name — `"C"` through `"B"`.
-    ///
-    /// Not the accidental: `alter` only draws a glyph beside the note, it
-    /// does not move it vertically on the staff, which is the only thing
-    /// this field exists to let the interface reconstruct.
+    /// The letter name — `"C"` through `"B"`.
     pub step: String,
-    /// Scientific pitch notation, where middle C is octave 4.
+    /// The octave it sounds in (under an 8va line, not the one it is drawn
+    /// in), in scientific pitch notation: middle C is octave 4.
     pub octave: i8,
+    /// The MIDI number it sounds as.
+    pub pitch: u8,
 }
 
 /// Something a command could not do, in words.
@@ -258,6 +252,7 @@ fn opened_piece(
                         element_id: element.as_str().to_owned(),
                         step: format!("{:?}", note.spelling().step()),
                         octave: note.spelling().octave(),
+                        pitch: u8::from(note.sounding()),
                     })
                     .collect();
 

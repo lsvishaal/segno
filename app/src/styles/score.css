@@ -1,11 +1,8 @@
 /*
   The score panel.
 
-  Everything here targets Verovio's own markup (`g.note`) for the ink itself
-  — a correct note recolours its own ink directly — and an overlay layer — a
-  cursor bar and a wrong-note dot, positioned by `Score.tsx` from real
-  measurements — for everything that has no element of its own to recolour
-  (see `Score.tsx`'s module doc).
+  A correct note recolours Verovio's own ink (`g.note`). The cursor and the
+  wrong-note mark are drawn inside the page's SVG by `Score.tsx`.
 */
 
 .hw-score {
@@ -85,20 +82,39 @@
 }
 
 /*
-  The wrong-note ghost: a pitch with no element of its own, so it gets a dot
-  centred on a computed point the same way the cursor is — the only case
-  left that needs one, now that a correct note recolours its own ink.
+  A wrong note, drawn where it would be written: shown at once, then faded
+  out over a second (`WRONG_NOTE_MS` in `Score.tsx`).
 */
-.hw-dot {
-  position: absolute;
-  width: 14px;
-  height: 14px;
-  border-radius: 50%;
-  transform: translate(-50%, -50%);
+.hw-wrong {
+  fill: var(--hw-wrong);
+  stroke: none;
+  animation: hw-wrong-fade 1s ease-in forwards;
 }
 
-.hw-dot-wrong {
-  background: var(--hw-wrong);
+.hw-wrong-ledger {
+  stroke: var(--hw-wrong);
+}
+
+.hw-wrong-label {
+  font-family: ui-sans-serif, system-ui, sans-serif;
+  font-weight: 600;
+}
+
+@keyframes hw-wrong-fade {
+  0%,
+  40% {
+    opacity: 0.9;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hw-wrong {
+    animation: none;
+    opacity: 0.9;
+  }
 }
 
 /*

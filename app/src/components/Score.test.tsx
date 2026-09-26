@@ -3,7 +3,8 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import type { Mark } from "../bridge";
 import minuet from "./__fixtures__/minuet-in-g.page1.svg?raw";
-import { Score, unionBox, wrongNoteBox } from "./Score";
+import { marksOf } from "./__fixtures__/pages";
+import { Score } from "./Score";
 
 /**
  * The mechanism `MVP §6.6` rests on.
@@ -17,13 +18,6 @@ import { Score, unionBox, wrongNoteBox } from "./Score";
  * real browser would report, rather than through a full component render
  * (which would only prove Motion mounted, not that the geometry is right).
  */
-
-const RECTS: Record<string, { left: number; top: number; width: number; height: number }> = {
-  "note-a": { left: 32, top: 44, width: 16, height: 12 },
-  "note-b": { left: 82, top: 44, width: 16, height: 12 },
-  "chord-1": { left: 132, top: 34, width: 16, height: 12 },
-  "chord-2": { left: 132, top: 49, width: 16, height: 12 },
-};
 
 function stubbedRect(left: number, top: number, width: number, height: number): DOMRect {
   return {
@@ -39,110 +33,8 @@ function stubbedRect(left: number, top: number, width: number, height: number): 
   };
 }
 
-/** A container with real elements at known ids, and stubbed geometry for them. */
-function stage(): HTMLDivElement {
-  const root = document.createElement("div");
-
-  for (const id of Object.keys(RECTS)) {
-    const element = document.createElement("g");
-    element.id = id;
-    root.append(element);
-  }
-
-  vi.spyOn(root, "getBoundingClientRect").mockReturnValue(stubbedRect(0, 0, 400, 100));
-
-  for (const [id, rect] of Object.entries(RECTS)) {
-    const element = root.querySelector(`#${id}`)!;
-    vi.spyOn(element, "getBoundingClientRect").mockReturnValue(
-      stubbedRect(rect.left, rect.top, rect.width, rect.height),
-    );
-  }
-
-  return root;
-}
-
 afterEach(() => {
   vi.restoreAllMocks();
-});
-
-describe("unionBox", () => {
-  it("is a single note's own box", () => {
-    const root = stage();
-
-    expect(unionBox(root, [{ elementId: "note-a", step: "C", octave: 4 }])).toEqual({
-      left: 32,
-      top: 44,
-      width: 16,
-      height: 12,
-    });
-  });
-
-  // A Position may be a chord: every notehead in it belongs to the same
-  // place in the music, so the box has to cover all of them.
-  it("spans every note of a chord", () => {
-    const root = stage();
-
-    const box = unionBox(root, [
-      { elementId: "chord-1", step: "E", octave: 4 },
-      { elementId: "chord-2", step: "G", octave: 4 },
-    ]);
-
-    expect(box).toEqual({ left: 132, top: 34, width: 16, height: 27 });
-  });
-
-  it("is nothing for a position that was never drawn", () => {
-    const root = stage();
-
-    expect(unionBox(root, undefined)).toBeNull();
-    expect(unionBox(root, [])).toBeNull();
-  });
-});
-
-describe("wrongNoteBox", () => {
-  const marks: readonly Mark[] = [
-    { measure: 1, position: 0, page: 0, notes: [{ elementId: "note-a", step: "C", octave: 4 }] },
-    { measure: 1, position: 1, page: 0, notes: [{ elementId: "note-b", step: "D", octave: 4 }] },
-  ];
-
-  it("sits at the expected note's horizontal position", () => {
-    const root = stage();
-    const anchor = marks[1]!.notes;
-
-    const box = wrongNoteBox(
-      root,
-      { kind: "wrong", position: 1, pitch: 62 },
-      anchor,
-      new Map([[1, 0]]),
-      marks,
-    );
-
-    // Pitch 62 is D natural — exactly the expected note — so the ghost
-    // should land right where D was actually drawn.
-    expect(box).toEqual({ left: 82, top: 44, width: 16, height: 12 });
-  });
-
-  it("falls back to the expected note's own box with only one calibration point", () => {
-    const root = stage();
-    const single: readonly Mark[] = [marks[1]!];
-
-    const box = wrongNoteBox(
-      root,
-      { kind: "wrong", position: 1, pitch: 65 },
-      single[0]!.notes,
-      new Map([[1, 0]]),
-      single,
-    );
-
-    expect(box).toEqual({ left: 82, top: 44, width: 16, height: 12 });
-  });
-
-  it("is nothing when the expected position was never drawn", () => {
-    const root = stage();
-
-    expect(
-      wrongNoteBox(root, { kind: "wrong", position: 9, pitch: 60 }, undefined, new Map(), marks),
-    ).toBeNull();
-  });
 });
 
 describe("the score component", () => {
@@ -151,7 +43,7 @@ describe("the score component", () => {
   </svg>`;
 
   const MARKS: readonly Mark[] = [
-    { measure: 1, position: 0, page: 0, notes: [{ elementId: "note-a", step: "C", octave: 4 }] },
+    { measure: 1, position: 0, page: 0, notes: [{ elementId: "note-a", step: "C", octave: 4, pitch: 60 }] },
   ];
 
   it("puts the engraving in the document", () => {
@@ -184,8 +76,8 @@ describe("the score component", () => {
   // A repeat marks the same drawn note once per pass.
   it("labels a note in a repeated bar once", async () => {
     const repeated: readonly Mark[] = [
-      { measure: 1, position: 0, page: 0, notes: [{ elementId: "note-a", step: "C", octave: 4 }] },
-      { measure: 1, position: 1, page: 0, notes: [{ elementId: "note-a", step: "C", octave: 4 }] },
+      { measure: 1, position: 0, page: 0, notes: [{ elementId: "note-a", step: "C", octave: 4, pitch: 60 }] },
+      { measure: 1, position: 1, page: 0, notes: [{ elementId: "note-a", step: "C", octave: 4, pitch: 60 }] },
     ];
 
     const { container, findByText } = render(
@@ -266,7 +158,7 @@ describe("the score component", () => {
       />,
     );
 
-    expect(container.querySelector(".hw-dot")).toBeNull();
+    expect(container.querySelector(".hw-wrong")).toBeNull();
   });
 });
 
@@ -286,7 +178,7 @@ describe("resize-driven re-measurement", () => {
       <g id="note-a" class="note"><ellipse cx="40" cy="50" rx="8" ry="6"/></g>
     </svg>`;
     const MARKS: readonly Mark[] = [
-      { measure: 1, position: 0, page: 0, notes: [{ elementId: "note-a", step: "C", octave: 4 }] },
+      { measure: 1, position: 0, page: 0, notes: [{ elementId: "note-a", step: "C", octave: 4, pitch: 60 }] },
     ];
 
     const callbacks: (() => void)[] = [];
@@ -327,18 +219,8 @@ describe("resize-driven re-measurement", () => {
 });
 
 describe("the cursor, on the Minuet", () => {
-  // Bar 1, beat 1: D5 over G3.
-  const MARKS: readonly Mark[] = [
-    {
-      measure: 1,
-      position: 0,
-      page: 0,
-      notes: [
-        { elementId: "b37hn12", step: "D", octave: 5 },
-        { elementId: "j14qhuvu", step: "G", octave: 3 },
-      ],
-    },
-  ];
+  // Bar 1, beat 1: D5 over the G3 chord.
+  const MARKS = marksOf("minuet-in-g");
 
   it("is a line inside the shifted music group, behind the music", () => {
     const { container } = render(
@@ -357,9 +239,48 @@ describe("the cursor, on the Minuet", () => {
 
   it("draws nothing for a position with no drawn notes", () => {
     const { container } = render(
-      <Score pages={[minuet]} marks={MARKS} cursor={{ position: 5 }} dot={null} followCursor={false} />,
+      <Score pages={[minuet]} marks={MARKS} cursor={{ position: 9999 }} dot={null} followCursor={false} />,
     );
 
     expect(container.querySelector(".hw-cursor-line")).toBeNull();
+  });
+});
+
+describe("a wrong note, on the Minuet", () => {
+  const MARKS = marksOf("minuet-in-g");
+  const score = (pitch: number) => (
+    <Score
+      pages={[minuet]}
+      marks={MARKS}
+      cursor={{ position: 0 }}
+      dot={{ kind: "wrong", position: 0, pitch }}
+      followCursor={false}
+    />
+  );
+
+  it("is drawn inside the shifted music group, above the music", () => {
+    const { container } = render(score(76));
+
+    const surface = container.querySelector("svg.definition-scale > g.page-margin")!;
+    expect(surface.lastElementChild).toHaveClass("hw-over");
+    expect(surface.lastElementChild!.querySelector(".hw-wrong use")).not.toBeNull();
+    expect(container.querySelector(".hw-wrong-label")?.textContent).toBe("E5");
+  });
+
+  it("is replaced by the next one, never shown twice", () => {
+    const { container, rerender } = render(score(76));
+    rerender(score(72));
+
+    expect(container.querySelectorAll(".hw-wrong")).toHaveLength(1);
+    expect(container.querySelector(".hw-wrong-label")?.textContent).toBe("C5");
+  });
+
+  it("goes after a second", () => {
+    vi.useFakeTimers();
+    const { container } = render(score(76));
+
+    act(() => vi.advanceTimersByTime(1000));
+    expect(container.querySelector(".hw-wrong")).toBeNull();
+    vi.useRealTimers();
   });
 });

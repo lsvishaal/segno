@@ -412,3 +412,39 @@ fn grace_notes_and_trills_are_tolerated_against_a_real_engine() {
     assert!(f5.tolerates(pitch(78)) && g5.tolerates(pitch(78)) && g5.tolerates(pitch(77)));
     assert!(!f5.tolerates(pitch(74)));
 }
+
+/// The Minuet, as bundled, with an 8va line added over bars 1-2 of the right
+/// hand: drawn an octave lower than it sounds.
+fn minuet_under_an_octave_line() -> String {
+    let source = include_str!("../../../app/src-tauri/library/minuet-in-g.musicxml");
+    let shift = |kind: &str| {
+        format!(
+            r#"<direction><direction-type><octave-shift type="{kind}" size="8" number="1"/></direction-type><staff>1</staff></direction>"#
+        )
+    };
+    let before_first_note_of = |text: &str, bar: &str| {
+        let start = text
+            .find(&format!(r#"<measure number="{bar}""#))
+            .expect("the bar");
+        start + text[start..].find("<note").expect("a note in it")
+    };
+
+    let mut edited = source.to_owned();
+    let stop = before_first_note_of(&edited, "3");
+    edited.insert_str(stop, &shift("stop"));
+    let start = before_first_note_of(&edited, "1");
+    edited.insert_str(start, &shift("down"));
+    edited
+}
+
+// Under the 8va the first note is drawn as D4 but sounds as D5, and D5 is
+// the key the performer has to press.
+#[test]
+#[ignore = "needs a real libverovio; run `just engraving-test`"]
+fn a_note_under_an_octave_line_is_expected_at_the_pitch_it_sounds() {
+    let engraved = engraver()
+        .engrave(minuet_under_an_octave_line().as_bytes())
+        .expect("the edited Minuet engraves");
+
+    assert_eq!(required(&engraved).first(), Some(&vec![74, 55, 59, 62]));
+}

@@ -1,15 +1,13 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 
-import { AnimatePresence, motion } from "motion/react";
-
 import type { DrawnNote, Mark } from "../bridge";
 import { NoteNames } from "./NoteNames";
 import { showGeometry as drawGeometry } from "./scoreDebug";
 import { cursorLine, drawingSurface, readPage } from "./scoreGeometry";
 import type { PageGeometry } from "./scoreGeometry";
-import { nearestSpelling, verticalPositionFor } from "./staffGeometry";
-import type { Spelling } from "./staffGeometry";
+import { wrongNoteMark } from "./staffGeometry";
+import type { WrongNoteMark } from "./staffGeometry";
 
 /** Which position the cursor is on. */
 export interface CursorState {
@@ -41,8 +39,9 @@ export interface Box {
  * would put all of them through reconciliation every time something moved —
  * ten times a second while someone is playing. So the markup is injected
  * once, imperatively, into its own node; React never touches what is inside
- * it. The cursor is portalled into a layer inside the page, behind the ink;
- * the dots are a separate layer on top.
+ * it. The cursor and the wrong-note mark are portalled into layers inside
+ * the page (behind and above the ink), placed in the page's own units from
+ * its geometry, so no zoom, resize or scroll can pull them out of place.
  *
  * # Correct notes recolor real ink; wrong notes cannot
  *
@@ -50,11 +49,8 @@ export interface Box {
  * set directly (Verovio draws with `currentColor`, inherited from
  * `.hw-page`) and transitions back, no positioning involved. A wrong note
  * has no such element: a keyboard reports a struck key's sound, never its
- * spelling (`ADR-0001`), so there is nothing to recolor. That's the one case
- * still drawn as an overlay, positioned from real measurements
- * (`getBoundingClientRect()` on whatever *was* actually drawn — trustworthy,
- * unlike the static-file geometry bug `ADR-0012` records) rather than from
- * anything Verovio drew for the pitch that was actually played.
+ * spelling, so there is nothing to recolor. It is drawn where it would be
+ * written instead (`staffGeometry.ts`).
  */
 export function Score({
   pages,
@@ -75,9 +71,11 @@ export function Score({
 }) {
   const wrapper = useRef<HTMLDivElement>(null);
   const container = useRef<HTMLDivElement>(null);
-  // Per page: its geometry, and a layer drawn behind the ink for the cursor.
-  const [surfaces, setSurfaces] = useState<readonly { layer: SVGGElement; geometry: PageGeometry }[]>([]);
-  const [dotBox, setDotBox] = useState<Box | null>(null);
+  // Per page: its geometry, a layer behind the ink (the cursor), one above
+  // it (the wrong-note mark), and the id of the page's black notehead glyph.
+  const [surfaces, setSurfaces] = useState<readonly Surface[]>([]);
+  const [wrong, setWrong] = useState<{ id: number; mark: WrongNoteMark; surface: Surface } | null>(null);
+  const wrongCount = useRef(0);
   const [noteLabels, setNoteLabels] = useState<readonly { elementId: string; step: string; box: Box }[]>([]);
   // Bumped by the `ResizeObserver` below — its value is never read, only its
   // identity change matters, to force every measurement effect to re-run.
@@ -89,18 +87,6 @@ export function Score({
 
     for (const mark of marks) {
       index.set(mark.position, mark.notes);
-    }
-
-    return index;
-  }, [marks]);
-
-  /** Which page a position was drawn on — for restricting staff geometry
-   * calibration to notes actually near the one being placed. */
-  const pageOf = useMemo(() => {
-    const index = new Map<number, number>();
-
-    for (const mark of marks) {
-      index.set(mark.position, mark.page);
     }
 
     return index;
@@ -146,10 +132,14 @@ export function Score({
       [...panel.querySelectorAll(".hw-page")].flatMap((page) => {
         const surface = drawingSurface(page);
         if (!surface) return [];
-        const layer = document.createElementNS("http://www.w3.org/2000/svg", "g");
-        layer.setAttribute("class", "hw-under");
-        surface.prepend(layer);
-        return [{ layer, geometry: readPage(page) }];
+        const under = document.createElementNS(SVG, "g");
+        under.setAttribute("class", "hw-under");
+        surface.prepend(under);
+        const over = document.createElementNS(SVG, "g");
+        over.setAttribute("class", "hw-over");
+        surface.append(over);
+        const notehead = page.querySelector('defs [id^="E0A4-"]')?.id ?? null;
+        return [{ under, over, notehead, geometry: readPage(page) }];
       }),
     );
   }, [pages]);
@@ -169,14 +159,12 @@ export function Score({
   // zoom, resize or scroll can pull it off its notes.
   const cursorIds = (notesAt.get(cursor.position) ?? []).map((note) => note.elementId);
   const cursorOn = surfaces
-    .map((surface) => ({ layer: surface.layer, line: cursorLine(surface.geometry, cursorIds) }))
+    .map((surface) => ({ layer: surface.under, line: cursorLine(surface.geometry, cursorIds) }))
     .find((candidate) => candidate.line);
 
-  // A correct note recolors the real notehead — there is one, so there is
-  // nothing to position (`ADR-0001` only forces an overlay for a *wrong*
-  // pitch, which has no element of its own). A wrong note still gets a
-  // positioned ghost dot, retired on its own timer so its lifetime isn't
-  // tied to whatever event happens to arrive next.
+  // A correct note recolors the real notehead. A wrong note is drawn where
+  // it would be written, and retired on its own timer; the next one
+  // replaces it, so there is never more than one.
   useEffect(() => {
     if (!dot) return;
 
@@ -204,14 +192,18 @@ export function Score({
       return () => window.clearTimeout(timeout);
     }
 
-    const box = wrongNoteBox(root, dot, notes, pageOf, marks);
-    if (box) setDotBox(box);
+    for (const surface of surfaces) {
+      const mark = wrongNoteMark(surface.geometry, notes ?? [], marks, dot.pitch);
+      if (!mark) continue;
 
-    const timeout = window.setTimeout(() => setDotBox(null), 420);
-    return () => window.clearTimeout(timeout);
+      wrongCount.current += 1;
+      setWrong({ id: wrongCount.current, mark, surface });
+      const timeout = window.setTimeout(() => setWrong(null), WRONG_NOTE_MS);
+      return () => window.clearTimeout(timeout);
+    }
     // `dot` is a fresh object per event even when its fields repeat, so a
-    // second wrong note in a row still restarts the animation.
-  }, [dot, notesAt, pageOf, marks, layoutTick]);
+    // second wrong note in a row still restarts the fade.
+  }, [dot, notesAt, marks, surfaces]);
 
   // Note-name labels, one per drawn note — recomputed whenever the toggle
   // turns on or the pages themselves change. Declared after the pages
@@ -276,22 +268,11 @@ export function Score({
             cursorOn.layer,
           )}
 
-        <AnimatePresence>
-          {dotBox && (
-            <motion.div
-              key={`${dot?.position}-${dot?.pitch}-${dotBox.left}-${dotBox.top}`}
-              className="hw-dot hw-dot-wrong"
-              style={{
-                left: dotBox.left + dotBox.width / 2,
-                top: dotBox.top + dotBox.height / 2,
-              }}
-              initial={{ opacity: 0, scale: 0.4 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.6 }}
-              transition={{ duration: 0.3, ease: "easeOut" }}
-            />
+        {wrong &&
+          createPortal(
+            <WrongNote key={wrong.id} mark={wrong.mark} notehead={wrong.surface.notehead} />,
+            wrong.surface.over,
           )}
-        </AnimatePresence>
       </div>
     </div>
   );
@@ -313,70 +294,63 @@ export function boxOf(root: HTMLElement, elementId: string): Box | null {
   };
 }
 
-/** The union of every drawn note's box for one position, relative to `root`. */
-export function unionBox(root: HTMLElement, notes: readonly DrawnNote[] | undefined): Box | null {
-  if (!notes || notes.length === 0) return null;
+const SVG = "http://www.w3.org/2000/svg";
+/** How long a wrong-note mark stays; keep in step with `hw-wrong-fade`. */
+const WRONG_NOTE_MS = 1000;
+const ACCIDENTALS = { sharp: "♯", flat: "♭", natural: "♮" } as const;
 
-  let box: Box | null = null;
-
-  for (const note of notes) {
-    const relative = boxOf(root, note.elementId);
-    if (!relative) continue;
-
-    box = box ? union(box, relative) : relative;
-  }
-
-  return box;
+interface Surface {
+  readonly under: SVGGElement;
+  readonly over: SVGGElement;
+  readonly notehead: string | null;
+  readonly geometry: PageGeometry;
 }
 
-function union(a: Box, b: Box): Box {
-  const left = Math.min(a.left, b.left);
-  const top = Math.min(a.top, b.top);
-  const right = Math.max(a.left + a.width, b.left + b.width);
-  const bottom = Math.max(a.top + a.height, b.top + b.height);
+/** A wrong note, drawn as it would be written: notehead, ledger lines, accidental, name. */
+function WrongNote({ mark, notehead }: { readonly mark: WrongNoteMark; readonly notehead: string | null }) {
+  const left = mark.x - mark.width / 2;
+  // SMuFL glyphs are 1000 units to four staff spaces.
+  const glyphScale = (mark.spacing * 4) / 1000;
 
-  return { left, top, width: right - left, height: bottom - top };
-}
-
-/**
- * Where a wrong note's dot belongs: the cursor's own horizontal position
- * (the beat it was played at), and a vertical position guessed from real
- * measured notes nearby (`staffGeometry.ts`) — never from anything Verovio
- * drew for this pitch, because nothing was.
- */
-export function wrongNoteBox(
-  root: HTMLElement,
-  dot: Dot,
-  anchorNotes: readonly DrawnNote[] | undefined,
-  pageOf: ReadonlyMap<number, number>,
-  marks: readonly Mark[],
-): Box | null {
-  const anchorBox = unionBox(root, anchorNotes);
-  const anchor = anchorNotes?.[0];
-  if (!anchorBox || !anchor) return null;
-
-  const page = pageOf.get(dot.position);
-
-  const calibration = marks
-    .filter((mark) => mark.page === page)
-    .flatMap((mark) => mark.notes)
-    .flatMap((note) => {
-      const box = boxOf(root, note.elementId);
-      return box ? [{ spelling: spellingOf(note), y: box.top }] : [];
-    });
-
-  const ghost = nearestSpelling(dot.pitch, spellingOf(anchor));
-  const y = verticalPositionFor(ghost, calibration);
-
-  // Nothing to calibrate against (a one-note piece, alone on its line) —
-  // an honest fallback next to the cursor rather than nowhere at all.
-  const top = y ?? anchorBox.top;
-
-  return { left: anchorBox.left, top, width: anchorBox.width, height: anchorBox.height };
-}
-
-function spellingOf(note: DrawnNote): Spelling {
-  return { step: note.step, octave: note.octave };
+  return (
+    <g className="hw-wrong">
+      {mark.ledgers.map((y) => (
+        <line
+          key={y}
+          className="hw-wrong-ledger"
+          x1={mark.x - mark.ledgerWidth / 2}
+          x2={mark.x + mark.ledgerWidth / 2}
+          y1={y}
+          y2={y}
+          strokeWidth={mark.spacing * 0.12}
+        />
+      ))}
+      {notehead ? (
+        <use href={`#${notehead}`} transform={`translate(${left}, ${mark.y}) scale(${glyphScale})`} />
+      ) : (
+        <ellipse cx={mark.x} cy={mark.y} rx={mark.width / 2} ry={mark.spacing / 2} />
+      )}
+      {mark.accidental && (
+        <text
+          x={left - mark.spacing * 0.25}
+          y={mark.y}
+          fontSize={mark.spacing * 2.2}
+          textAnchor="end"
+          dominantBaseline="central"
+        >
+          {ACCIDENTALS[mark.accidental]}
+        </text>
+      )}
+      <text
+        className="hw-wrong-label"
+        x={mark.x + mark.width / 2 + mark.spacing * 0.4}
+        y={mark.y - mark.spacing * 0.6}
+        fontSize={mark.spacing * 1.3}
+      >
+        {mark.label}
+      </text>
+    </g>
+  );
 }
 
 /**

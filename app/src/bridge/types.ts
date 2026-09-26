@@ -29,23 +29,19 @@ export interface PieceSummary {
 /** The written letter name of a note — `"C"` through `"B"`. */
 export type Step = "C" | "D" | "E" | "F" | "G" | "A" | "B";
 
-/**
- * A written pitch, for placing things on the staff.
- *
- * Not the domain's spelling — no `alter` — because this exists for exactly
- * one purpose: computing a vertical position. An accidental draws a glyph
- * beside a note, it never moves the note up or down.
- */
+/** A letter and octave, without the accidental. */
 export interface StaffPosition {
   readonly step: Step;
   /** Scientific pitch notation, where middle C is octave 4. */
   readonly octave: number;
 }
 
-/** One notehead Verovio drew, and the spelling it was drawn from. */
+/** One notehead Verovio drew, and the note it sounds (under an 8va line, not where it is drawn). */
 export interface DrawnNote extends StaffPosition {
   /** The identifier Verovio gave this notehead. */
   readonly elementId: string;
+  /** The MIDI number it sounds as. */
+  readonly pitch: number;
 }
 
 /**

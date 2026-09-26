@@ -1,938 +1,1172 @@
 {
 "a1frtass": {
 "octave": 4,
+"pitch": 66,
 "step": "F"
 },
 "a1jj7l9j": {
 "octave": 5,
+"pitch": 76,
 "step": "E"
 },
 "a1kany1y": {
 "octave": 3,
+"pitch": 55,
 "step": "G"
 },
 "a1n0fw13": {
 "octave": 4,
+"pitch": 64,
 "step": "E"
 },
 "a1s98so9": {
 "octave": 4,
+"pitch": 64,
 "step": "E"
 },
 "a2vl8de": {
 "octave": 4,
+"pitch": 71,
 "step": "B"
 },
 "a3ie8ud": {
 "octave": 5,
+"pitch": 72,
 "step": "C"
 },
 "a85g2or": {
 "octave": 4,
+"pitch": 67,
 "step": "G"
 },
 "aavnt97": {
 "octave": 5,
+"pitch": 79,
 "step": "G"
 },
 "acjw24t": {
 "octave": 4,
+"pitch": 60,
 "step": "C"
 },
 "ad6it14": {
 "octave": 3,
+"pitch": 57,
 "step": "A"
 },
 "anr4k48": {
 "octave": 4,
+"pitch": 62,
 "step": "D"
 },
 "b15m0q24": {
 "octave": 4,
+"pitch": 62,
 "step": "D"
 },
 "b179xb8m": {
 "octave": 4,
+"pitch": 62,
 "step": "D"
 },
 "bb8g0u0": {
 "octave": 5,
+"pitch": 77,
 "step": "F"
 },
 "bcl6eok": {
 "octave": 5,
+"pitch": 81,
 "step": "A"
 },
 "bfnxpbz": {
 "octave": 4,
+"pitch": 67,
 "step": "G"
 },
 "bouscjb": {
 "octave": 4,
+"pitch": 67,
 "step": "G"
 },
 "bznfzok": {
 "octave": 5,
+"pitch": 72,
 "step": "C"
 },
 "c1buyc72": {
 "octave": 4,
+"pitch": 67,
 "step": "G"
 },
 "c1kyp1ws": {
 "octave": 5,
+"pitch": 76,
 "step": "E"
 },
 "c3vauea": {
 "octave": 3,
+"pitch": 57,
 "step": "A"
 },
 "cc8wdp9": {
 "octave": 5,
+"pitch": 76,
 "step": "E"
 },
 "ccy59xo": {
 "octave": 4,
+"pitch": 66,
 "step": "F"
 },
 "cfjak8c": {
 "octave": 4,
+"pitch": 69,
 "step": "A"
 },
 "cjxbu3k": {
 "octave": 5,
+"pitch": 74,
 "step": "D"
 },
 "cqbos32": {
 "octave": 5,
+"pitch": 72,
 "step": "C"
 },
 "crqel9v": {
 "octave": 5,
+"pitch": 72,
 "step": "C"
 },
 "csdt8x1": {
 "octave": 4,
+"pitch": 62,
 "step": "D"
 },
 "cul4ydu": {
 "octave": 4,
+"pitch": 60,
 "step": "C"
 },
 "d16zdwlv": {
 "octave": 5,
+"pitch": 74,
 "step": "D"
 },
 "d1dlxll1": {
 "octave": 4,
+"pitch": 71,
 "step": "B"
 },
 "d1eyoooy": {
 "octave": 4,
+"pitch": 67,
 "step": "G"
 },
 "d1h9nhab": {
 "octave": 5,
+"pitch": 79,
 "step": "G"
 },
 "d1mc3yi9": {
 "octave": 4,
+"pitch": 60,
 "step": "C"
 },
 "d1ob77lz": {
 "octave": 4,
+"pitch": 62,
 "step": "D"
 },
 "d94u6tm": {
 "octave": 4,
+"pitch": 64,
 "step": "E"
 },
 "di9o7k5": {
 "octave": 3,
+"pitch": 58,
 "step": "B"
 },
 "dvn23fz": {
 "octave": 4,
+"pitch": 62,
 "step": "D"
 },
 "e11izfdo": {
 "octave": 5,
+"pitch": 77,
 "step": "F"
 },
 "e17s6hmz": {
 "octave": 4,
+"pitch": 64,
 "step": "E"
 },
 "e1ou1n7x": {
 "octave": 4,
+"pitch": 69,
 "step": "A"
 },
 "e1sjd0p7": {
 "octave": 3,
+"pitch": 59,
 "step": "B"
 },
 "e1xpfl8b": {
 "octave": 4,
+"pitch": 60,
 "step": "C"
 },
 "e8boech": {
 "octave": 4,
+"pitch": 60,
 "step": "C"
 },
 "ea7j3uy": {
 "octave": 4,
+"pitch": 62,
 "step": "D"
 },
 "efdh2og": {
 "octave": 4,
+"pitch": 69,
 "step": "A"
 },
 "eiy8kk4": {
 "octave": 4,
+"pitch": 67,
 "step": "G"
 },
 "el6gvkc": {
 "octave": 3,
+"pitch": 57,
 "step": "A"
 },
 "ewtw03u": {
 "octave": 5,
+"pitch": 72,
 "step": "C"
 },
 "f12ecyql": {
 "octave": 5,
+"pitch": 76,
 "step": "E"
 },
 "f1pu9rwv": {
 "octave": 4,
+"pitch": 67,
 "step": "G"
 },
 "f1vel1qc": {
 "octave": 4,
+"pitch": 62,
 "step": "D"
 },
 "f1xggd9g": {
 "octave": 4,
+"pitch": 67,
 "step": "G"
 },
 "f72br06": {
 "octave": 4,
+"pitch": 62,
 "step": "D"
 },
 "fi81gdq": {
 "octave": 3,
+"pitch": 59,
 "step": "B"
 },
 "frvbxh6": {
 "octave": 4,
+"pitch": 67,
 "step": "G"
 },
 "fw9akby": {
 "octave": 3,
+"pitch": 55,
 "step": "G"
 },
 "g17khdw9": {
 "octave": 5,
+"pitch": 74,
 "step": "D"
 },
 "g1fmtxfr": {
 "octave": 5,
+"pitch": 72,
 "step": "C"
 },
 "g1grnb6y": {
 "octave": 4,
+"pitch": 67,
 "step": "G"
 },
 "g1gv1amb": {
 "octave": 5,
+"pitch": 72,
 "step": "C"
 },
 "g1mvncgo": {
 "octave": 4,
+"pitch": 66,
 "step": "F"
 },
 "g1wpyvd": {
 "octave": 5,
+"pitch": 74,
 "step": "D"
 },
 "g6az5bx": {
 "octave": 3,
+"pitch": 58,
 "step": "B"
 },
 "gg37udu": {
 "octave": 5,
+"pitch": 74,
 "step": "D"
 },
 "gje7t91": {
 "octave": 3,
+"pitch": 55,
 "step": "G"
 },
 "goma0gm": {
 "octave": 4,
+"pitch": 60,
 "step": "C"
 },
 "gxzwqqc": {
 "octave": 4,
+"pitch": 62,
 "step": "D"
 },
 "h18et2sh": {
 "octave": 4,
+"pitch": 64,
 "step": "E"
 },
 "h1a2rmes": {
 "octave": 4,
+"pitch": 60,
 "step": "C"
 },
 "h1al30pf": {
 "octave": 4,
+"pitch": 66,
 "step": "F"
 },
 "h1s3hncn": {
 "octave": 5,
+"pitch": 74,
 "step": "D"
 },
 "h1vkwkc8": {
 "octave": 5,
+"pitch": 73,
 "step": "C"
 },
 "h1wzlugz": {
 "octave": 4,
+"pitch": 64,
 "step": "E"
 },
 "h1ypnu6v": {
 "octave": 4,
+"pitch": 62,
 "step": "D"
 },
 "h2lpm6k": {
 "octave": 4,
+"pitch": 62,
 "step": "D"
 },
 "i1i53k8": {
 "octave": 4,
+"pitch": 60,
 "step": "C"
 },
 "i1jr5o5t": {
 "octave": 4,
+"pitch": 67,
 "step": "G"
 },
 "i1yz9fdu": {
 "octave": 5,
+"pitch": 76,
 "step": "E"
 },
 "ipk7z6m": {
 "octave": 5,
+"pitch": 77,
 "step": "F"
 },
 "izlez9": {
 "octave": 4,
+"pitch": 69,
 "step": "A"
 },
 "izv1mc9": {
 "octave": 4,
+"pitch": 67,
 "step": "G"
 },
 "j14qhuvu": {
 "octave": 5,
+"pitch": 72,
 "step": "C"
 },
 "j16qode7": {
 "octave": 4,
+"pitch": 67,
 "step": "G"
 },
 "j18suc05": {
 "octave": 3,
+"pitch": 58,
 "step": "B"
 },
 "j1956xao": {
 "octave": 5,
+"pitch": 79,
 "step": "G"
 },
 "j1icueal": {
 "octave": 4,
+"pitch": 64,
 "step": "E"
 },
 "j1jdruzw": {
 "octave": 5,
+"pitch": 74,
 "step": "D"
 },
 "j1sntez7": {
 "octave": 5,
+"pitch": 72,
 "step": "C"
 },
 "j1tt1sod": {
 "octave": 3,
+"pitch": 59,
 "step": "B"
 },
 "j1vmyhcz": {
 "octave": 4,
+"pitch": 67,
 "step": "G"
 },
 "j1wjncss": {
 "octave": 4,
+"pitch": 64,
 "step": "E"
 },
 "jcesrko": {
 "octave": 5,
+"pitch": 72,
 "step": "C"
 },
 "jkg2d2a": {
 "octave": 4,
+"pitch": 69,
 "step": "A"
 },
 "k16e8mly": {
 "octave": 5,
+"pitch": 72,
 "step": "C"
 },
 "k18bi7ed": {
 "octave": 4,
+"pitch": 60,
 "step": "C"
 },
 "k19a056m": {
 "octave": 4,
+"pitch": 62,
 "step": "D"
 },
 "k19chaoz": {
 "octave": 4,
+"pitch": 67,
 "step": "G"
 },
 "k1c77xk2": {
 "octave": 4,
+"pitch": 62,
 "step": "D"
 },
 "k1usr1ts": {
 "octave": 4,
+"pitch": 67,
 "step": "G"
 },
 "kc0c02x": {
 "octave": 5,
+"pitch": 74,
 "step": "D"
 },
 "kccwrwf": {
 "octave": 5,
+"pitch": 74,
 "step": "D"
 },
 "l1b9tw60": {
 "octave": 5,
+"pitch": 76,
 "step": "E"
 },
 "l1lqnom3": {
 "octave": 5,
+"pitch": 77,
 "step": "F"
 },
 "l1n5s8am": {
 "octave": 4,
+"pitch": 66,
 "step": "F"
 },
 "l1pryqzq": {
 "octave": 5,
+"pitch": 73,
 "step": "C"
 },
 "lcz237t": {
 "octave": 5,
+"pitch": 76,
 "step": "E"
 },
 "ld6qbcb": {
 "octave": 5,
+"pitch": 74,
 "step": "D"
 },
 "lh296ix": {
 "octave": 3,
+"pitch": 59,
 "step": "B"
 },
 "lwj58e8": {
 "octave": 4,
+"pitch": 64,
 "step": "E"
 },
 "m149133l": {
 "octave": 4,
+"pitch": 62,
 "step": "D"
 },
 "m14cka5b": {
 "octave": 3,
+"pitch": 58,
 "step": "B"
 },
 "m17jlnp0": {
 "octave": 4,
+"pitch": 69,
 "step": "A"
 },
 "m17pgesv": {
 "octave": 5,
+"pitch": 79,
 "step": "G"
 },
 "mljomxz": {
 "octave": 4,
+"pitch": 64,
 "step": "E"
 },
 "mlwp7zq": {
 "octave": 4,
+"pitch": 62,
 "step": "D"
 },
 "mthzzc0": {
 "octave": 4,
+"pitch": 60,
 "step": "C"
 },
 "mwxt00x": {
 "octave": 4,
+"pitch": 67,
 "step": "G"
 },
 "n10ahdpa": {
 "octave": 4,
+"pitch": 66,
 "step": "F"
 },
 "n114aunr": {
 "octave": 4,
+"pitch": 64,
 "step": "E"
 },
 "n11m0kgq": {
 "octave": 5,
+"pitch": 72,
 "step": "C"
 },
 "n1692ago": {
 "octave": 4,
+"pitch": 69,
 "step": "A"
 },
 "n17b471z": {
 "octave": 3,
+"pitch": 59,
 "step": "B"
 },
 "n1rpc8a2": {
 "octave": 4,
+"pitch": 60,
 "step": "C"
 },
 "n1tqn102": {
 "octave": 5,
+"pitch": 76,
 "step": "E"
 },
 "n1xjm7ca": {
 "octave": 4,
+"pitch": 64,
 "step": "E"
 },
 "ndvl5ld": {
 "octave": 5,
+"pitch": 72,
 "step": "C"
 },
 "nnjk6n6": {
 "octave": 4,
+"pitch": 67,
 "step": "G"
 },
 "o186unp8": {
 "octave": 4,
+"pitch": 67,
 "step": "G"
 },
 "o1awc8ol": {
 "octave": 4,
+"pitch": 62,
 "step": "D"
 },
 "o1nwbnw5": {
 "octave": 5,
+"pitch": 76,
 "step": "E"
 },
 "o1ut7bzm": {
 "octave": 4,
+"pitch": 67,
 "step": "G"
 },
 "o1x2yam7": {
 "octave": 4,
+"pitch": 62,
 "step": "D"
 },
 "oj1wbz8": {
 "octave": 3,
+"pitch": 59,
 "step": "B"
 },
 "osg2r92": {
 "octave": 4,
+"pitch": 60,
 "step": "C"
 },
 "ota496l": {
 "octave": 4,
+"pitch": 60,
 "step": "C"
 },
 "p13wmgga": {
 "octave": 5,
+"pitch": 81,
 "step": "A"
 },
 "p19dmk2d": {
 "octave": 3,
+"pitch": 50,
 "step": "D"
 },
 "p1fhv3b9": {
 "octave": 3,
+"pitch": 59,
 "step": "B"
 },
 "p1gsuziy": {
 "octave": 3,
+"pitch": 59,
 "step": "B"
 },
 "p1k68kr4": {
 "octave": 4,
+"pitch": 69,
 "step": "A"
 },
 "p1me5okx": {
 "octave": 4,
+"pitch": 64,
 "step": "E"
 },
 "p1vt5nji": {
 "octave": 5,
+"pitch": 74,
 "step": "D"
 },
 "pijp300": {
 "octave": 5,
+"pitch": 72,
 "step": "C"
 },
 "pltt4fm": {
 "octave": 4,
+"pitch": 67,
 "step": "G"
 },
 "pmwmthe": {
 "octave": 4,
+"pitch": 69,
 "step": "A"
 },
 "pzm5g91": {
 "octave": 5,
+"pitch": 74,
 "step": "D"
 },
 "q14fmeoc": {
 "octave": 5,
+"pitch": 74,
 "step": "D"
 },
 "q17y899w": {
 "octave": 4,
+"pitch": 67,
 "step": "G"
 },
 "q1960all": {
 "octave": 3,
+"pitch": 50,
 "step": "D"
 },
 "q1iuwyps": {
 "octave": 5,
+"pitch": 72,
 "step": "C"
 },
 "q1vqdmya": {
 "octave": 4,
+"pitch": 62,
 "step": "D"
 },
 "q2mj26n": {
 "octave": 4,
+"pitch": 69,
 "step": "A"
 },
 "qg6e4o": {
 "octave": 4,
+"pitch": 62,
 "step": "D"
 },
 "qjepdrb": {
 "octave": 4,
+"pitch": 60,
 "step": "C"
 },
 "qqsgymx": {
 "octave": 4,
+"pitch": 64,
 "step": "E"
 },
 "r112oa7f": {
 "octave": 4,
+"pitch": 69,
 "step": "A"
 },
 "r15w1rxo": {
 "octave": 4,
+"pitch": 67,
 "step": "G"
 },
 "r1mn9a82": {
 "octave": 5,
+"pitch": 76,
 "step": "E"
 },
 "r1o3ghkp": {
 "octave": 4,
+"pitch": 64,
 "step": "E"
 },
 "r1y47wy7": {
 "octave": 4,
+"pitch": 60,
 "step": "C"
 },
 "r1ymreae": {
 "octave": 4,
+"pitch": 64,
 "step": "E"
 },
 "r3ruo0a": {
 "octave": 5,
+"pitch": 77,
 "step": "F"
 },
 "rjcvnmm": {
 "octave": 4,
+"pitch": 71,
 "step": "B"
 },
 "rzqft21": {
 "octave": 5,
+"pitch": 74,
 "step": "D"
 },
 "s13mhw1v": {
 "octave": 4,
+"pitch": 66,
 "step": "F"
 },
 "s192kyub": {
 "octave": 5,
+"pitch": 74,
 "step": "D"
 },
 "s1f31sgl": {
 "octave": 5,
+"pitch": 77,
 "step": "F"
 },
 "s1q4sot3": {
 "octave": 4,
+"pitch": 67,
 "step": "G"
 },
 "s1tkjxkp": {
 "octave": 5,
+"pitch": 81,
 "step": "A"
 },
 "s1yv9rff": {
 "octave": 4,
+"pitch": 62,
 "step": "D"
 },
 "s2cpl9z": {
 "octave": 4,
+"pitch": 67,
 "step": "G"
 },
 "sgs7ve": {
 "octave": 5,
+"pitch": 73,
 "step": "C"
 },
 "sp9r9e1": {
 "octave": 4,
+"pitch": 62,
 "step": "D"
 },
 "sruhx8h": {
 "octave": 5,
+"pitch": 72,
 "step": "C"
 },
 "t12l1c7g": {
 "octave": 5,
+"pitch": 74,
 "step": "D"
 },
 "t1ajik95": {
 "octave": 4,
+"pitch": 69,
 "step": "A"
 },
 "t1ey95ji": {
 "octave": 3,
+"pitch": 57,
 "step": "A"
 },
 "tf1nsqr": {
 "octave": 4,
+"pitch": 64,
 "step": "E"
 },
 "tn60b9w": {
 "octave": 5,
+"pitch": 72,
 "step": "C"
 },
 "treqnvm": {
 "octave": 4,
+"pitch": 67,
 "step": "G"
 },
 "u19knp2v": {
 "octave": 5,
+"pitch": 77,
 "step": "F"
 },
 "u1huv7ug": {
 "octave": 4,
+"pitch": 69,
 "step": "A"
 },
 "u1si2cx4": {
 "octave": 3,
+"pitch": 57,
 "step": "A"
 },
 "u4oqxce": {
 "octave": 4,
+"pitch": 64,
 "step": "E"
 },
 "u62e529": {
 "octave": 4,
+"pitch": 71,
 "step": "B"
 },
 "u6oscn4": {
 "octave": 5,
+"pitch": 74,
 "step": "D"
 },
 "ugy5jj": {
 "octave": 3,
+"pitch": 53,
 "step": "F"
 },
 "uhhiwd8": {
 "octave": 4,
+"pitch": 64,
 "step": "E"
 },
 "uk92rdx": {
 "octave": 4,
+"pitch": 62,
 "step": "D"
 },
 "uzft6fm": {
 "octave": 4,
+"pitch": 62,
 "step": "D"
 },
 "v1aak2lp": {
 "octave": 4,
+"pitch": 69,
 "step": "A"
 },
 "v1sgsbxi": {
 "octave": 4,
+"pitch": 67,
 "step": "G"
 },
 "v2tl8w5": {
 "octave": 5,
+"pitch": 74,
 "step": "D"
 },
 "v4ou8uj": {
 "octave": 4,
+"pitch": 66,
 "step": "F"
 },
 "v7t36q5": {
 "octave": 4,
+"pitch": 64,
 "step": "E"
 },
 "vstw9rp": {
 "octave": 3,
+"pitch": 57,
 "step": "A"
 },
 "vto7s5d": {
 "octave": 3,
+"pitch": 57,
 "step": "A"
 },
 "vw5oye6": {
 "octave": 3,
+"pitch": 53,
 "step": "F"
 },
 "vyt4ad": {
 "octave": 5,
+"pitch": 77,
 "step": "F"
 },
 "w164cdfr": {
 "octave": 4,
+"pitch": 67,
 "step": "G"
 },
 "w1905d68": {
 "octave": 3,
+"pitch": 59,
 "step": "B"
 },
 "w1m11mph": {
 "octave": 4,
+"pitch": 64,
 "step": "E"
 },
 "w1ouffmc": {
 "octave": 5,
+"pitch": 73,
 "step": "C"
 },
 "w5xpaue": {
 "octave": 5,
+"pitch": 76,
 "step": "E"
 },
 "wr53rn5": {
 "octave": 4,
+"pitch": 62,
 "step": "D"
 },
 "wzzljyr": {
 "octave": 4,
+"pitch": 64,
 "step": "E"
 },
 "x1053kmm": {
 "octave": 5,
+"pitch": 72,
 "step": "C"
 },
 "x13rs43l": {
 "octave": 4,
+"pitch": 67,
 "step": "G"
 },
 "x1cuz1d6": {
 "octave": 3,
+"pitch": 57,
 "step": "A"
 },
 "x1cv5vuf": {
 "octave": 4,
+"pitch": 67,
 "step": "G"
 },
 "x4qhv2q": {
 "octave": 4,
+"pitch": 62,
 "step": "D"
 },
 "xl2xv5c": {
 "octave": 4,
+"pitch": 64,
 "step": "E"
 },
 "xlw6597": {
 "octave": 4,
+"pitch": 60,
 "step": "C"
 },
 "xz5i2aa": {
 "octave": 3,
+"pitch": 59,
 "step": "B"
 },
 "y115m6re": {
 "octave": 4,
+"pitch": 60,
 "step": "C"
 },
 "y12mu2tn": {
 "octave": 4,
+"pitch": 62,
 "step": "D"
 },
 "y1a5xzjj": {
 "octave": 4,
+"pitch": 60,
 "step": "C"
 },
 "y1o7o13m": {
 "octave": 5,
+"pitch": 74,
 "step": "D"
 },
 "y1ytblm": {
 "octave": 4,
+"pitch": 67,
 "step": "G"
 },
 "y23h8om": {
 "octave": 4,
+"pitch": 64,
 "step": "E"
 },
 "y3605cs": {
 "octave": 3,
+"pitch": 57,
 "step": "A"
 },
 "yj3q1z9": {
 "octave": 5,
+"pitch": 81,
 "step": "A"
 },
 "yl0j1wk": {
 "octave": 5,
+"pitch": 72,
 "step": "C"
 },
 "yvzjjlx": {
 "octave": 4,
+"pitch": 69,
 "step": "A"
 },
 "z18z7271": {
 "octave": 5,
+"pitch": 76,
 "step": "E"
 },
 "z1x7m9c2": {
 "octave": 5,
+"pitch": 72,
 "step": "C"
 },
 "z4bj489": {
 "octave": 5,
+"pitch": 74,
 "step": "D"
 },
 "zfx25hn": {
 "octave": 4,
+"pitch": 67,
 "step": "G"
 },
 "zg3pbut": {
 "octave": 3,
+"pitch": 55,
 "step": "G"
 },
 "zh0ehz8": {
 "octave": 3,
+"pitch": 57,
 "step": "A"
 },
 "zxa0yl0": {
 "octave": 4,
+"pitch": 62,
 "step": "D"
 },
 "zymttu": {
 "octave": 4,
+"pitch": 69,
 "step": "A"
 }
 }
