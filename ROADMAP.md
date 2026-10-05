@@ -74,3 +74,5 @@ struggle with and helps you fix them.
   the background until another command ends it (issue 4: session handling).
 - A zip damaged *inside* an entry (not cut short) could still reach Verovio
   and crash it; only the container's structure is checked before loading.
+- MIDI import (deferred, after v1): the converter is proven to work but needs
+  a licence decision first (Apache-2.0 vs GPL); see `MIDI-IMPORT.md`.
