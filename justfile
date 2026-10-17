@@ -20,6 +20,20 @@ verovio_data := env_var_or_default("HOGWASH_VEROVIO_DATA", justfile_directory() 
 run: _require-verovio
     cd app && HOGWASH_VEROVIO_LIB="{{verovio_lib}}" HOGWASH_VEROVIO_DATA="{{verovio_data}}" npx tauri dev
 
+# builds the Linux AppImage an end user would run, with Verovio bundled beside it (M4.1)
+[group('run')]
+release: _require-verovio
+    #!/usr/bin/env bash
+    set -euo pipefail
+    stage="{{justfile_directory()}}/app/src-tauri/bundle"
+    rm -rf "$stage" && mkdir -p "$stage"
+    cp "{{verovio_lib}}" "$stage/libverovio.so"
+    cp -r "{{verovio_data}}" "$stage/verovio-data"
+    cp "{{verovio_data}}/../COPYING" "{{verovio_data}}/../COPYING.LESSER" "$stage/"
+    # NO_STRIP: the AppImage tool's bundled strip chokes on the newer ELF files of a rolling distro.
+    cd app && NO_STRIP=true npx tauri build --bundles appimage
+    ls -lh "{{justfile_directory()}}"/target/release/bundle/appimage/*.AppImage
+
 # alias for `run`
 [group('run')]
 dev: run

@@ -10,7 +10,7 @@
 //! engine is a value describing what was looked for and where — never a
 //! panic, and never an empty window.
 
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 use hogwash_engraving_verovio::VerovioEngraver;
 use serde::Serialize;
@@ -40,10 +40,14 @@ impl Startup {
     ///
     /// # Where it looks, and why in that order
     ///
-    /// 1. **Beside the executable.** This is how a packaged application finds
-    ///    the library it shipped with, and it must win, so that an installed
-    ///    copy is not silently affected by a developer's environment.
-    /// 2. **`HOGWASH_VEROVIO_LIB` / `HOGWASH_VEROVIO_DATA`.** For development,
+    /// 1. **The package's resource folder** (`resources`, from Tauri). A
+    ///    packaged application keeps its files there, not beside the binary
+    ///    (an `AppImage` has `usr/bin` and `usr/lib/<name>`), and it must win so
+    ///    that an installed copy is not silently affected by a developer's
+    ///    environment.
+    /// 2. **Beside the executable.** A plain build with the files copied next
+    ///    to it.
+    /// 3. **`HOGWASH_VEROVIO_LIB` / `HOGWASH_VEROVIO_DATA`.** For development,
     ///    and for a performer who has deliberately substituted their own build
     ///    — which `ADR-0007` exists to permit.
     ///
@@ -52,17 +56,17 @@ impl Startup {
     /// [`Unavailable`], naming every path that was tried. "Could not find the
     /// engraving library" is not actionable; "could not find it in these two
     /// places" is.
-    pub fn engine() -> Result<VerovioEngraver, Unavailable> {
+    pub fn engine(resources: Option<&Path>) -> Result<VerovioEngraver, Unavailable> {
         let mut looked_in = Vec::new();
 
-        for (library, resources) in Self::candidates() {
+        for (library, data) in Self::candidates(resources) {
             looked_in.push(library.display().to_string());
 
             if !library.exists() {
                 continue;
             }
 
-            return VerovioEngraver::open(&library, &resources).map_err(|failure| Unavailable {
+            return VerovioEngraver::open(&library, &data).map_err(|failure| Unavailable {
                 summary: "The music engraving engine could not be started.".to_owned(),
                 detail: format!("{failure:?}"),
                 looked_in,
@@ -80,21 +84,35 @@ impl Startup {
     }
 
     /// The places an engine might be, in the order they are tried.
-    fn candidates() -> Vec<(PathBuf, PathBuf)> {
-        let mut candidates = Vec::new();
-
-        if let Ok(executable) = std::env::current_exe()
-            && let Some(beside) = executable.parent()
-        {
-            candidates.push((beside.join(Self::LIBRARY), beside.join("verovio-data")));
-        }
-
-        if let (Ok(library), Ok(resources)) = (
+    fn candidates(resources: Option<&Path>) -> Vec<(PathBuf, PathBuf)> {
+        let executable = std::env::current_exe().ok();
+        let variables = match (
             std::env::var("HOGWASH_VEROVIO_LIB"),
             std::env::var("HOGWASH_VEROVIO_DATA"),
         ) {
-            candidates.push((PathBuf::from(library), PathBuf::from(resources)));
+            (Ok(library), Ok(data)) => Some((PathBuf::from(library), PathBuf::from(data))),
+            _ => None,
+        };
+
+        Self::candidates_from(resources, executable.as_deref(), variables)
+    }
+
+    /// [`Self::candidates`] with everything it reads handed in, so the order
+    /// can be tested without touching the environment.
+    fn candidates_from(
+        resources: Option<&Path>,
+        executable: Option<&Path>,
+        variables: Option<(PathBuf, PathBuf)>,
+    ) -> Vec<(PathBuf, PathBuf)> {
+        let mut candidates = Vec::new();
+
+        for folder in resources
+            .into_iter()
+            .chain(executable.and_then(Path::parent))
+        {
+            candidates.push((folder.join(Self::LIBRARY), folder.join("verovio-data")));
         }
+        candidates.extend(variables);
 
         candidates
     }
@@ -117,5 +135,49 @@ impl Startup {
         resolver
             .app_data_dir()
             .unwrap_or_else(|_| PathBuf::from("."))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use std::path::{Path, PathBuf};
+
+    use super::Startup;
+
+    #[test]
+    fn a_packaged_engine_is_found_before_the_environment_and_beside_the_binary() {
+        let found = Startup::candidates_from(
+            Some(Path::new("/app/usr/lib/Hogwash")),
+            Some(Path::new("/app/usr/bin/hogwash-app")),
+            Some((
+                PathBuf::from("/dev/libverovio.so"),
+                PathBuf::from("/dev/data"),
+            )),
+        );
+
+        let libraries: Vec<_> = found.iter().map(|(library, _)| library.clone()).collect();
+        assert_eq!(
+            libraries,
+            [
+                Path::new("/app/usr/lib/Hogwash").join(Startup::LIBRARY),
+                Path::new("/app/usr/bin").join(Startup::LIBRARY),
+                PathBuf::from("/dev/libverovio.so"),
+            ]
+        );
+        assert_eq!(found[0].1, Path::new("/app/usr/lib/Hogwash/verovio-data"));
+        assert_eq!(found[1].1, Path::new("/app/usr/bin/verovio-data"));
+    }
+
+    #[test]
+    fn a_development_run_has_only_the_variables() {
+        let found = Startup::candidates_from(
+            None,
+            None,
+            Some((
+                PathBuf::from("/dev/libverovio.so"),
+                PathBuf::from("/dev/data"),
+            )),
+        );
+        assert_eq!(found.len(), 1);
     }
 }

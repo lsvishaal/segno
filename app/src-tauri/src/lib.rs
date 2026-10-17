@@ -57,14 +57,17 @@ pub fn run() -> Result<(), tauri::Error> {
             // explained rather than fatal. So the failure becomes state the
             // interface can render as a screen, and the window opens either
             // way. A program that exited here would have nowhere to say why.
-            let started = engraving::Engraving::start().and_then(|engraving| {
-                let records = hogwash_records::Records::under(&Startup::data_directory(app.path()));
-                let practice = practice::Practice::start(records.clone(), move |event| {
-                    drop(handle.emit(PRACTICE_CHANNEL, event));
-                })?;
+            let started = engraving::Engraving::start_in(app.path().resource_dir().ok()).and_then(
+                |engraving| {
+                    let records =
+                        hogwash_records::Records::under(&Startup::data_directory(app.path()));
+                    let practice = practice::Practice::start(records.clone(), move |event| {
+                        drop(handle.emit(PRACTICE_CHANNEL, event));
+                    })?;
 
-                state::Hogwash::start(engraving, records, practice)
-            });
+                    state::Hogwash::start(engraving, records, practice)
+                },
+            );
 
             match started {
                 Ok(hogwash) => {

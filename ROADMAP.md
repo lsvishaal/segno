@@ -650,6 +650,10 @@ v0.1 is for you and a handful of pianists, not a public launch.
       resources and found relative to the executable. LGPL: keep Verovio as
       a separate shared library beside the app, list it in `THIRD_PARTY.md`,
       include its licence text. Add `just release`.
+      **Alpha slice done 18 Oct:** `just release` builds a 127 MB AppImage with
+      Verovio and its licences in `usr/lib/Hogwash`; it starts with no
+      environment variables. Still open: a build on an older base (the
+      library needs this machine's libstdc++), `.deb`, M4.2.
       **Time-box: 2 days.** If it isn't working by then, stop, write down
       exactly what failed, and decide between (a) static linking with LGPL
       relinking instructions, (b) WASM Verovio in the webview. Don't spiral.

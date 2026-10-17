@@ -59,6 +59,15 @@ impl Engraving {
     ///
     /// [`Unavailable`], describing what was looked for and where.
     pub fn start() -> Result<Self, Unavailable> {
+        Self::start_in(None)
+    }
+
+    /// [`Self::start`], also looking in the package's resource folder.
+    ///
+    /// # Errors
+    ///
+    /// As [`Self::start`].
+    pub fn start_in(resources: Option<std::path::PathBuf>) -> Result<Self, Unavailable> {
         let (requests, incoming) = channel::<Request>();
         let (started, ready) = sync_channel::<Result<(), Unavailable>>(0);
 
@@ -67,7 +76,7 @@ impl Engraving {
             .spawn(move || {
                 // Created *on this thread*, and never moved off it. This is
                 // the line the whole module exists to make true.
-                let mut engraver = match Startup::engine() {
+                let mut engraver = match Startup::engine(resources.as_deref()) {
                     Ok(engine) => {
                         drop(started.send(Ok(())));
                         engine

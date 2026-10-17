@@ -6,6 +6,10 @@
 # licence reasoning rests on. See THIRD_PARTY.md.
 /.verovio-build
 
+# What `just release` copies in so Tauri can bundle it: a copy of Verovio
+# (never committed, see above) staged for packaging.
+/app/src-tauri/bundle
+
 # `docs/` is an independent git repository (remote: hogwash-docs).
 # It is deliberately not tracked here — see the plan and 004 §15.
 /docs
