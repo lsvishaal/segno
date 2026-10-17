@@ -386,6 +386,11 @@ never out of the release dates.
       downloads if they were ever committed (the 23 Sep baseline mentioned them).
       *Done when:* `git log --all --name-only | grep -i '\.mxl'` shows no file
       whose licence isn't recorded in `PROVENANCE.md`.
+      **Deferred, 17 Oct:** the repo is private, so the five files stay (the
+      tests read them). **Blocker before the repo goes public or `just release`
+      is built:** do steps 1-3 above, and change `tauri.conf.json`
+      `resources` from `library/*` to the bundled pieces only, or the build
+      ships the five files.
 - [ ] **M0.3 · S · Swap the Prelude for the OpenWTC edition** (D4).
       Download the public-domain MuseScore/OpenWTC Book I Prelude 1,
       export MusicXML, replace `prelude-in-c.musicxml`, update the
@@ -1588,6 +1593,7 @@ _Date · decision · why · what it replaced._
 - 2026-10-06 · Product lane is pieces + weak bars, not drills · MidiSlayer owns drills
 - 2026-10-06 · "Listen" will use MIDI out to the user's piano · avoids software synth/audio bugs
 - 2026-10-06 · Goal widened from "readable" to "polished and frictionless" · v1.0 public launch
+- 2026-10-17 · Five `.mxl` test scores stay in the private repo; move them out, purge history and narrow `resources` before going public · tests read them, no exposure while private · M0.2 as written
 - _(D1–D12 answers go here)_
 
 ---
