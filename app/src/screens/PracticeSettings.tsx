@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import type { RefObject } from "react";
 
 import {
@@ -7,6 +7,7 @@ import {
   setThru,
 } from "../bridge";
 import type { InstrumentSummary, OutputPortSummary } from "../bridge";
+import { DeviceSelect } from "../components/DeviceSelect";
 import { MAX_SCALE, MIN_SCALE, SCALE_STEP } from "./zoom";
 
 /**
@@ -166,141 +167,6 @@ export function SettingsPanel({
   );
 }
 
-/** A small down chevron for a dropdown trigger. */
-function ChevronIcon() {
-  return (
-    <svg
-      width="12"
-      height="12"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2.5"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden="true"
-      className="shrink-0"
-    >
-      <path d="m6 9 6 6 6-6" />
-    </svg>
-  );
-}
-
-/** A checkmark beside a dropdown's selected option. */
-function CheckIcon() {
-  return (
-    <svg
-      width="14"
-      height="14"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2.5"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden="true"
-      className="shrink-0 text-accent"
-    >
-      <path d="M20 6 9 17l-5-5" />
-    </svg>
-  );
-}
-
-/**
- * A trigger showing the current choice, opening a real list of options —
- * not a native `<select>`. Closes on selecting an option or clicking
- * outside it.
- */
-function Dropdown({
-  label,
-  value,
-  placeholder,
-  options,
-  onChange,
-}: {
-  readonly label: string;
-  readonly value: string | null;
-  readonly placeholder: string;
-  readonly options: readonly string[];
-  readonly onChange: (value: string | null) => void;
-}) {
-  const [open, setOpen] = useState(false);
-  const rootRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    if (!open) return;
-
-    const onPointerDown = (event: MouseEvent) => {
-      if (!rootRef.current?.contains(event.target as Node)) setOpen(false);
-    };
-
-    document.addEventListener("mousedown", onPointerDown);
-    return () => document.removeEventListener("mousedown", onPointerDown);
-  }, [open]);
-
-  const choose = (next: string | null) => {
-    onChange(next);
-    setOpen(false);
-  };
-
-  return (
-    <div ref={rootRef} className="relative min-w-0 flex-1">
-      <button
-        type="button"
-        onClick={() => setOpen((current) => !current)}
-        aria-haspopup="listbox"
-        aria-expanded={open}
-        aria-label={label}
-        className="flex w-full cursor-pointer items-center justify-between gap-2 rounded-md border border-rule-strong bg-paper-raised px-3 py-1.5 text-left text-ink focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-accent"
-      >
-        <span className="truncate">{value ?? placeholder}</span>
-        <ChevronIcon />
-      </button>
-
-      {open && (
-        <ul
-          role="listbox"
-          aria-label={label}
-          className="panel absolute z-20 mt-1 max-h-48 w-full min-w-40 overflow-auto rounded-lg py-1"
-        >
-          <li>
-            <button
-              type="button"
-              role="option"
-              aria-selected={value === null}
-              onClick={() => choose(null)}
-              className={optionClassName(value === null)}
-            >
-              {placeholder}
-            </button>
-          </li>
-
-          {options.map((name) => (
-            <li key={name}>
-              <button
-                type="button"
-                role="option"
-                aria-selected={value === name}
-                onClick={() => choose(name)}
-                className={optionClassName(value === name)}
-              >
-                <span className="truncate">{name}</span>
-                {value === name && <CheckIcon />}
-              </button>
-            </li>
-          ))}
-        </ul>
-      )}
-    </div>
-  );
-}
-
-function optionClassName(selected: boolean): string {
-  return `flex w-full cursor-pointer items-center justify-between gap-2 px-3 py-1.5 text-left transition-colors ${
-    selected ? "text-accent" : "text-ink hover:bg-ink/5"
-  }`;
-}
-
 /**
  * Routes MIDI Thru: an input device's raw messages, forwarded straight to an
  * output device — real hardware or a software synth, in place of Hogwash
@@ -357,10 +223,10 @@ function SoundRouting() {
     <div className="flex flex-col gap-3">
       <div className="flex items-center gap-3">
         <span className="w-14 shrink-0 text-ink-muted">Input</span>
-        <Dropdown
+        <DeviceSelect
           label="MIDI input"
           value={input}
-          placeholder="None"
+          none="None"
           options={inputs.map((instrument) => instrument.name)}
           onChange={setInput}
         />
@@ -368,10 +234,10 @@ function SoundRouting() {
 
       <div className="flex items-center gap-3">
         <span className="w-14 shrink-0 text-ink-muted">Output</span>
-        <Dropdown
+        <DeviceSelect
           label="MIDI output"
           value={output}
-          placeholder="None"
+          none="None"
           options={outputs.map((port) => port.name)}
           onChange={setOutput}
         />

@@ -13,6 +13,7 @@ vi.mock("../bridge", () => ({
   setThru: vi.fn().mockResolvedValue(undefined),
 }));
 
+import { instruments, setThru } from "../bridge";
 import { SettingsPanel } from "./PracticeSettings";
 
 // `SoundRouting`'s device-fetch effects resolve after mount (mocked, but
@@ -66,8 +67,8 @@ describe("SettingsPanel", () => {
 
     expect(screen.getByRole("dialog", { name: "Settings" })).toBeInTheDocument();
     expect(screen.getByRole("slider")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "MIDI input" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "MIDI output" })).toBeInTheDocument();
+    expect(screen.getByRole("combobox", { name: "MIDI input" })).toBeInTheDocument();
+    expect(screen.getByRole("combobox", { name: "MIDI output" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Export MusicXML" })).toBeInTheDocument();
   });
 
@@ -127,37 +128,31 @@ describe("SettingsPanel", () => {
   });
 });
 
-describe("MIDI device dropdowns", () => {
-  it("open on click and show a listbox of options", async () => {
+describe("MIDI device selects", () => {
+  it("are the browser's own selects, with None chosen to begin with", async () => {
     await renderPanel();
 
-    fireEvent.click(screen.getByRole("button", { name: "MIDI input" }));
-
-    expect(screen.getByRole("listbox", { name: "MIDI input" })).toBeInTheDocument();
-    expect(screen.getByRole("option", { name: "None" })).toHaveAttribute(
-      "aria-selected",
-      "true",
-    );
+    expect(screen.getByRole("combobox", { name: "MIDI input" })).toHaveValue("");
+    expect(screen.getByRole("combobox", { name: "MIDI output" })).toHaveValue("");
+    expect(screen.getAllByRole("option", { name: "None", selected: true })).toHaveLength(2);
   });
 
-  it("closes after an option is selected", async () => {
+  it("route Thru when a device is chosen", async () => {
+    vi.mocked(instruments).mockResolvedValueOnce([{ name: "Digital Piano" }]);
     await renderPanel();
 
-    fireEvent.click(screen.getByRole("button", { name: "MIDI input" }));
-    fireEvent.click(screen.getByRole("option", { name: "None" }));
+    fireEvent.change(screen.getByRole("combobox", { name: "MIDI input" }), {
+      target: { value: "Digital Piano" },
+    });
 
-    expect(screen.queryByRole("listbox", { name: "MIDI input" })).not.toBeInTheDocument();
+    expect(setThru).toHaveBeenLastCalledWith("Digital Piano", null);
   });
 
-  it("closes on an outside click without closing the whole settings panel", async () => {
+  it("choosing one does not close the settings panel", async () => {
     const { onClose } = await renderPanel();
 
-    fireEvent.click(screen.getByRole("button", { name: "MIDI input" }));
-    expect(screen.getByRole("listbox", { name: "MIDI input" })).toBeInTheDocument();
+    fireEvent.mouseDown(screen.getByRole("combobox", { name: "MIDI output" }));
 
-    fireEvent.mouseDown(screen.getByText("Sound"));
-
-    expect(screen.queryByRole("listbox", { name: "MIDI input" })).not.toBeInTheDocument();
     expect(screen.getByRole("dialog", { name: "Settings" })).toBeInTheDocument();
     expect(onClose).not.toHaveBeenCalled();
   });

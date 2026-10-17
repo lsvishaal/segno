@@ -140,3 +140,18 @@ describe("restarting", () => {
     expect(bridge.startAttempt).toHaveBeenCalledTimes(1);
   });
 });
+
+describe("choosing the instrument", () => {
+  it("offers every connected keyboard in a select, and starts on the chosen one", async () => {
+    bridge.instruments.mockResolvedValue([{ name: "Digital Piano" }, { name: "Second Keyboard" }]);
+    await renderScreen();
+
+    const select = screen.getByRole("combobox", { name: "Instrument" });
+    expect(select).toHaveValue("Digital Piano");
+
+    fireEvent.change(select, { target: { value: "Second Keyboard" } });
+    await startPracticing();
+
+    expect(bridge.startAttempt).toHaveBeenCalledWith("minuet", "Second Keyboard");
+  });
+});

@@ -11,6 +11,7 @@ import {
   startAttempt,
 } from "../bridge";
 import type { AttemptSummary, InstrumentSummary, Mark, OpenedPiece, PracticeEvent } from "../bridge";
+import { DeviceSelect } from "../components/DeviceSelect";
 import { Score } from "../components/Score";
 import type { CursorState, Dot } from "../components/Score";
 import { BEFORE_STARTING, cursorFor, dotFor } from "./overlayEvents";
@@ -518,27 +519,13 @@ function InstrumentPicker({
     <div className="panel flex shrink-0 flex-wrap items-center gap-4 rounded-2xl px-7 py-5">
       <span className="text-sm text-ink-muted">Play on</span>
 
-      <div
-        role="radiogroup"
-        aria-label="Instrument"
-        className="flex flex-wrap items-center gap-1 rounded-full border border-rule bg-paper-raised/60 p-0.5"
-      >
-        {available.map((instrument) => (
-          <button
-            key={instrument.name}
-            type="button"
-            role="radio"
-            aria-checked={chosen === instrument.name}
-            onClick={() => setChosen(instrument.name)}
-            className={`cursor-pointer rounded-full px-2.5 py-1 text-xs transition-colors focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-accent ${
-              chosen === instrument.name
-                ? "bg-ink text-paper"
-                : "text-ink-muted hover:text-ink"
-            }`}
-          >
-            {instrument.name}
-          </button>
-        ))}
+      <div className="flex min-w-48 max-w-80 flex-1">
+        <DeviceSelect
+          label="Instrument"
+          value={chosen}
+          options={available.map((instrument) => instrument.name)}
+          onChange={setChosen}
+        />
       </div>
 
       <motion.button
