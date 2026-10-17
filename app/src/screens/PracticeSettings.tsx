@@ -8,12 +8,11 @@ import {
 } from "../bridge";
 import type { InstrumentSummary, OutputPortSummary } from "../bridge";
 import { MAX_SCALE, MIN_SCALE, SCALE_STEP } from "./zoom";
-import type { Surface } from "./Practice";
 
 /**
  * Everything about how the score is shown and heard, gathered behind one
  * gear trigger instead of five separate floating controls (`BFR-8`).
- * A pure props-in/callbacks-out panel — `scale`, `surface` and
+ * A pure props-in/callbacks-out panel — `scale` and
  * `showNoteNames` stay owned by `Practice.tsx`, since it also drives the
  * rescale effect and the Ctrl+scroll handler from `scale`.
  */
@@ -21,8 +20,6 @@ export function SettingsPanel({
   open,
   onClose,
   triggerRef,
-  surface,
-  onSurfaceChange,
   showNoteNames,
   onShowNoteNamesChange,
   showGeometry,
@@ -36,8 +33,6 @@ export function SettingsPanel({
   readonly open: boolean;
   readonly onClose: () => void;
   readonly triggerRef: RefObject<HTMLButtonElement | null>;
-  readonly surface: Surface;
-  readonly onSurfaceChange: (surface: Surface) => void;
   readonly showNoteNames: boolean;
   readonly onShowNoteNamesChange: (value: boolean) => void;
   readonly showGeometry: boolean;
@@ -93,28 +88,6 @@ export function SettingsPanel({
         </h3>
 
         <div className="mt-4 flex items-center justify-between">
-          <span className="text-ink-muted">Score surface</span>
-          <fieldset className="flex shrink-0 items-center gap-0.5 rounded-full border border-rule-strong p-0.5">
-            <legend className="sr-only">Score appearance</legend>
-            {(["paper", "dark"] as const).map((option) => (
-              <button
-                key={option}
-                type="button"
-                aria-pressed={surface === option}
-                onClick={() => onSurfaceChange(option)}
-                className={`cursor-pointer rounded-full px-2.5 py-1 text-xs capitalize transition-colors focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-accent ${
-                  surface === option
-                    ? "bg-ink text-paper"
-                    : "text-ink-muted hover:text-ink"
-                }`}
-              >
-                {option}
-              </button>
-            ))}
-          </fieldset>
-        </div>
-
-        <div className="mt-3 flex items-center justify-between">
           <span className="text-ink-muted">Note names</span>
           <button
             type="button"

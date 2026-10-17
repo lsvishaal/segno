@@ -21,9 +21,6 @@ import { REFLOW_THRESHOLD, clampScale, loadZoom, saveZoom, scoreWidth, stepScale
  * a real Verovio pass, so not on every wheel tick or resize frame. */
 const REFLOW_DEBOUNCE_MS = 250;
 
-/** Whether the score is drawn on paper or inverted. */
-export type Surface = "paper" | "dark";
-
 /** Where the practice loop is, for this piece. */
 type Phase =
   | { readonly kind: "choosing"; readonly refusal: string | null }
@@ -53,7 +50,6 @@ export function PracticeScreen({
   readonly piece: OpenedPiece;
   readonly onLeave: () => void;
 }) {
-  const [surface, setSurface] = useState<Surface>("paper");
   const [showNoteNames, setShowNoteNames] = useState(false);
   // A developer view: what the geometry layer reads from the page.
   const [showGeometry, setShowGeometry] = useState(false);
@@ -332,8 +328,6 @@ export function PracticeScreen({
             open={settingsOpen}
             onClose={() => setSettingsOpen(false)}
             triggerRef={gearRef}
-            surface={surface}
-            onSurfaceChange={setSurface}
             showNoteNames={showNoteNames}
             onShowNoteNamesChange={setShowNoteNames}
             showGeometry={showGeometry}
@@ -401,7 +395,6 @@ export function PracticeScreen({
       <div
         ref={scoreRef}
         className="hw-score relative min-h-0 flex-1 px-4 py-6 sm:px-8 sm:py-8 lg:px-12 lg:py-10"
-        data-surface={surface}
       >
         <Score
           hidden={!fitted}

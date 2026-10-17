@@ -50,21 +50,6 @@
 }
 
 /*
-  Paper is the default because it is what printed music looks like, and a
-  performer is reading. The dark variant only touches the overlay's own
-  colours and the sheet's — Verovio draws with `currentColor`, so `--hw-ink`
-  alone still recolours every stave and stem.
-*/
-.hw-score[data-surface="dark"] {
-  --hw-ink: #e8e4dc;
-  --hw-paper: #17161a;
-  --hw-rule: #2c2a30;
-  --hw-cursor: color-mix(in srgb, #6cd0f5 60%, transparent);
-  --hw-correct: #5fb98a;
-  --hw-wrong: #f87171;
-}
-
-/*
   The cursor: a thin line behind the ink, across the whole system, placed in
   the page's own units (`Score.tsx`) but always 3px wide on screen.
 */

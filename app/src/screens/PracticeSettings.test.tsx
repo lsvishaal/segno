@@ -22,7 +22,6 @@ import { SettingsPanel } from "./PracticeSettings";
 async function renderPanel(overrides: Partial<Parameters<typeof SettingsPanel>[0]> = {}) {
   const triggerRef = createRef<HTMLButtonElement>();
   const onClose = vi.fn();
-  const onSurfaceChange = vi.fn();
   const onShowNoteNamesChange = vi.fn();
   const onShowGeometryChange = vi.fn();
   const onScaleChange = vi.fn();
@@ -38,8 +37,6 @@ async function renderPanel(overrides: Partial<Parameters<typeof SettingsPanel>[0
           open={true}
           onClose={onClose}
           triggerRef={triggerRef}
-          surface="paper"
-          onSurfaceChange={onSurfaceChange}
           showNoteNames={false}
           onShowNoteNamesChange={onShowNoteNamesChange}
           showGeometry={false}
@@ -55,7 +52,7 @@ async function renderPanel(overrides: Partial<Parameters<typeof SettingsPanel>[0
     );
   });
 
-  return { onClose, onSurfaceChange, onShowNoteNamesChange, onShowGeometryChange, onScaleChange, onExport };
+  return { onClose, onShowNoteNamesChange, onShowGeometryChange, onScaleChange, onExport };
 }
 
 describe("SettingsPanel", () => {
@@ -72,8 +69,6 @@ describe("SettingsPanel", () => {
     expect(screen.getByRole("button", { name: "MIDI input" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "MIDI output" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Export MusicXML" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "paper" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "dark" })).toBeInTheDocument();
   });
 
   it("calls onExport when the export button is clicked", async () => {
@@ -82,14 +77,6 @@ describe("SettingsPanel", () => {
     fireEvent.click(screen.getByRole("button", { name: "Export MusicXML" }));
 
     expect(onExport).toHaveBeenCalledOnce();
-  });
-
-  it("calls onSurfaceChange when a surface option is chosen", async () => {
-    const { onSurfaceChange } = await renderPanel();
-
-    fireEvent.click(screen.getByRole("button", { name: "dark" }));
-
-    expect(onSurfaceChange).toHaveBeenCalledWith("dark");
   });
 
   it("calls onShowNoteNamesChange when the note names toggle is clicked", async () => {
