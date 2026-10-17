@@ -534,7 +534,7 @@ touching nothing but the score, the keyboard and at most two buttons.
   "never played."
 - **Edge:** pieces with one staff (Ode to Joy) hide the selector.
 
-### M1.8 · S · Restart without leaving
+### M1.8 · S · Restart without leaving — done 18 Oct (bar 1; the loop start comes with M1.6)
 
 - **What:** **R** restarts the attempt from the current loop start, or from
   bar 1 if no loop. Saves the current attempt first.

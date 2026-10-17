@@ -99,3 +99,44 @@ describe("leaving the practice screen", () => {
     expect(bridge.endAttempt).toHaveBeenCalledOnce();
   });
 });
+
+describe("restarting", () => {
+  it("starts again on the same instrument without ending the attempt", async () => {
+    await renderScreen();
+    await startPracticing();
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: "Restart" }));
+    });
+
+    expect(bridge.startAttempt).toHaveBeenCalledTimes(2);
+    expect(bridge.startAttempt).toHaveBeenLastCalledWith("minuet", "Digital Piano");
+    expect(bridge.endAttempt).not.toHaveBeenCalled();
+  });
+
+  it("does the same on the R key", async () => {
+    await renderScreen();
+    await startPracticing();
+
+    await act(async () => {
+      fireEvent.keyDown(window, { key: "r" });
+    });
+
+    expect(bridge.startAttempt).toHaveBeenCalledTimes(2);
+  });
+
+  it("ignores R with a modifier key held, and before an attempt has started", async () => {
+    await renderScreen();
+
+    await act(async () => {
+      fireEvent.keyDown(window, { key: "r" });
+    });
+    expect(bridge.startAttempt).not.toHaveBeenCalled();
+
+    await startPracticing();
+    await act(async () => {
+      fireEvent.keyDown(window, { key: "r", ctrlKey: true });
+    });
+    expect(bridge.startAttempt).toHaveBeenCalledTimes(1);
+  });
+});

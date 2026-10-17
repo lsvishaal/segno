@@ -270,6 +270,31 @@ export function PracticeScreen({
     [begin],
   );
 
+  // Starting again while an attempt runs ends it and keeps it (the backend
+  // does that), and begins afresh from the first bar.
+  const instrumentInUse = phase.kind === "practicing" ? phase.instrument : null;
+  const restart = useCallback(() => {
+    if (instrumentInUse) begin(instrumentInUse);
+  }, [instrumentInUse, begin]);
+
+  // R restarts, unless it is being typed into something.
+  useEffect(() => {
+    if (!instrumentInUse) return;
+
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key.toLowerCase() !== "r" || event.ctrlKey || event.metaKey || event.altKey) return;
+      const typing =
+        event.target instanceof Element &&
+        event.target.closest("input, select, textarea, [contenteditable]");
+      if (typing) return;
+      event.preventDefault();
+      restart();
+    };
+
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [instrumentInUse, restart]);
+
   const chooseAnother = useCallback(() => {
     setPhase({ kind: "choosing", refusal: null });
   }, []);
@@ -318,6 +343,17 @@ export function PracticeScreen({
             <p className="truncate text-xs text-ink-muted">{piece.composer}</p>
           )}
         </div>
+
+        {phase.kind === "practicing" && (
+          <button
+            type="button"
+            onClick={restart}
+            title="Start again from the beginning (R)"
+            className="cursor-pointer rounded-md px-3 py-1.5 text-xs font-medium text-ink-muted transition-colors hover:bg-ink/5 hover:text-accent focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-accent"
+          >
+            Restart
+          </button>
+        )}
 
         {phase.kind === "practicing" && (
           <button
