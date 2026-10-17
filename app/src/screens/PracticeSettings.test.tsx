@@ -8,6 +8,7 @@ import { describe, expect, it, vi } from "vitest";
 // exists in jsdom, so these are stubbed the way every other bridge-calling
 // screen in this suite would need to be, were one under test.
 vi.mock("../bridge", () => ({
+  appVersion: vi.fn().mockResolvedValue("0.1.0"),
   instruments: vi.fn().mockResolvedValue([]),
   outputPorts: vi.fn().mockResolvedValue([]),
   setThru: vi.fn().mockResolvedValue(undefined),
@@ -125,6 +126,15 @@ describe("SettingsPanel", () => {
     fireEvent.mouseDown(screen.getByRole("dialog", { name: "Settings" }));
 
     expect(onClose).not.toHaveBeenCalled();
+  });
+});
+
+describe("About", () => {
+  it("names the version, the licence and Verovio", async () => {
+    await renderPanel();
+
+    expect(screen.getByText("Hogwash 0.1.0 · Apache-2.0")).toBeInTheDocument();
+    expect(screen.getByText(/engraved by Verovio/)).toBeInTheDocument();
   });
 });
 

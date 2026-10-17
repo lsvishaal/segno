@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import type { RefObject } from "react";
 
 import {
+  appVersion,
   instruments as fetchInstruments,
   outputPorts as fetchOutputPorts,
   setThru,
@@ -163,7 +164,43 @@ export function SettingsPanel({
         </button>
         {exportError && <p className="mt-1 text-xs text-wrong">{exportError}</p>}
       </section>
+
+      <div className="staff-rule mt-5" />
+
+      <About />
     </div>
+  );
+}
+
+/**
+ * What this is, and what it uses: the version, the licence, and the credit
+ * Verovio's LGPL asks for. Plain text on purpose: Hogwash makes no network
+ * calls, so there is nothing here to click through to.
+ */
+function About() {
+  const [version, setVersion] = useState<string | null>(null);
+
+  useEffect(() => {
+    let live = true;
+    appVersion()
+      .then((found) => live && setVersion(found))
+      .catch(() => undefined);
+
+    return () => {
+      live = false;
+    };
+  }, []);
+
+  return (
+    <section className="pt-5">
+      <h3 className="text-label font-medium text-ink-muted uppercase">About</h3>
+      <p className="mt-3 text-xs text-ink-muted">
+        Hogwash{version ? ` ${version}` : ""} · Apache-2.0
+      </p>
+      <p className="mt-1 text-xs text-ink-muted">
+        Music is engraved by Verovio (LGPL-3.0-or-later).
+      </p>
+    </section>
   );
 }
 

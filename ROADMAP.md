@@ -674,8 +674,10 @@ v0.1 is for you and a handful of pianists, not a public launch.
       from user-visible strings everywhere, and from comments in files touched
       during M1–M2.
 - [ ] **M4.6 · M · README for a stranger** (outline in §24).
-- [ ] **M4.7 · S · Version number and "About"** (version, licence, links,
-      Verovio credit) reachable from the settings panel.
+- [x] **M4.7 · S · Version number and "About"** (version, licence, links,
+      Verovio credit) reachable from the settings panel. _Done 18 Oct, without
+      links (Hogwash makes no network calls); add the repository URL as plain
+      text once the repo is public._
 - [ ] **M4.8 · S · GitHub release** with the AppImage, .deb, checksums, and
       short release notes.
 - [ ] **M4.9 · S · One outside pianist.** Send it to one person. Watch them

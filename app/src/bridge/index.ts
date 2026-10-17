@@ -10,6 +10,7 @@
  *    depends on Rust for — which is nearly everything, by design, because
  *    `004 §8.8` says Presentation originates no finding of its own.
  */
+import { getVersion } from "@tauri-apps/api/app";
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import type { UnlistenFn } from "@tauri-apps/api/event";
@@ -45,6 +46,11 @@ export type {
 };
 
 /** The Pieces available to practise. Never empty (FR-207). */
+/** The version this build of Hogwash reports. */
+export function appVersion(): Promise<string> {
+  return getVersion();
+}
+
 export function library(): Promise<PieceSummary[]> {
   return invoke<PieceSummary[]>("library");
 }
