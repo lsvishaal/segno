@@ -405,9 +405,9 @@ never out of the release dates.
         before changing styles."*
       - Add: *"Task IDs come from ROADMAP.md (e.g. M1.5). Reference them in
         commit messages."*
-- [ ] **M0.5 · S · Make sure `docs/` is gone** from the working tree and
+- [x] **M0.5 · S · Make sure `docs/` is gone** from the working tree and
       from git (the export still contained the folder).
-- [ ] **M0.6 · S · Start `annoyances.md`** in the repo root (gitignored or
+- [x] **M0.6 · S · Start `annoyances.md`** in the repo root (gitignored or
       not, your choice) with a one-line header: `date · where · what`.
 - [ ] **M0.7 · S · Decide D1, D6, D8** (dates, practice log, name). Write
       the answers into §32.

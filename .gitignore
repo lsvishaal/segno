@@ -10,10 +10,6 @@
 # (never committed, see above) staged for packaging.
 /app/src-tauri/bundle
 
-# `docs/` is an independent git repository (remote: hogwash-docs).
-# It is deliberately not tracked here — see the plan and 004 §15.
-/docs
-
 # The frontend's dependencies and build output. `package-lock.json` IS
 # committed — it is the only record of exactly which JavaScript went into a
 # build, and the Rust half has `Cargo.lock` for the same reason.
