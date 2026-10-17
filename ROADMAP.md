@@ -448,7 +448,7 @@ touching nothing but the score, the keyboard and at most two buttons.
 - **Manual check:** play 8 notes, quit, open the newest session file, see
   increasing timestamps and non-zero velocities.
 
-### M1.2 · S · Leaving the practice screen ends and saves the attempt
+### M1.2 · S · Leaving the practice screen ends and saves the attempt — done 18 Oct
 
 - **Why:** today the attempt keeps running in the background.
 - **What:** "← Library", Esc, and opening another piece all call
@@ -1464,6 +1464,8 @@ Carried over from the previous roadmap; each one is real but rare.
 - **Wrong-note mark's accidental** ignores accidentals earlier in the same bar.
 - **Re-importing an edited file** creates a new piece (new fingerprint); the
   old history stays with the old version. Want: "replace file, keep history."
+- **Closing the window mid-attempt** loses the attempt (leaving the practice
+  screen now saves it; the window close does not).
 - **A zip damaged inside an entry** (not cut short) could still reach Verovio
   and crash it; only the container's structure is checked.
 - **A real Für Elise with a pickup bar** hasn't been verified; test bar
