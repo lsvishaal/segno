@@ -663,16 +663,18 @@ v0.1 is for you and a handful of pianists, not a public launch.
 - [ ] **M4.3 · S · First run: playable within 3 clicks.** Library opens with
       bundled pieces; a gentle first-run card: *"Connect your keyboard, open
       a piece, play the first note."*
-- [ ] **M4.4 · S · Helpful refusals for `.mid`, `.midi`, `.kar`, `.pdf`,
+- [x] **M4.4 · S · Helpful refusals for `.mid`, `.midi`, `.kar`, `.pdf`,
       `.mscz`.** Each says what it is and what to do:
       MIDI → *"Hogwash reads sheet music, not MIDI recordings. Open the file
       in MuseScore Studio (free) and export MusicXML."*
       PDF → *"PDFs are pictures of music. Audiveris (free) can try to convert
       them; results vary."*
       `.mscz` → *"Export it from MuseScore Studio as MusicXML (File → Export)."*
-- [ ] **M4.5 · S · Remove dead spec references** (`§`, `ADR-`, `FR-`, `MVP`)
+      _The refusals existed (format, reason, route); 18 Oct: MIDI and PDF routes now name MuseScore Studio and Audiveris._
+- [x] **M4.5 · S · Remove dead spec references** (`§`, `ADR-`, `FR-`, `MVP`)
       from user-visible strings everywhere, and from comments in files touched
       during M1–M2.
+      _18 Oct: none left in user-visible strings; only comments, removed as files are touched._
 - [ ] **M4.6 · M · README for a stranger** (outline in §24).
 - [x] **M4.7 · S · Version number and "About"** (version, licence, links,
       Verovio credit) reachable from the settings panel. _Done 18 Oct, without

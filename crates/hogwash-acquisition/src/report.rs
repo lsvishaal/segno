@@ -212,12 +212,15 @@ fn why(format: OfferedFormat) -> String {
 fn route_from(format: OfferedFormat) -> String {
     match format {
         OfferedFormat::Midi => "If you have the sheet music in a notation program such as \
-             MuseScore, Finale or Sibelius, export it as MusicXML and open that instead."
+             MuseScore, Finale or Sibelius, export it as MusicXML and open that instead. \
+             MuseScore Studio (free) can also open a MIDI file and export MusicXML, but a \
+             recording has no written rhythm, so expect a rough score."
             .to_owned(),
 
         OfferedFormat::Pdf => "Look for the same piece as MusicXML — many public-domain \
-             scores are available in it — or open the PDF in a notation program that can \
-             scan it, and export MusicXML from there."
+             scores are available in it — or scan the PDF with a program such as Audiveris \
+             (free) and export MusicXML from there. Results vary with the quality of the \
+             print."
             .to_owned(),
 
         OfferedFormat::MuseScore => "Open it in MuseScore and choose File, then Export, \
@@ -253,6 +256,21 @@ mod tests {
             assert!(!refused.reason().is_empty(), "{format:?} has no reason");
             assert!(!refused.route().is_empty(), "{format:?} has no route");
         }
+    }
+
+    // The two conversions that exist are named, so the route is something to do.
+    #[test]
+    fn the_routes_for_midi_and_pdf_name_a_free_tool() {
+        assert!(
+            UnsupportedInput::in_format(OfferedFormat::Midi)
+                .route()
+                .contains("MuseScore Studio")
+        );
+        assert!(
+            UnsupportedInput::in_format(OfferedFormat::Pdf)
+                .route()
+                .contains("Audiveris")
+        );
     }
 
     // 003 §7.15 — Unsupported Input "carries no implication that the
