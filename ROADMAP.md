@@ -1364,6 +1364,7 @@ users ask for; log the change in §32.
 - Flatpak / AUR package.
 - Practice-time reminders (local notification, opt-in).
 - Import from a folder (watch a directory of MusicXML).
+- 2026-10-18 · Feature ideas (click to seek, play button, on-screen keyboard, smooth scroll, report, layouts, ...): sorted in `FEATURE-IDEAS.md`.
 - Simplify a piece (melody only / reduce chords) — only if it can be done
   honestly.
 
@@ -1598,6 +1599,7 @@ _Date · decision · why · what it replaced._
 - 2026-10-06 · "Listen" will use MIDI out to the user's piano · avoids software synth/audio bugs
 - 2026-10-06 · Goal widened from "readable" to "polished and frictionless" · v1.0 public launch
 - 2026-10-17 · Five `.mxl` test scores stay in the private repo; move them out, purge history and narrow `resources` before going public · tests read them, no exposure while private · M0.2 as written
+- 2026-10-18 · Listen stays piano-only (MIDI out), no built-in synth · reconfirmed · avoids audio-engine bugs
 - _(D1–D12 answers go here)_
 
 ---
