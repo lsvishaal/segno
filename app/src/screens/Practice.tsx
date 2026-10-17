@@ -54,6 +54,9 @@ export function PracticeScreen({
   // A developer view: what the geometry layer reads from the page.
   const [showGeometry, setShowGeometry] = useState(false);
   const [phase, setPhase] = useState<Phase>({ kind: "choosing", refusal: null });
+  // For the cleanup below, which has to see where the loop is *now*.
+  const phaseRef = useRef(phase);
+  phaseRef.current = phase;
   const [available, setAvailable] = useState<readonly InstrumentSummary[]>([]);
   const [cursor, setCursor] = useState<CursorState>(BEFORE_STARTING);
   const [dot, setDot] = useState<Dot | null>(null);
@@ -271,6 +274,21 @@ export function PracticeScreen({
     setPhase({ kind: "choosing", refusal: null });
   }, []);
 
+  // An attempt still running when this screen goes away is ended, and kept if
+  // anything was played, instead of carrying on unseen in the background.
+  // Leaving by the button does it at once; this covers every other way out.
+  useEffect(
+    () => () => {
+      if (phaseRef.current.kind === "practicing") void endAttempt().catch(() => undefined);
+    },
+    [],
+  );
+
+  const leave = useCallback(() => {
+    if (phaseRef.current.kind === "practicing") void endAttempt().catch(() => undefined);
+    onLeave();
+  }, [onLeave]);
+
   const exportPiece = useCallback(() => {
     void (async () => {
       try {
@@ -286,7 +304,7 @@ export function PracticeScreen({
       <header className="flex shrink-0 items-baseline gap-6 px-10 py-6">
         <button
           type="button"
-          onClick={onLeave}
+          onClick={leave}
           className="cursor-pointer rounded-md px-2 py-1 text-sm text-ink-muted transition-colors hover:bg-ink/5 hover:text-accent focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
         >
           ← Library

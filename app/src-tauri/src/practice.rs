@@ -386,27 +386,36 @@ fn handle(
             reference,
             instrument,
             reply,
-        } => match source.open(&instrument) {
-            Ok(keyboard) => {
-                open_session(session, piece_id, reference);
-
-                let Some(open) = session.as_ref() else {
-                    unreachable!("open_session always leaves a session in place")
-                };
-                let attempt = open.session.begin_attempt();
-
-                *ongoing = Some(Ongoing {
-                    instrument,
-                    attempt,
-                    keyboard,
-                    lost_since: None,
-                    last_reconnect_attempt: Instant::now(),
-                });
-
-                drop(reply.send(Ok(())));
+        } => {
+            // A restart (or a second piece opened) while one is running: the
+            // one running is ended and kept first, never silently dropped. No
+            // `Ended` event: the screen is starting again, not reading a summary.
+            if let Some(previous) = ongoing.take() {
+                drop(finish(session, previous.attempt, records, false, None));
             }
-            Err(failure) => drop(reply.send(Err(failure))),
-        },
+
+            match source.open(&instrument) {
+                Ok(keyboard) => {
+                    open_session(session, piece_id, reference);
+
+                    let Some(open) = session.as_ref() else {
+                        unreachable!("open_session always leaves a session in place")
+                    };
+                    let attempt = open.session.begin_attempt();
+
+                    *ongoing = Some(Ongoing {
+                        instrument,
+                        attempt,
+                        keyboard,
+                        lost_since: None,
+                        last_reconnect_attempt: Instant::now(),
+                    });
+
+                    drop(reply.send(Ok(())));
+                }
+                Err(failure) => drop(reply.send(Err(failure))),
+            }
+        }
         Command::End { reply } => {
             let outcome = ongoing.take().map(|active| {
                 let summary = finish(session, active.attempt, records, false, None);
@@ -612,28 +621,32 @@ fn finish(
     let overall = feedback.overall();
     let lines = feedback.lines();
 
-    open.session.record(ended);
+    // An attempt in which nothing was played is not practice: it is not
+    // added to the session and nothing is written.
+    if !ended.observed().is_empty() {
+        open.session.record(ended);
 
-    let record = SessionRecord {
-        id: open.id.clone(),
-        piece: open.piece_id.clone(),
-        started: open.started.clone(),
-        closed: false,
-        attempts: open
-            .session
-            .attempts()
-            .iter()
-            .map(|attempt| AttemptRecord {
-                played: attempt.observed().clone(),
-                reached: attempt.reached(),
-            })
-            .collect(),
-    };
+        let record = SessionRecord {
+            id: open.id.clone(),
+            piece: open.piece_id.clone(),
+            started: open.started.clone(),
+            closed: false,
+            attempts: open
+                .session
+                .attempts()
+                .iter()
+                .map(|attempt| AttemptRecord {
+                    played: attempt.observed().clone(),
+                    reached: attempt.reached(),
+                })
+                .collect(),
+        };
 
-    // A failure here is a filesystem problem, not a reason to withhold the
-    // summary the performer just earned — they can still read it, even if it
-    // could not be saved this time.
-    drop(records.keep(&record));
+        // A failure here is a filesystem problem, not a reason to withhold the
+        // summary the performer just earned — they can still read it, even if
+        // it could not be saved this time.
+        drop(records.keep(&record));
+    }
 
     AttemptSummary {
         lines,
@@ -649,4 +662,60 @@ fn finish(
 
 fn emit(sink: &Sink, event: &PracticeEvent) {
     sink(event);
+}
+
+#[cfg(test)]
+mod tests {
+    use std::sync::Arc;
+
+    use hogwash_domain::Pitch;
+    use hogwash_practice::PracticeSession;
+    use hogwash_records::Records;
+
+    use super::{OpenSession, Practice, finish};
+
+    // Nothing is kept for an attempt in which nothing was played, and the
+    // next one with a note is. Uses the real Minuet, so it needs a real engine.
+    #[test]
+    #[ignore = "needs a real libverovio; run `just provided-test`"]
+    fn only_an_attempt_with_notes_is_kept() {
+        let directory = std::env::temp_dir().join("hogwash-practice-keeps-test");
+        drop(std::fs::remove_dir_all(&directory));
+
+        let records = Records::under(&directory);
+        let engraving = crate::engraving::Engraving::start().expect("the engine starts");
+        let practice =
+            Practice::start(records.clone(), |_| {}).expect("the practice thread starts");
+        let hogwash = crate::state::Hogwash::start(engraving, records.clone(), practice)
+            .expect("the provided material prepares");
+
+        let minuet = hogwash
+            .library()
+            .pieces()
+            .into_iter()
+            .find(|piece| piece.title() == "Minuet in G Major")
+            .expect("the Minuet is on the shelf");
+        let id = minuet.id().clone();
+
+        let mut session = Some(OpenSession {
+            piece_id: id.clone(),
+            id: "keeps-test".to_owned(),
+            started: "0".to_owned(),
+            session: PracticeSession::open(Arc::new(minuet.reference().clone())),
+        });
+
+        let nothing = session.as_ref().expect("open").session.begin_attempt();
+        drop(finish(&mut session, nothing, &records, false, None));
+        assert_eq!(records.sessions_of(&id), 0, "an empty attempt was kept");
+
+        // D5 is the first note of the Minuet.
+        let mut one = session.as_ref().expect("open").session.begin_attempt();
+        one.play(Pitch::new(74).expect("D5 is a piano key"));
+        drop(finish(&mut session, one, &records, false, None));
+        assert_eq!(
+            records.sessions_of(&id),
+            1,
+            "an attempt with a note was not kept"
+        );
+    }
 }
