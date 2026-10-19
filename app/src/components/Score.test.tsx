@@ -147,6 +147,41 @@ describe("the score component", () => {
     vi.useRealTimers();
   });
 
+  // At a normal tempo the next note arrives before the last flash is over.
+  // Every flashed note must still fade back, not be left green.
+  it("fades back every flashed note, even when the next one comes first", () => {
+    vi.useFakeTimers();
+
+    const two = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 100">
+      <g id="note-a" class="note"><ellipse cx="40" cy="50" rx="8" ry="6"/></g>
+      <g id="note-b" class="note"><ellipse cx="80" cy="50" rx="8" ry="6"/></g>
+    </svg>`;
+    const marks: readonly Mark[] = [
+      { measure: 1, position: 0, page: 0, notes: [{ elementId: "note-a", step: "C", octave: 4, pitch: 60 }] },
+      { measure: 1, position: 1, page: 0, notes: [{ elementId: "note-b", step: "D", octave: 4, pitch: 62 }] },
+    ];
+    const pages = [two];
+    const at = (position: number) => (
+      <Score
+        pages={pages}
+        marks={marks}
+        cursor={{ position }}
+        dot={{ kind: "correct", position, pitch: 60 }}
+        followCursor={false}
+      />
+    );
+
+    const { container, rerender } = render(at(0));
+    vi.advanceTimersByTime(250);
+    rerender(at(1));
+    vi.advanceTimersByTime(1000);
+
+    expect((container.querySelector("#note-a") as SVGElement).style.color).toBe("");
+    expect((container.querySelector("#note-b") as SVGElement).style.color).toBe("");
+
+    vi.useRealTimers();
+  });
+
   it("never produces a green dot overlay — the notehead itself is what flashes", () => {
     const { container } = render(
       <Score

@@ -193,7 +193,14 @@ export function Score({
         }
       }, 420);
 
-      return () => window.clearTimeout(timeout);
+      return () => {
+        window.clearTimeout(timeout);
+        // The next note arrived before this flash was over: start its fade
+        // now, so no note is ever left green.
+        for (const element of elements) {
+          element.style.color = "";
+        }
+      };
     }
 
     for (const surface of surfaces) {

@@ -50,6 +50,15 @@
 }
 
 /*
+  Verovio recolours strokes with `currentColor` (stems, beams, ledger lines)
+  but gives a notehead glyph no fill of its own, so it stays black. This lets
+  the head follow the note's colour like everything else.
+*/
+.hw-page g.notehead use {
+  fill: currentColor;
+}
+
+/*
   The cursor: a thin line behind the ink, across the whole system, placed in
   the page's own units (`Score.tsx`) but always 3px wide on screen.
 */
