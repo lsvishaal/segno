@@ -1,6 +1,7 @@
 //! `midir` behind the [`MidiSource`] port.
 
 use std::sync::mpsc::{Receiver, Sender, TryRecvError, channel};
+use std::time::{Duration, Instant};
 
 use hogwash_capture::{Instrument, Keyboard, MidiSource, NoInstrument};
 use hogwash_domain::Pitch;
@@ -10,6 +11,12 @@ use crate::message::note_struck;
 
 /// The name `midir` is asked to give this application's ports.
 const CLIENT: &str = "Hogwash";
+
+/// How often a connected instrument is checked for still being there.
+///
+/// `midir` never reports a device that vanishes: its callback just goes
+/// quiet. So the port list is asked instead, and not on every tick.
+const WATCH_EVERY: Duration = Duration::from_millis(500);
 
 /// The performer's MIDI instruments.
 #[derive(Debug)]
@@ -44,16 +51,38 @@ impl MidiSource for MidiInstruments {
             detail: failure.to_string(),
         })?;
 
+        // A second, idle input: connecting consumes `midi`, and the port list
+        // is how a vanished device is noticed afterwards.
+        let watcher = MidiInput::new(CLIENT).map_err(|failure| NoInstrument::Unavailable {
+            instrument: instrument.clone(),
+            detail: failure.to_string(),
+        })?;
+
         // Matched by name rather than by index. An index is meaningless to a
         // performer and shifts when anything else is plugged in, so a
-        // remembered one would eventually open the wrong device.
-        let port = midi
-            .ports()
-            .into_iter()
-            .find(|port| midi.port_name(port).as_deref() == Ok(instrument.name()))
+        // remembered one would eventually open the wrong device. A device
+        // that comes back may have a new ALSA client number in its name, so
+        // failing an exact match the name without those numbers is tried.
+        let ports = midi.ports();
+        let wanted = instrument.name();
+        let exact = ports
+            .iter()
+            .find(|port| midi.port_name(port).as_deref() == Ok(wanted));
+        let renumbered = || {
+            ports.iter().find(|port| {
+                midi.port_name(port)
+                    .is_ok_and(|name| without_ids(&name) == without_ids(wanted))
+            })
+        };
+        let port = exact
+            .or_else(renumbered)
+            .cloned()
             .ok_or_else(|| NoInstrument::Gone {
                 instrument: instrument.clone(),
             })?;
+        let name = midi
+            .port_name(&port)
+            .unwrap_or_else(|_| instrument.name().to_owned());
 
         let (notes, played) = channel();
 
@@ -80,6 +109,9 @@ impl MidiSource for MidiInstruments {
         Ok(Box::new(Connected {
             played,
             connection: Some(connection),
+            watcher,
+            name,
+            checked: Instant::now(),
         }))
     }
 }
@@ -104,6 +136,39 @@ struct Connected {
     // An `Option` only so that `Drop` can take it. `midir` disconnects when
     // the connection is dropped, so the whole lifecycle is ownership.
     connection: Option<MidiInputConnection<()>>,
+    /// Lists ports, to notice the instrument disappearing.
+    watcher: MidiInput,
+    /// The port's name as it was opened.
+    name: String,
+    checked: Instant,
+}
+
+impl Connected {
+    fn still_listed(&self) -> bool {
+        self.watcher
+            .ports()
+            .iter()
+            .any(|port| self.watcher.port_name(port).as_deref() == Ok(self.name.as_str()))
+    }
+}
+
+/// A port name without the `client:port` numbers ALSA appends, e.g.
+/// `Digital Piano:Digital Piano MIDI 1 20:0` becomes
+/// `Digital Piano:Digital Piano MIDI 1`. Other names are returned unchanged.
+fn without_ids(name: &str) -> &str {
+    let is_ids = |text: &str| {
+        text.split_once(':').is_some_and(|(client, port)| {
+            !client.is_empty()
+                && !port.is_empty()
+                && client.bytes().all(|byte| byte.is_ascii_digit())
+                && port.bytes().all(|byte| byte.is_ascii_digit())
+        })
+    };
+
+    match name.trim_end().rsplit_once(' ') {
+        Some((rest, ids)) if is_ids(ids) => rest,
+        _ => name.trim_end(),
+    }
 }
 
 impl std::fmt::Debug for Connected {
@@ -133,10 +198,57 @@ impl Keyboard for Connected {
             }
         }
 
+        // Quiet is not the same as gone: ask whether the port is still there.
+        if self.connection.is_some() && self.checked.elapsed() >= WATCH_EVERY {
+            self.checked = Instant::now();
+            if !self.still_listed() {
+                self.connection = None;
+            }
+        }
+
         struck
     }
 
     fn is_connected(&self) -> bool {
         self.connection.is_some()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::without_ids;
+
+    #[test]
+    fn alsa_ids_are_dropped_from_the_end_of_a_name() {
+        assert_eq!(
+            without_ids("Digital Piano:Digital Piano MIDI 1 20:0"),
+            "Digital Piano:Digital Piano MIDI 1"
+        );
+        assert_eq!(
+            without_ids("vkbd:Test Keyboard 128:0"),
+            "vkbd:Test Keyboard"
+        );
+        assert_eq!(
+            without_ids("Midi Through:Midi Through Port-0 14:0"),
+            "Midi Through:Midi Through Port-0"
+        );
+    }
+
+    #[test]
+    fn a_name_without_ids_is_unchanged() {
+        assert_eq!(without_ids("Digital Piano"), "Digital Piano");
+        assert_eq!(without_ids("Piano 2"), "Piano 2");
+        assert_eq!(without_ids("Keyboard 1:"), "Keyboard 1:");
+        assert_eq!(without_ids(""), "");
+    }
+
+    #[test]
+    fn a_renumbered_device_matches_itself_but_not_another() {
+        let before = "Digital Piano:Digital Piano MIDI 1 20:0";
+        let after = "Digital Piano:Digital Piano MIDI 1 24:0";
+        let other = "Practice Pad:Practice Pad MIDI 1 24:0";
+
+        assert_eq!(without_ids(before), without_ids(after));
+        assert_ne!(without_ids(before), without_ids(other));
     }
 }
