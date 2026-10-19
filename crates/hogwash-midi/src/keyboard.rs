@@ -33,6 +33,7 @@ impl MidiSource for MidiInstruments {
             .ports()
             .iter()
             .filter_map(|port| midi.port_name(port).ok())
+            .filter(|name| !is_loopback(name))
             .map(Instrument::new)
             .collect();
 
@@ -152,6 +153,12 @@ impl Connected {
     }
 }
 
+/// ALSA's built-in loopback port, present on every Linux machine and never a
+/// keyboard. Listed first, it would be the default choice.
+fn is_loopback(name: &str) -> bool {
+    name.starts_with("Midi Through")
+}
+
 /// A port name without the `client:port` numbers ALSA appends, e.g.
 /// `Digital Piano:Digital Piano MIDI 1 20:0` becomes
 /// `Digital Piano:Digital Piano MIDI 1`. Other names are returned unchanged.
@@ -216,7 +223,14 @@ impl Keyboard for Connected {
 
 #[cfg(test)]
 mod tests {
-    use super::without_ids;
+    use super::{is_loopback, without_ids};
+
+    #[test]
+    fn only_alsas_loopback_is_left_out_of_the_keyboards() {
+        assert!(is_loopback("Midi Through:Midi Through Port-0 14:0"));
+        assert!(!is_loopback("Digital Piano:Digital Piano MIDI 1 20:0"));
+        assert!(!is_loopback("Through Keyboard"));
+    }
 
     #[test]
     fn alsa_ids_are_dropped_from_the_end_of_a_name() {
