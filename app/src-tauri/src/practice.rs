@@ -107,6 +107,8 @@ pub enum PracticeEvent {
     /// the attempt ending itself.
     InstrumentLost {
         instrument: String,
+        // `rename_all` on the enum renames only the variants, not their fields.
+        #[serde(rename = "secondsRemaining")]
         seconds_remaining: u64,
     },
     /// The same instrument came back before the window ran out.
@@ -672,7 +674,24 @@ mod tests {
     use hogwash_practice::PracticeSession;
     use hogwash_records::Records;
 
-    use super::{OpenSession, Practice, finish};
+    use super::{OpenSession, Practice, PracticeEvent, finish};
+
+    // The interface reads `secondsRemaining`. Serde's `rename_all` on the enum
+    // leaves a variant's fields alone, and the countdown once arrived as
+    // `seconds_remaining`: the banner said "Waiting s".
+    #[test]
+    fn the_lost_event_names_its_countdown_as_the_interface_reads_it() {
+        let event = PracticeEvent::InstrumentLost {
+            instrument: "Digital Piano".to_owned(),
+            seconds_remaining: 60,
+        };
+
+        let json = serde_json::to_value(&event).expect("the event serialises");
+
+        assert_eq!(json["kind"], "instrumentLost");
+        assert_eq!(json["instrument"], "Digital Piano");
+        assert_eq!(json["secondsRemaining"], 60);
+    }
 
     // Nothing is kept for an attempt in which nothing was played, and the
     // next one with a note is. Uses the real Minuet, so it needs a real engine.
