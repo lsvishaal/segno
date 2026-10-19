@@ -4,3 +4,4 @@ date · where · what
 2026-10-19 · practice · the instrument picker lists "Midi Through:Midi Through Port-0 14:0" first and selects it by default, so Start on a machine with a real piano listens to the wrong port; names also carry ALSA client numbers ("vkbd:Test Keyboard 128:0").
 2026-10-19 · practice · at 1280x720 the "Play on" bar leaves room for about one line of music; at 2560x1440 the score is capped at 1600 px wide (issue 3: screen sizes).
 2026-10-19 · library · the four hand-made pieces are still on the shelf (issue 2).
+2026-10-19 · fixed · the green-note defect (notes left green; heads never green), unplug detection on Linux, and Midi Through as the default keyboard: all verified in the real app. The unplug banner also showed "Waiting s" with no number (field sent as seconds_remaining, read as secondsRemaining); fixed and tested.
