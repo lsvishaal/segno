@@ -34,6 +34,19 @@ release: _require-verovio
     cd app && NO_STRIP=true npx tauri build --bundles appimage
     ls -lh "{{justfile_directory()}}"/target/release/bundle/appimage/*.AppImage
 
+# drives the real AppImage with a virtual MIDI keyboard through every scenario in scripts/e2e (Linux; needs tauri-driver and WebKitWebDriver)
+[group('check')]
+e2e *scenarios: release
+    #!/usr/bin/env bash
+    set -euo pipefail
+    cd "{{justfile_directory()}}"
+    rm -rf target/e2e/app && mkdir -p target/e2e/app
+    (cd target/e2e/app && ../../release/bundle/appimage/Hogwash_*.AppImage --appimage-extract >/dev/null)
+    HOGWASH_VEROVIO_LIB="{{verovio_lib}}" HOGWASH_VEROVIO_DATA="{{verovio_data}}" \
+        cargo run --quiet --package hogwash-cli -- expected app/src-tauri/library/minuet-in-g.musicxml > target/e2e/minuet.expected.json
+    cargo build --quiet --package hogwash-midi --example vkbd
+    node scripts/e2e/run.mjs {{scenarios}}
+
 # alias for `run`
 [group('run')]
 dev: run

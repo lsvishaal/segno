@@ -438,6 +438,9 @@ touching nothing but the score, the keyboard and at most two buttons.
     format.
   - Replay is unchanged: it keeps no record, so timing it would show
     nothing.
+  - Verified with `just e2e` (`scripts/e2e/`), the real-app test kit. It
+    drives the packaged AppImage with a virtual MIDI keyboard; run it after
+    any change in behaviour.
 - **Why:** stall time per bar (M2) is impossible without them.
 - **What:** midir's microsecond timestamp and the note-on velocity travel
   from the MIDI callback → practice thread → `ObservedPerformance` →
