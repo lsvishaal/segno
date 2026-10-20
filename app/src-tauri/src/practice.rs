@@ -48,12 +48,12 @@ use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 
 use hogwash_analysis::Analysis;
 use hogwash_capture::{Action, Instrument, Keyboard, MidiSource, NoInstrument, Touch};
-use hogwash_domain::PieceId;
+use hogwash_domain::{MeasureNumber, PieceId};
 use hogwash_feedback::Feedback;
 use hogwash_midi::{MidiInstruments, NoOutput, OutputPort, Thru, output_ports};
 use hogwash_notation::ReferencePerformance;
 use hogwash_practice::{Attempt, CursorMovement, PracticeSession};
-use hogwash_records::{AttemptRecord, Records, SessionRecord};
+use hogwash_records::{AttemptRecord, Ended, Records, SessionRecord};
 use serde::Serialize;
 
 use crate::startup::Unavailable;
@@ -144,6 +144,40 @@ pub struct AttemptSummary {
 #[derive(Debug)]
 pub struct NotPracticing;
 
+/// Where the next attempt starts, as a step and the bar it is in.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct StartPoint {
+    /// A step in the Reference Performance, in played order.
+    pub position: usize,
+    /// The bar that step is in: the one clicked, or the next with something
+    /// to strike if the clicked one has nothing.
+    pub measure: u32,
+}
+
+/// Why the start could not be moved.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum NoStart {
+    /// The bar does not exist, or nothing follows it to start at.
+    NothingThere,
+    /// The keyboard has gone and an attempt is waiting for it.
+    InstrumentLost,
+}
+
+/// How the interface ends an attempt. The others (restart, jump, lost) are
+/// decided here.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub enum Ending {
+    /// Stop.
+    Stop,
+    /// Finish, at the end of the piece.
+    Finished,
+    /// Leaving the piece: back to the library, Esc, another piece. The
+    /// start point goes back to the beginning.
+    Left,
+}
+
 enum Command {
     Instruments {
         reply: SyncSender<Result<Vec<Instrument>, NoInstrument>>,
@@ -155,7 +189,14 @@ enum Command {
         reply: SyncSender<Result<(), NoInstrument>>,
     },
     End {
+        ending: Ending,
         reply: SyncSender<Result<AttemptSummary, NotPracticing>>,
+    },
+    StartAt {
+        piece_id: PieceId,
+        reference: Arc<ReferencePerformance>,
+        measure: MeasureNumber,
+        reply: SyncSender<Result<StartPoint, NoStart>>,
     },
     OutputPorts {
         reply: SyncSender<Result<Vec<OutputPort>, NoOutput>>,
@@ -253,19 +294,49 @@ impl Practice {
         answer.recv().map_err(|_| gone())?
     }
 
-    /// Ends whatever attempt is running.
+    /// Ends whatever attempt is running, as `ending` says. Leaving also
+    /// puts the start point back at the beginning, running or not.
     ///
     /// # Errors
     ///
     /// [`NotPracticing`] if no attempt is running.
-    pub fn end_attempt(&self) -> Result<AttemptSummary, NotPracticing> {
+    pub fn end_attempt(&self, ending: Ending) -> Result<AttemptSummary, NotPracticing> {
         let (reply, answer) = sync_channel(0);
 
         self.commands
-            .send(Command::End { reply })
+            .send(Command::End { ending, reply })
             .map_err(|_| NotPracticing)?;
 
         answer.recv().map_err(|_| NotPracticing)?
+    }
+
+    /// Moves where attempts at `piece_id` start to the beginning of
+    /// `measure` (its first occurrence in played order). While an attempt
+    /// is running, it is ended and kept, and a new one begins there on the
+    /// same keyboard.
+    ///
+    /// # Errors
+    ///
+    /// [`NoStart`] if there is nothing to start at in that bar or after it,
+    /// or the keyboard is lost.
+    pub fn start_at_bar(
+        &self,
+        piece_id: PieceId,
+        reference: Arc<ReferencePerformance>,
+        measure: MeasureNumber,
+    ) -> Result<StartPoint, NoStart> {
+        let (reply, answer) = sync_channel(0);
+
+        self.commands
+            .send(Command::StartAt {
+                piece_id,
+                reference,
+                measure,
+                reply,
+            })
+            .map_err(|_| NoStart::NothingThere)?;
+
+        answer.recv().map_err(|_| NoStart::NothingThere)?
     }
 
     /// The MIDI output devices currently available, for routing Thru.
@@ -323,9 +394,11 @@ struct OpenSession {
     id: String,
     started: String,
     session: PracticeSession,
-    /// When each attempt kept in `session` began, in Unix milliseconds,
-    /// index for index.
-    began: Vec<Option<u64>>,
+    /// When each attempt kept in `session` began (Unix milliseconds) and how
+    /// it ended, index for index.
+    kept: Vec<(Option<u64>, Ended)>,
+    /// The step the next attempt starts at.
+    from: usize,
 }
 
 /// An attempt in progress, and its live keyboard connection.
@@ -405,6 +478,7 @@ fn handle(
                     session,
                     previous.attempt,
                     Some(previous.began_ms),
+                    Ended::Restart,
                     records,
                     false,
                     None,
@@ -418,7 +492,7 @@ fn handle(
                     let Some(open) = session.as_ref() else {
                         unreachable!("open_session always leaves a session in place")
                     };
-                    let attempt = open.session.begin_attempt();
+                    let attempt = open.session.begin_attempt_at(open.from);
 
                     *ongoing = Some(Ongoing {
                         instrument,
@@ -435,12 +509,17 @@ fn handle(
                 Err(failure) => drop(reply.send(Err(failure))),
             }
         }
-        Command::End { reply } => {
+        Command::End { ending, reply } => {
             let outcome = ongoing.take().map(|active| {
                 let summary = finish(
                     session,
                     active.attempt,
                     Some(active.began_ms),
+                    match ending {
+                        Ending::Stop => Ended::Stop,
+                        Ending::Finished => Ended::Finished,
+                        Ending::Left => Ended::Left,
+                    },
                     records,
                     false,
                     None,
@@ -453,7 +532,22 @@ fn handle(
                 );
                 summary
             });
+            if ending == Ending::Left
+                && let Some(open) = session.as_mut()
+            {
+                open.from = 0;
+            }
             drop(reply.send(outcome.ok_or(NotPracticing)));
+        }
+        Command::StartAt {
+            piece_id,
+            reference,
+            measure,
+            reply,
+        } => {
+            drop(reply.send(start_at(
+                session, ongoing, piece_id, reference, measure, records, sink,
+            )));
         }
         Command::OutputPorts { reply } => {
             drop(reply.send(output_ports()));
@@ -521,6 +615,7 @@ fn poll(
                     session,
                     active.attempt,
                     Some(active.began_ms),
+                    Ended::Lost,
                     records,
                     true,
                     Some("The instrument did not reconnect.".to_owned()),
@@ -646,8 +741,67 @@ fn open_session(
         started: stamp.to_string(),
         piece_id,
         session: PracticeSession::open(reference),
-        began: Vec::new(),
+        kept: Vec::new(),
+        from: 0,
     });
+}
+
+/// Moves the start point to `measure`, and, while practising, ends the
+/// running attempt as a jump and begins the next one there.
+///
+/// The one place a start point is set from outside, so the bar click, and
+/// later looping and the feedback buttons, all go through the same rule.
+fn start_at(
+    session: &mut Option<OpenSession>,
+    ongoing: &mut Option<Ongoing>,
+    piece_id: PieceId,
+    reference: Arc<ReferencePerformance>,
+    measure: MeasureNumber,
+    records: &Records,
+    sink: &Sink,
+) -> Result<StartPoint, NoStart> {
+    if ongoing
+        .as_ref()
+        .is_some_and(|active| active.lost_since.is_some())
+    {
+        return Err(NoStart::InstrumentLost);
+    }
+
+    let position = reference
+        .first_position_of(measure)
+        .ok_or(NoStart::NothingThere)?;
+    let used = reference
+        .at(position)
+        .map_or(measure.get(), |step| step.measure().get());
+
+    open_session(session, piece_id, reference);
+    let Some(open) = session.as_mut() else {
+        unreachable!("open_session always leaves a session in place")
+    };
+    open.from = position;
+
+    if let Some(active) = ongoing.as_mut() {
+        // Notes already played belong to the attempt being left.
+        drain(active, sink);
+        let next = open.session.begin_attempt_at(position);
+        let previous = std::mem::replace(&mut active.attempt, next);
+        let began_ms = std::mem::replace(&mut active.began_ms, unix_ms());
+        active.started = Instant::now();
+        drop(finish(
+            session,
+            previous,
+            Some(began_ms),
+            Ended::Jump,
+            records,
+            false,
+            None,
+        ));
+    }
+
+    Ok(StartPoint {
+        position,
+        measure: used,
+    })
 }
 
 /// The wall clock, in Unix milliseconds.
@@ -669,6 +823,7 @@ fn finish(
     session: &mut Option<OpenSession>,
     attempt: Attempt,
     began_ms: Option<u64>,
+    ended: Ended,
     records: &Records,
     auto_ended: bool,
     reason: Option<String>,
@@ -677,19 +832,23 @@ fn finish(
         unreachable!("an attempt in progress implies its session is open");
     };
 
-    let ended = attempt.end();
-    let reached_the_end = ended.was_completed();
+    let finished = attempt.end();
+    let reached_the_end = finished.was_completed();
 
-    let analysis = Analysis::of(ended.observed(), open.session.reference());
+    let analysis = Analysis::starting_at(
+        finished.observed(),
+        open.session.reference(),
+        finished.from(),
+    );
     let feedback = Feedback::of(&analysis);
     let overall = feedback.overall();
     let lines = feedback.lines();
 
     // An attempt in which nothing was played is not practice: it is not
     // added to the session and nothing is written.
-    if !ended.observed().is_empty() {
-        open.session.record(ended);
-        open.began.push(began_ms);
+    if !finished.observed().is_empty() {
+        open.session.record(finished);
+        open.kept.push((began_ms, ended));
 
         let record = SessionRecord {
             id: open.id.clone(),
@@ -700,11 +859,13 @@ fn finish(
                 .session
                 .attempts()
                 .iter()
-                .zip(&open.began)
-                .map(|(attempt, &began_ms)| AttemptRecord {
+                .zip(&open.kept)
+                .map(|(attempt, &(began_ms, ended))| AttemptRecord {
                     began_ms,
+                    from: attempt.from(),
                     played: attempt.observed().clone(),
                     reached: attempt.reached(),
+                    ended: Some(ended),
                 })
                 .collect(),
         };
@@ -737,9 +898,12 @@ mod tests {
 
     use hogwash_domain::Pitch;
     use hogwash_practice::PracticeSession;
-    use hogwash_records::Records;
+    use hogwash_records::{Ended, Records};
 
-    use super::{OpenSession, Practice, PracticeEvent, finish};
+    use super::{
+        Command, Ending, NoStart, Ongoing, OpenSession, Practice, PracticeEvent, Sink, finish,
+        handle, start_at,
+    };
 
     // The interface reads `secondsRemaining`. Serde's `rename_all` on the enum
     // leaves a variant's fields alone, and the countdown once arrived as
@@ -786,21 +950,265 @@ mod tests {
             id: "keeps-test".to_owned(),
             started: "0".to_owned(),
             session: PracticeSession::open(Arc::new(minuet.reference().clone())),
-            began: Vec::new(),
+            kept: Vec::new(),
+            from: 0,
         });
 
         let nothing = session.as_ref().expect("open").session.begin_attempt();
-        drop(finish(&mut session, nothing, None, &records, false, None));
+        drop(finish(
+            &mut session,
+            nothing,
+            None,
+            Ended::Stop,
+            &records,
+            false,
+            None,
+        ));
         assert_eq!(records.sessions_of(&id), 0, "an empty attempt was kept");
 
         // D5 is the first note of the Minuet.
         let mut one = session.as_ref().expect("open").session.begin_attempt();
         one.play(Pitch::new(74).expect("D5 is a piano key"));
-        drop(finish(&mut session, one, None, &records, false, None));
+        drop(finish(
+            &mut session,
+            one,
+            None,
+            Ended::Stop,
+            &records,
+            false,
+            None,
+        ));
         assert_eq!(
             records.sessions_of(&id),
             1,
             "an attempt with a note was not kept"
         );
+    }
+
+    /// A keyboard that is there and plays nothing.
+    struct Silent;
+    impl hogwash_capture::Keyboard for Silent {
+        fn heard(&mut self) -> Vec<hogwash_capture::Heard> {
+            Vec::new()
+        }
+        fn is_connected(&self) -> bool {
+            true
+        }
+    }
+
+    /// The real Minuet, through the real engine, and an empty history.
+    fn minuet(
+        name: &str,
+    ) -> (
+        Records,
+        hogwash_domain::PieceId,
+        Arc<hogwash_notation::ReferencePerformance>,
+    ) {
+        let directory = std::env::temp_dir().join(format!("hogwash-practice-{name}"));
+        drop(std::fs::remove_dir_all(&directory));
+        let records = Records::under(&directory);
+        let engraving = crate::engraving::Engraving::start().expect("the engine starts");
+        let practice =
+            Practice::start(records.clone(), |_| {}).expect("the practice thread starts");
+        let hogwash = crate::state::Hogwash::start(engraving, records.clone(), practice)
+            .expect("the provided material prepares");
+        let piece = hogwash
+            .library()
+            .pieces()
+            .into_iter()
+            .find(|piece| piece.title() == "Minuet in G Major")
+            .expect("the Minuet is on the shelf");
+        (
+            records,
+            piece.id().clone(),
+            Arc::new(piece.reference().clone()),
+        )
+    }
+
+    fn practising(reference: &Arc<hogwash_notation::ReferencePerformance>) -> Ongoing {
+        Ongoing {
+            instrument: hogwash_capture::Instrument::new("Silent".to_owned()),
+            attempt: hogwash_practice::Attempt::begin(Arc::clone(reference)),
+            started: std::time::Instant::now(),
+            began_ms: 0,
+            keyboard: Box::new(Silent),
+            lost_since: None,
+            last_reconnect_attempt: std::time::Instant::now(),
+        }
+    }
+
+    fn bar(number: u32) -> hogwash_domain::MeasureNumber {
+        hogwash_domain::MeasureNumber::new(number).expect("a bar")
+    }
+
+    fn quiet() -> Sink {
+        Box::new(|_| {})
+    }
+
+    // Bar 9 of the Minuet is step 36 in played order: the start point and
+    // the attempt that begins there both say 36, never 9.
+    #[test]
+    #[ignore = "needs a real libverovio; run `just provided-test`"]
+    fn clicking_a_bar_before_starting_only_moves_the_start() {
+        let (records, id, reference) = minuet("idle-click");
+        let mut session = None;
+        let mut ongoing = None;
+
+        let point = start_at(
+            &mut session,
+            &mut ongoing,
+            id.clone(),
+            Arc::clone(&reference),
+            bar(9),
+            &records,
+            &quiet(),
+        )
+        .expect("bar 9 has notes");
+
+        assert_eq!((point.position, point.measure), (36, 9));
+        assert_eq!(session.as_ref().expect("open").from, 36);
+        assert!(ongoing.is_none());
+        assert_eq!(records.sessions_of(&id), 0);
+    }
+
+    #[test]
+    #[ignore = "needs a real libverovio; run `just provided-test`"]
+    fn jumping_repeatedly_without_playing_saves_no_attempts() {
+        let (records, id, reference) = minuet("empty-jumps");
+        let mut session = None;
+        let mut ongoing = Some(practising(&reference));
+
+        for number in [9, 3, 5, 9] {
+            start_at(
+                &mut session,
+                &mut ongoing,
+                id.clone(),
+                Arc::clone(&reference),
+                bar(number),
+                &records,
+                &quiet(),
+            )
+            .expect("a bar with notes");
+        }
+
+        assert_eq!(records.sessions_of(&id), 0);
+        assert_eq!(ongoing.expect("still practising").attempt.from(), 36);
+    }
+
+    #[test]
+    #[ignore = "needs a real libverovio; run `just provided-test`"]
+    fn a_jump_keeps_what_was_played_and_begins_again_at_the_bar() {
+        let (records, id, reference) = minuet("jump-keeps");
+        let mut session = None;
+        let mut ongoing = Some(practising(&reference));
+        // D5, the Minuet's first note.
+        ongoing
+            .as_mut()
+            .expect("practising")
+            .attempt
+            .play(Pitch::new(74).expect("a key"));
+
+        start_at(
+            &mut session,
+            &mut ongoing,
+            id.clone(),
+            Arc::clone(&reference),
+            bar(9),
+            &records,
+            &quiet(),
+        )
+        .expect("bar 9 has notes");
+
+        let (kept, _) = records.sessions().expect("history reads");
+        let attempts = &kept.first().expect("one session").attempts;
+        assert_eq!(attempts.len(), 1);
+        assert_eq!(
+            (attempts[0].from, attempts[0].ended),
+            (0, Some(Ended::Jump))
+        );
+        let running = &ongoing.expect("still practising").attempt;
+        assert_eq!((running.from(), running.cursor().position()), (36, 36));
+    }
+
+    // The banner says the keyboard is gone; a click must change nothing.
+    #[test]
+    #[ignore = "needs a real libverovio; run `just provided-test`"]
+    fn a_click_while_the_keyboard_is_lost_is_refused_and_changes_nothing() {
+        let (records, id, reference) = minuet("lost-click");
+        let mut session = None;
+        let mut active = practising(&reference);
+        active.attempt.play(Pitch::new(74).expect("a key"));
+        active.lost_since = Some(std::time::Instant::now());
+        let mut ongoing = Some(active);
+
+        let refused = start_at(
+            &mut session,
+            &mut ongoing,
+            id.clone(),
+            Arc::clone(&reference),
+            bar(9),
+            &records,
+            &quiet(),
+        );
+
+        assert_eq!(refused, Err(NoStart::InstrumentLost));
+        assert!(session.is_none());
+        assert_eq!(ongoing.expect("still waiting").attempt.from(), 0);
+        assert_eq!(records.sessions_of(&id), 0);
+    }
+
+    #[test]
+    #[ignore = "needs a real libverovio; run `just provided-test`"]
+    fn leaving_the_piece_puts_the_start_back_at_the_beginning() {
+        let (records, id, reference) = minuet("leave-resets");
+        let mut session = None;
+        let mut ongoing = None;
+        start_at(
+            &mut session,
+            &mut ongoing,
+            id,
+            Arc::clone(&reference),
+            bar(9),
+            &records,
+            &quiet(),
+        )
+        .expect("bar 9 has notes");
+
+        let (reply, answer) = std::sync::mpsc::sync_channel(1);
+        handle(
+            Command::End {
+                ending: Ending::Left,
+                reply,
+            },
+            &mut hogwash_midi::MidiInstruments,
+            &mut session,
+            &mut ongoing,
+            &mut None,
+            &records,
+            &quiet(),
+        );
+
+        assert!(
+            answer.recv().expect("a reply").is_err(),
+            "nothing was running"
+        );
+        assert_eq!(session.expect("open").from, 0);
+    }
+
+    #[test]
+    #[ignore = "needs a real libverovio; run `just provided-test`"]
+    fn a_bar_that_does_not_exist_is_refused() {
+        let (records, id, reference) = minuet("no-bar");
+        let refused = start_at(
+            &mut None,
+            &mut None,
+            id,
+            reference,
+            bar(99),
+            &records,
+            &quiet(),
+        );
+
+        assert_eq!(refused, Err(NoStart::NothingThere));
     }
 }

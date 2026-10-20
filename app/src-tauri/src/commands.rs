@@ -33,7 +33,7 @@ use tauri::{Manager as _, State};
 use tauri_plugin_dialog::DialogExt as _;
 
 use crate::engraving::Engraving;
-use crate::practice::AttemptSummary;
+use crate::practice::{AttemptSummary, Ending, NoStart, StartPoint};
 use crate::startup::Unavailable;
 use crate::state::{Failed, Hogwash, Shared};
 
@@ -138,10 +138,9 @@ pub fn forget(hogwash: &mut Hogwash, id: &str) -> Result<usize, Refused> {
         return Err("Pieces that come with Hogwash cannot be deleted.".to_owned());
     }
 
-    // An attempt left running in the background (leaving the practice screen
-    // does not end one yet) would otherwise save history for a piece that no
-    // longer exists. Nothing running is the ordinary case.
-    drop(hogwash.practice().end_attempt());
+    // An attempt still running would otherwise save history for a piece
+    // that no longer exists. Nothing running is the ordinary case.
+    drop(hogwash.practice().end_attempt(Ending::Left));
 
     let forgotten = hogwash
         .records()
@@ -679,13 +678,51 @@ pub fn start_attempt(
 ///
 /// If no attempt is running.
 #[tauri::command]
-pub fn end_attempt(state: State<'_, Shared>) -> Result<AttemptSummary, Refused> {
+pub fn end_attempt(ending: Ending, state: State<'_, Shared>) -> Result<AttemptSummary, Refused> {
     let hogwash = state.inner().0.lock().map_err(|_| POISONED.to_owned())?;
 
     hogwash
         .practice()
-        .end_attempt()
+        .end_attempt(ending)
         .map_err(|_| "No attempt is in progress.".to_owned())
+}
+
+/// Moves where attempts at `piece_id` start to bar `measure`, its first
+/// occurrence in played order. While practising, the running attempt is
+/// ended and kept, and a new one begins there.
+///
+/// # Errors
+///
+/// If the piece or bar is unknown, there is nothing to start at, or the
+/// keyboard is lost.
+#[tauri::command]
+pub fn start_at_bar(
+    piece_id: String,
+    measure: u32,
+    state: State<'_, Shared>,
+) -> Result<StartPoint, Refused> {
+    let hogwash = state.inner().0.lock().map_err(|_| POISONED.to_owned())?;
+
+    let id = hogwash_domain::PieceId::new(&piece_id)
+        .ok_or_else(|| format!("`{piece_id}` is not a usable piece name."))?;
+    let piece = hogwash
+        .library()
+        .pieces()
+        .into_iter()
+        .find(|piece| *piece.id() == id)
+        .ok_or_else(|| format!("There is no piece called `{piece_id}` in the library."))?;
+    let bar = hogwash_domain::MeasureNumber::new(measure)
+        .ok_or_else(|| format!("There is no bar {measure}."))?;
+
+    hogwash
+        .practice()
+        .start_at_bar(id, std::sync::Arc::new(piece.reference().clone()), bar)
+        .map_err(|refused| match refused {
+            NoStart::NothingThere => format!("There is nothing to start at from bar {measure}."),
+            NoStart::InstrumentLost => {
+                "The keyboard has stopped reporting; wait for it before moving.".to_owned()
+            }
+        })
 }
 
 /// A MIDI output device, as the picker needs it.

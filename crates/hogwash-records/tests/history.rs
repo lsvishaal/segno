@@ -39,13 +39,17 @@ fn session(id: &str) -> SessionRecord {
         attempts: vec![
             AttemptRecord {
                 began_ms: None,
+                from: 0,
                 played: played(&[60, 62, 64]),
                 reached: 3,
+                ended: None,
             },
             AttemptRecord {
                 began_ms: None,
+                from: 0,
                 played: played(&[60, 65]),
                 reached: 1,
+                ended: None,
             },
         ],
     }
@@ -129,8 +133,10 @@ fn keeping_a_session_again_replaces_it() {
     let mut later = session("one");
     later.attempts.push(AttemptRecord {
         began_ms: None,
+        from: 0,
         played: played(&[67]),
         reached: 1,
+        ended: None,
     });
     records.keep(&later).expect("keeps again");
 
@@ -177,7 +183,7 @@ fn a_record_from_a_newer_version_is_refused_rather_than_guessed_at() {
 
     let path = directory.path().join("history").join("one.json");
     let text = std::fs::read_to_string(&path).expect("reads");
-    std::fs::write(&path, text.replace("\"schema\": 2", "\"schema\": 99")).expect("writes");
+    std::fs::write(&path, text.replace("\"schema\": 3", "\"schema\": 99")).expect("writes");
 
     let (sessions, unreadable) = records.sessions().expect("the directory is readable");
 
@@ -387,8 +393,10 @@ fn tolerated_notes_are_not_mistakes_in_a_kept_attempt() {
     // C, grace G, D, trilled E (E F E F), and the trill's tail after the end.
     kept.attempts = vec![AttemptRecord {
         began_ms: None,
+        from: 0,
         played: played(&[60, 67, 62, 64, 65, 64, 65]),
         reached: 3,
+        ended: None,
     }];
     Records::under(directory.path())
         .keep(&kept)

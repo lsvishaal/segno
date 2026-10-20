@@ -95,9 +95,12 @@ export function startAttempt(pieceId: string, instrument: string): Promise<void>
   return invoke<void>("start_attempt", { pieceId, instrument });
 }
 
+/** How the performer ended an attempt. Leaving also puts the start back at bar 1. */
+export type Ending = "stop" | "finished" | "left";
+
 /** Ends whatever attempt is running, and returns its summary (FR-408). */
-export function endAttempt(): Promise<AttemptSummary> {
-  return invoke<AttemptSummary>("end_attempt");
+export function endAttempt(ending: Ending): Promise<AttemptSummary> {
+  return invoke<AttemptSummary>("end_attempt", { ending });
 }
 
 /**

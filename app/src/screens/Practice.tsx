@@ -55,9 +55,6 @@ export function PracticeScreen({
   // A developer view: what the geometry layer reads from the page.
   const [showGeometry, setShowGeometry] = useState(false);
   const [phase, setPhase] = useState<Phase>({ kind: "choosing", refusal: null });
-  // For the cleanup below, which has to see where the loop is *now*.
-  const phaseRef = useRef(phase);
-  phaseRef.current = phase;
   const [available, setAvailable] = useState<readonly InstrumentSummary[]>([]);
   const [cursor, setCursor] = useState<CursorState>(BEFORE_STARTING);
   const [dot, setDot] = useState<Dot | null>(null);
@@ -260,9 +257,10 @@ export function PracticeScreen({
     [pieceId],
   );
 
+  const reachedEnd = phase.kind === "practicing" && phase.reachedEnd;
   const finish = useCallback(() => {
-    void endAttempt();
-  }, []);
+    void endAttempt(reachedEnd ? "finished" : "stop");
+  }, [reachedEnd]);
 
   const again = useCallback(
     (instrument: string) => {
@@ -300,18 +298,19 @@ export function PracticeScreen({
     setPhase({ kind: "choosing", refusal: null });
   }, []);
 
-  // An attempt still running when this screen goes away is ended, and kept if
-  // anything was played, instead of carrying on unseen in the background.
-  // Leaving by the button does it at once; this covers every other way out.
+  // Leaving ends an attempt still running (kept if anything was played)
+  // instead of letting it carry on unseen, and puts the start point back at
+  // bar 1, running or not. Leaving by the button does it at once; this covers
+  // every other way out. Nothing running answers with a refusal, ignored.
   useEffect(
     () => () => {
-      if (phaseRef.current.kind === "practicing") void endAttempt().catch(() => undefined);
+      void endAttempt("left").catch(() => undefined);
     },
     [],
   );
 
   const leave = useCallback(() => {
-    if (phaseRef.current.kind === "practicing") void endAttempt().catch(() => undefined);
+    void endAttempt("left").catch(() => undefined);
     onLeave();
   }, [onLeave]);
 

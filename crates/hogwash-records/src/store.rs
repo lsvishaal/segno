@@ -7,6 +7,7 @@ use hogwash_capture::ObservedPerformance;
 use hogwash_domain::PieceId;
 
 use crate::atomic;
+pub use crate::stored::Ended;
 use crate::stored::{
     PIECE_SCHEMA, SESSION_SCHEMA, StoredAttempt, StoredPiece, StoredSession, read_id,
     read_performance, stored_performance,
@@ -42,10 +43,15 @@ pub struct AttemptRecord {
     /// When it began, in Unix milliseconds, as the caller reported it.
     /// `None` for attempts kept before this was recorded.
     pub began_ms: Option<u64>,
+    /// Where it started: a position in the Reference Performance (a step in
+    /// played order), not a bar number. 0 for attempts kept before this was.
+    pub from: usize,
     /// What the performer played, in order.
     pub played: ObservedPerformance,
     /// How far they got.
     pub reached: usize,
+    /// How it ended. `None` for attempts kept before this was recorded.
+    pub ended: Option<Ended>,
 }
 
 /// A piece kept on disk, and where its score is.
@@ -163,7 +169,9 @@ impl Records {
                     let (notes, pedal) = stored_performance(&attempt.played);
                     StoredAttempt {
                         began_ms: attempt.began_ms,
+                        from: attempt.from,
                         reached: attempt.reached,
+                        ended: attempt.ended,
                         notes,
                         pedal,
                         played: Vec::new(),
@@ -475,10 +483,23 @@ impl Records {
                 }
             })?;
 
+            // An attempt cannot have got less far than where it started.
+            if attempt.from > attempt.reached {
+                return Err(RecordsFailure::Unreadable {
+                    path: path.to_path_buf(),
+                    detail: format!(
+                        "an attempt starts at {} but reached only {}",
+                        attempt.from, attempt.reached
+                    ),
+                });
+            }
+
             attempts.push(AttemptRecord {
                 began_ms: attempt.began_ms,
+                from: attempt.from,
                 played,
                 reached: attempt.reached,
+                ended: attempt.ended,
             });
         }
 

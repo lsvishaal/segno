@@ -1,0 +1,76 @@
+{
+  "schema": 3,
+  "id": "minuet-1792270830806",
+  "piece": "minuet",
+  "started": "1792270830806",
+  "closed": false,
+  "attempts": [
+    {
+      "began_ms": 1792270831002,
+      "from": 0,
+      "reached": 3,
+      "ended": "restart",
+      "notes": [
+        {
+          "key": 74,
+          "at_us": 0,
+          "velocity": 80,
+          "released_us": 410000
+        },
+        {
+          "key": 67,
+          "at_us": 512000,
+          "velocity": 72,
+          "released_us": 990000
+        },
+        {
+          "key": 66,
+          "at_us": 1040000,
+          "velocity": 58,
+          "released_us": 1100000
+        },
+        {
+          "key": 69,
+          "at_us": 1350000,
+          "velocity": 90
+        }
+      ],
+      "pedal": [
+        {
+          "at_us": 300000,
+          "down": true
+        },
+        {
+          "at_us": 1200000,
+          "down": false
+        }
+      ]
+    },
+    {
+      "began_ms": 1792270845310,
+      "from": 36,
+      "reached": 38,
+      "ended": "jump",
+      "notes": [
+        {
+          "key": 74,
+          "at_us": 0,
+          "velocity": 64,
+          "released_us": 380000
+        },
+        {
+          "key": 59,
+          "at_us": 21000,
+          "velocity": 52,
+          "released_us": 395000
+        },
+        {
+          "key": 67,
+          "at_us": 498000,
+          "velocity": 60,
+          "released_us": 801000
+        }
+      ]
+    }
+  ]
+}

@@ -31,20 +31,50 @@ use serde::{Deserialize, Serialize};
 /// - **1**: each attempt's notes as bare key numbers, `"played": [74, 67]`.
 ///   Still read; never written.
 /// - **2**: each note an object, with when and how hard it was struck and
-///   when it came up, plus the sustain pedal and when the attempt began:
+///   when it came up, plus the sustain pedal and when the attempt began.
+///   Still read; never written.
+/// - **3**: as 2, plus where each attempt started and how it ended:
 ///
 /// ```json
-/// { "began_ms": 1792270830806, "reached": 2,
+/// { "began_ms": 1792270830806, "from": 36, "reached": 38, "ended": "jump",
 ///   "notes": [ { "key": 74, "at_us": 0, "velocity": 80, "released_us": 410000 },
-///              { "key": 67, "at_us": 512000, "velocity": 72 } ],
+///              { "key": 59, "at_us": 512000, "velocity": 72 } ],
 ///   "pedal": [ { "at_us": 300000, "down": true } ] }
 /// ```
 ///
-/// Times are microseconds since the attempt began; `began_ms` is Unix time in
+/// `from` and `reached` are positions in the Reference Performance (steps in
+/// played order, repeats included), never bar numbers. Times are
+/// microseconds since the attempt began; `began_ms` is Unix time in
 /// milliseconds, like a session's `started`. A note's timing fields are
 /// absent where they were never known (it came from a schema 1 file), and
 /// `released_us` is absent if the key was still down when the attempt ended.
-pub(crate) const SESSION_SCHEMA: u32 = 2;
+/// Read from schemas 1 and 2, `from` is 0 and `ended` is absent (unknown).
+pub(crate) const SESSION_SCHEMA: u32 = 3;
+
+/// How an attempt ended, as stored. Each name is fixed by its `rename`, so
+/// renaming a variant cannot change what is on disk; a name not listed here
+/// makes the whole file unreadable rather than guessed at.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub enum Ended {
+    /// The end of the piece was reached, and the performer finished.
+    #[serde(rename = "finished")]
+    Finished,
+    /// Restart (button or R): begun again at the same start.
+    #[serde(rename = "restart")]
+    Restart,
+    /// A click on the score began a new attempt somewhere else.
+    #[serde(rename = "jump")]
+    Jump,
+    /// The performer pressed Stop.
+    #[serde(rename = "stop")]
+    Stop,
+    /// The performer left the piece (back to the library, Esc, another piece).
+    #[serde(rename = "left")]
+    Left,
+    /// The keyboard went away and did not come back in time.
+    #[serde(rename = "lost")]
+    Lost,
+}
 
 /// The version of the piece shape below. Separate from the session's: the
 /// two change for different reasons, and bumping one must not make an older
@@ -78,8 +108,15 @@ pub(crate) struct StoredAttempt {
     /// When the attempt began, in Unix milliseconds. Absent in schema 1.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub(crate) began_ms: Option<u64>,
+    /// Where the attempt started, as a position in the Reference
+    /// Performance. 0 in schemas 1 and 2, where every attempt did.
+    #[serde(default)]
+    pub(crate) from: usize,
     /// How far the performer got, as a position in the Reference Performance.
     pub(crate) reached: usize,
+    /// How it ended. Absent in schemas 1 and 2.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub(crate) ended: Option<Ended>,
     /// Every note played, in order.
     ///
     /// The Observed Performance and **nothing derived from it**. An Analysis

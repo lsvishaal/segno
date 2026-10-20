@@ -82,10 +82,14 @@ impl Hogwash {
             .into_iter()
             .filter_map(|id| records.source_of(&id).map(|source| (id, source)))
             .collect();
-        let practised: BTreeSet<PieceId> = records
-            .sessions()
-            .map(|(sessions, _)| sessions.into_iter().map(|session| session.piece).collect())
-            .unwrap_or_default();
+        let (sessions, unreadable) = records.sessions().unwrap_or_default();
+        // A session file that does not read costs only itself: the rest of
+        // the history is used, and why that one was skipped is said.
+        for line in skipped(&unreadable) {
+            eprintln!("{line}");
+        }
+        let practised: BTreeSet<PieceId> =
+            sessions.into_iter().map(|session| session.piece).collect();
         let bundled: BTreeSet<PieceId> = pieces.iter().map(|piece| piece.id().clone()).collect();
         let (kept, surplus) = collapse(
             stored
@@ -294,13 +298,33 @@ fn collapse(
     (kept, surplus)
 }
 
+/// One line per practice record that could not be read, saying which file
+/// and why. Written to the log; the file is left where it is.
+fn skipped(unreadable: &[hogwash_records::RecordsFailure]) -> Vec<String> {
+    unreadable
+        .iter()
+        .map(|failure| match failure {
+            hogwash_records::RecordsFailure::Unreadable { path, detail } => {
+                format!("hogwash: skipped the practice record {}: {detail}", path.display())
+            }
+            hogwash_records::RecordsFailure::FromTheFuture { path, schema } => format!(
+                "hogwash: skipped the practice record {}: written by a newer Hogwash (schema {schema})",
+                path.display()
+            ),
+            hogwash_records::RecordsFailure::Storage(failure) => {
+                format!("hogwash: a practice record could not be read: {failure}")
+            }
+        })
+        .collect()
+}
+
 #[cfg(test)]
 mod tests {
     use std::collections::BTreeSet;
 
     use hogwash_domain::PieceId;
 
-    use super::collapse;
+    use super::{collapse, skipped};
 
     fn id(name: &str) -> PieceId {
         PieceId::new(name).expect("usable")
@@ -374,5 +398,64 @@ mod tests {
         );
         assert!(kept.is_empty());
         assert_eq!(surplus, [id("minuet")]);
+    }
+
+    // One session file with an ending this version does not know: the app
+    // still starts, the other session still counts, and the skipped one is
+    // named with the reason.
+    #[test]
+    #[ignore = "needs a real libverovio; run `just provided-test`"]
+    fn a_session_with_an_unknown_ending_is_skipped_and_the_rest_still_count() {
+        use hogwash_records::{AttemptRecord, Ended, Records, SessionRecord};
+
+        let directory = std::env::temp_dir().join("hogwash-state-unknown-ending");
+        drop(std::fs::remove_dir_all(&directory));
+        let records = Records::under(&directory);
+        let minuet = crate::provided::PROVIDED
+            .iter()
+            .find(|piece| piece.name == "minuet-in-g.musicxml")
+            .map(|piece| crate::provided::identify(piece.source))
+            .expect("the Minuet is provided");
+        let mut played = hogwash_capture::ObservedPerformance::new();
+        played.record(hogwash_domain::Pitch::new(74).expect("D5"));
+        let good = SessionRecord {
+            id: format!("{}-1", minuet.as_str()),
+            piece: minuet.clone(),
+            started: "1".to_owned(),
+            closed: false,
+            attempts: vec![AttemptRecord {
+                began_ms: None,
+                from: 0,
+                played,
+                reached: 0,
+                ended: Some(Ended::Stop),
+            }],
+        };
+        records.keep(&good).expect("keeps");
+        let history = directory.join("history");
+        let text = std::fs::read_to_string(history.join(format!("{}-1.json", minuet.as_str())))
+            .expect("reads");
+        std::fs::write(
+            history.join(format!("{}-2.json", minuet.as_str())),
+            text.replace("-1\"", "-2\"")
+                .replace("\"stop\"", "\"teleported\""),
+        )
+        .expect("writes");
+
+        let engraving = crate::engraving::Engraving::start().expect("the engine starts");
+        let practice =
+            crate::practice::Practice::start(records.clone(), |_| {}).expect("the thread starts");
+        let started = super::Hogwash::start(engraving, records.clone(), practice);
+
+        assert!(started.is_ok(), "the app did not start");
+        assert_eq!(records.sessions_of(&minuet), 1);
+        let (_, unreadable) = records.sessions().expect("history reads");
+        let lines = skipped(&unreadable);
+        assert_eq!(lines.len(), 1);
+        assert!(
+            lines[0].contains("-2.json") && lines[0].contains("teleported"),
+            "{}",
+            lines[0]
+        );
     }
 }

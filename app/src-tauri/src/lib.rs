@@ -88,6 +88,7 @@ pub fn run() -> Result<(), tauri::Error> {
             commands::instruments,
             commands::start_attempt,
             commands::end_attempt,
+            commands::start_at_bar,
             commands::export_musicxml,
             commands::import_musicxml,
             commands::rename_piece,

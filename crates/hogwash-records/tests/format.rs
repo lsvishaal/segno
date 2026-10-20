@@ -1,13 +1,14 @@
 //! The session file format, pinned.
 //!
 //! A performer's history outlives any one version of Hogwash, so what is on
-//! disk is checked against files kept here: one written by schema 1, which
-//! must always load, and one in today's shape, which must load to exactly
-//! the record it describes and be written back byte for byte. A change to
-//! the format that was not meant fails here first.
+//! disk is checked against files kept here: one per schema ever written.
+//! Old ones must always load; today's must load to exactly the record it
+//! describes and be written back byte for byte. A change to the format that
+//! was not meant fails here first.
 //!
-//! The notes are the opening of the Minuet in G: D5 G4 A4 B4 as written,
-//! and in schema 2 a wrong F#4 before the A4.
+//! The notes are the Minuet in G: its opening D5 G4 A4 B4 (in schemas 2 and
+//! 3 with a wrong F#4 before the A4), and in schema 3 a second attempt
+//! started at bar 9, which is step 36 of the Minuet's played order.
 
 #![expect(
     clippy::expect_used,
@@ -18,10 +19,11 @@ use std::path::Path;
 
 use hogwash_capture::{ObservedPerformance, Touch};
 use hogwash_domain::{PieceId, Pitch};
-use hogwash_records::{AttemptRecord, Records, RecordsFailure, SessionRecord};
+use hogwash_records::{AttemptRecord, Ended, Records, RecordsFailure, SessionRecord};
 
 const SCHEMA_1: &str = include_str!("fixtures/session-schema-1.json");
 const SCHEMA_2: &str = include_str!("fixtures/session-schema-2.json");
+const SCHEMA_3: &str = include_str!("fixtures/session-schema-3.json");
 
 fn key(number: u8) -> Pitch {
     Pitch::new(number).expect("a piano key")
@@ -61,7 +63,7 @@ fn written(session: &SessionRecord, root: &Path) -> String {
         .expect("reads back")
 }
 
-fn schema_2_record() -> SessionRecord {
+fn opening() -> ObservedPerformance {
     let mut played = ObservedPerformance::new();
     played.record_touched(key(74), touch(0, 80, Some(410_000)));
     played.pedal(300_000, true);
@@ -69,7 +71,12 @@ fn schema_2_record() -> SessionRecord {
     played.record_touched(key(66), touch(1_040_000, 58, Some(1_100_000)));
     played.pedal(1_200_000, false);
     played.record_touched(key(69), touch(1_350_000, 90, None));
+    played
+}
 
+/// The schema 2 fixture as read today: it says nothing of where its attempt
+/// started (so the start) or how it ended (unknown).
+fn schema_2_record() -> SessionRecord {
     SessionRecord {
         id: "minuet-1792270830806".to_owned(),
         piece: PieceId::new("minuet").expect("a plain name"),
@@ -77,9 +84,36 @@ fn schema_2_record() -> SessionRecord {
         closed: false,
         attempts: vec![AttemptRecord {
             began_ms: Some(1_792_270_831_002),
-            played,
+            from: 0,
+            played: opening(),
             reached: 3,
+            ended: None,
         }],
+    }
+}
+
+fn schema_3_record() -> SessionRecord {
+    // Bar 9 of the Minuet: D5 over B3, then G4.
+    let mut bar_9 = ObservedPerformance::new();
+    bar_9.record_touched(key(74), touch(0, 64, Some(380_000)));
+    bar_9.record_touched(key(59), touch(21_000, 52, Some(395_000)));
+    bar_9.record_touched(key(67), touch(498_000, 60, Some(801_000)));
+
+    SessionRecord {
+        attempts: vec![
+            AttemptRecord {
+                ended: Some(Ended::Restart),
+                ..schema_2_record().attempts.remove(0)
+            },
+            AttemptRecord {
+                began_ms: Some(1_792_270_845_310),
+                from: 36,
+                played: bar_9,
+                reached: 38,
+                ended: Some(Ended::Jump),
+            },
+        ],
+        ..schema_2_record()
     }
 }
 
@@ -95,14 +129,32 @@ fn a_schema_1_session_still_loads_with_its_notes_untimed() {
     assert!(attempt.played.touches().iter().all(Option::is_none));
     assert!(attempt.played.pedal_changes().is_empty());
     assert_eq!(attempt.began_ms, None);
+    assert_eq!(attempt.from, 0);
     assert_eq!(attempt.reached, 4);
+    assert_eq!(attempt.ended, None);
 }
 
 #[test]
-fn a_schema_2_session_loads_to_exactly_what_it_describes() {
+fn a_schema_2_session_still_loads_starting_at_the_start_and_ending_unknown() {
     let session = read(SCHEMA_2, "minuet-1792270830806").expect("schema 2 loads");
 
     assert_eq!(session, schema_2_record());
+}
+
+#[test]
+fn a_schema_3_session_loads_to_exactly_what_it_describes() {
+    let session = read(SCHEMA_3, "minuet-1792270830806").expect("schema 3 loads");
+
+    assert_eq!(session, schema_3_record());
+}
+
+// `from` is a step in played order. Bar 9 of the Minuet is step 36; storing
+// the bar number instead would replay the attempt from the wrong place.
+#[test]
+fn from_is_the_step_an_attempt_started_at_not_its_bar_number() {
+    let session = read(SCHEMA_3, "minuet-1792270830806").expect("schema 3 loads");
+
+    assert_eq!(session.attempts[1].from, 36);
 }
 
 #[test]
@@ -110,8 +162,8 @@ fn todays_format_is_written_byte_for_byte() {
     let directory = tempfile::tempdir().expect("a temporary directory");
 
     assert_eq!(
-        written(&schema_2_record(), directory.path()).trim_end(),
-        SCHEMA_2.trim_end()
+        written(&schema_3_record(), directory.path()).trim_end(),
+        SCHEMA_3.trim_end()
     );
 }
 
@@ -124,7 +176,7 @@ fn an_old_session_is_written_back_in_todays_shape_without_losing_a_note() {
 
     let text = written(&session, directory.path());
 
-    assert!(text.contains("\"schema\": 2"));
+    assert!(text.contains("\"schema\": 3"));
     assert!(!text.contains("at_us"));
     assert_eq!(
         read(&text, "minuet-1790435530700").expect("reloads"),
@@ -162,10 +214,47 @@ fn a_note_whose_timing_is_half_there_is_refused() {
 
 #[test]
 fn a_session_from_a_later_schema_is_still_refused() {
-    let text = SCHEMA_2.replace("\"schema\": 2", "\"schema\": 3");
+    let text = SCHEMA_3.replace("\"schema\": 3", "\"schema\": 4");
 
     assert!(matches!(
         read(&text, "minuet-1792270830806"),
-        Err(RecordsFailure::FromTheFuture { schema: 3, .. })
+        Err(RecordsFailure::FromTheFuture { schema: 4, .. })
+    ));
+}
+
+// An ending this version does not know is refused, not guessed at, and costs
+// only its own file: the rest of the history still reads.
+#[test]
+fn an_unknown_ending_makes_only_that_session_unreadable() {
+    let directory = tempfile::tempdir().expect("a temporary directory");
+    let history = directory.path().join("history");
+    std::fs::create_dir_all(&history).expect("a history folder");
+    std::fs::write(history.join("minuet-1792270830806.json"), SCHEMA_3).expect("writes");
+    std::fs::write(
+        history.join("minuet-1792270899999.json"),
+        SCHEMA_3
+            .replace("minuet-1792270830806", "minuet-1792270899999")
+            .replace("\"jump\"", "\"teleported\""),
+    )
+    .expect("writes");
+
+    let (sessions, unreadable) = Records::under(directory.path())
+        .sessions()
+        .expect("the history is readable");
+
+    assert_eq!(sessions, [schema_3_record()]);
+    assert!(
+        matches!(unreadable.as_slice(), [RecordsFailure::Unreadable { detail, .. }] if detail.contains("teleported")),
+        "{unreadable:?}"
+    );
+}
+
+#[test]
+fn an_attempt_that_starts_after_where_it_reached_is_refused() {
+    let text = SCHEMA_3.replace("\"from\": 36", "\"from\": 40");
+
+    assert!(matches!(
+        read(&text, "minuet-1792270830806"),
+        Err(RecordsFailure::Unreadable { .. })
     ));
 }

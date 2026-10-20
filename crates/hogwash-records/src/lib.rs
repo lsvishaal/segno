@@ -12,4 +12,4 @@ mod atomic;
 mod store;
 mod stored;
 
-pub use store::{AttemptRecord, PieceRecord, Records, RecordsFailure, SessionRecord};
+pub use store::{AttemptRecord, Ended, PieceRecord, Records, RecordsFailure, SessionRecord};

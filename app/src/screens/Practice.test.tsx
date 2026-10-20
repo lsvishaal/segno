@@ -73,18 +73,18 @@ describe("leaving the practice screen", () => {
       fireEvent.click(screen.getByRole("button", { name: "← Library" }));
     });
 
-    expect(bridge.endAttempt).toHaveBeenCalled();
+    expect(bridge.endAttempt).toHaveBeenCalledWith("left");
     expect(onLeave).toHaveBeenCalledOnce();
   });
 
-  it("has nothing to end before an attempt has started", async () => {
+  it("says it is leaving even before an attempt has started, so the start resets", async () => {
     const { onLeave } = await renderScreen();
 
     await act(async () => {
       fireEvent.click(screen.getByRole("button", { name: "← Library" }));
     });
 
-    expect(bridge.endAttempt).not.toHaveBeenCalled();
+    expect(bridge.endAttempt).toHaveBeenCalledWith("left");
     expect(onLeave).toHaveBeenCalledOnce();
   });
 
@@ -97,6 +97,7 @@ describe("leaving the practice screen", () => {
     });
 
     expect(bridge.endAttempt).toHaveBeenCalledOnce();
+    expect(bridge.endAttempt).toHaveBeenCalledWith("left");
   });
 });
 
