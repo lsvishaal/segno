@@ -47,7 +47,7 @@ use std::thread;
 use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 
 use hogwash_analysis::Analysis;
-use hogwash_capture::{Instrument, Keyboard, MidiSource, NoInstrument};
+use hogwash_capture::{Action, Instrument, Keyboard, MidiSource, NoInstrument, Touch};
 use hogwash_domain::PieceId;
 use hogwash_feedback::Feedback;
 use hogwash_midi::{MidiInstruments, NoOutput, OutputPort, Thru, output_ports};
@@ -323,12 +323,20 @@ struct OpenSession {
     id: String,
     started: String,
     session: PracticeSession,
+    /// When each attempt kept in `session` began, in Unix milliseconds,
+    /// index for index.
+    began: Vec<Option<u64>>,
 }
 
 /// An attempt in progress, and its live keyboard connection.
 struct Ongoing {
     instrument: Instrument,
     attempt: Attempt,
+    /// When it began: the zero every played note's time counts from. Kept
+    /// across a reconnect, so times run on rather than starting again.
+    started: Instant,
+    /// The same moment on the wall clock, for the record.
+    began_ms: u64,
     keyboard: Box<dyn Keyboard>,
     /// `Some` once the instrument has stopped reporting; the moment it did.
     lost_since: Option<Instant>,
@@ -393,7 +401,14 @@ fn handle(
             // one running is ended and kept first, never silently dropped. No
             // `Ended` event: the screen is starting again, not reading a summary.
             if let Some(previous) = ongoing.take() {
-                drop(finish(session, previous.attempt, records, false, None));
+                drop(finish(
+                    session,
+                    previous.attempt,
+                    Some(previous.began_ms),
+                    records,
+                    false,
+                    None,
+                ));
             }
 
             match source.open(&instrument) {
@@ -408,6 +423,8 @@ fn handle(
                     *ongoing = Some(Ongoing {
                         instrument,
                         attempt,
+                        started: Instant::now(),
+                        began_ms: unix_ms(),
                         keyboard,
                         lost_since: None,
                         last_reconnect_attempt: Instant::now(),
@@ -420,7 +437,14 @@ fn handle(
         }
         Command::End { reply } => {
             let outcome = ongoing.take().map(|active| {
-                let summary = finish(session, active.attempt, records, false, None);
+                let summary = finish(
+                    session,
+                    active.attempt,
+                    Some(active.began_ms),
+                    records,
+                    false,
+                    None,
+                );
                 emit(
                     sink,
                     &PracticeEvent::Ended {
@@ -496,6 +520,7 @@ fn poll(
                 let summary = finish(
                     session,
                     active.attempt,
+                    Some(active.began_ms),
                     records,
                     true,
                     Some("The instrument did not reconnect.".to_owned()),
@@ -523,12 +548,35 @@ fn poll(
     }
 }
 
-/// Drains every note struck since the last tick, playing each into the
-/// Attempt and reporting what happened.
+/// Drains everything heard since the last tick, playing each note into the
+/// Attempt and reporting what happened. Releases and the pedal are only
+/// recorded.
 fn drain(active: &mut Ongoing, sink: &Sink) {
-    for pitch in active.keyboard.played() {
-        // The correctness signal `003 §7.16` forbids `CursorMovement` from
-        // giving: was this pitch one the Cursor was waiting for, checked
+    for heard in active.keyboard.heard() {
+        // Saturating: a message stamped a moment before the attempt began
+        // (already in flight at Start) counts as its first instant.
+        let at_us = u64::try_from(
+            heard
+                .at
+                .saturating_duration_since(active.started)
+                .as_micros(),
+        )
+        .unwrap_or(u64::MAX);
+
+        let (pitch, velocity) = match heard.action {
+            Action::Pressed { pitch, velocity } => (pitch, velocity),
+            Action::Released { pitch } => {
+                active.attempt.release(pitch, at_us);
+                continue;
+            }
+            Action::Pedal { down } => {
+                active.attempt.pedal(at_us, down);
+                continue;
+            }
+        };
+
+        // The correctness signal `CursorMovement` deliberately does not
+        // give: was this pitch one the Cursor was waiting for, checked
         // *before* the Cursor is told about it.
         let correct = active
             .attempt
@@ -541,7 +589,14 @@ fn drain(active: &mut Ongoing, sink: &Sink) {
         let tolerated = active.attempt.cursor().tolerates(pitch);
 
         let position = active.attempt.cursor().position();
-        let movement = active.attempt.play(pitch);
+        let movement = active.attempt.play_touched(
+            pitch,
+            Touch {
+                at_us,
+                velocity,
+                released_us: None,
+            },
+        );
 
         if tolerated {
             continue;
@@ -584,17 +639,23 @@ fn open_session(
         return;
     }
 
-    let stamp = SystemTime::now()
-        .duration_since(UNIX_EPOCH)
-        .map(|duration| duration.as_millis())
-        .unwrap_or_default();
+    let stamp = unix_ms();
 
     *session = Some(OpenSession {
         id: format!("{}-{stamp}", piece_id.as_str()),
         started: stamp.to_string(),
         piece_id,
         session: PracticeSession::open(reference),
+        began: Vec::new(),
     });
+}
+
+/// The wall clock, in Unix milliseconds.
+fn unix_ms() -> u64 {
+    SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .map(|duration| u64::try_from(duration.as_millis()).unwrap_or(u64::MAX))
+        .unwrap_or_default()
 }
 
 /// Ends an attempt, analyses it, derives feedback, keeps the record, and
@@ -607,6 +668,7 @@ fn open_session(
 fn finish(
     session: &mut Option<OpenSession>,
     attempt: Attempt,
+    began_ms: Option<u64>,
     records: &Records,
     auto_ended: bool,
     reason: Option<String>,
@@ -627,6 +689,7 @@ fn finish(
     // added to the session and nothing is written.
     if !ended.observed().is_empty() {
         open.session.record(ended);
+        open.began.push(began_ms);
 
         let record = SessionRecord {
             id: open.id.clone(),
@@ -637,7 +700,9 @@ fn finish(
                 .session
                 .attempts()
                 .iter()
-                .map(|attempt| AttemptRecord {
+                .zip(&open.began)
+                .map(|(attempt, &began_ms)| AttemptRecord {
+                    began_ms,
                     played: attempt.observed().clone(),
                     reached: attempt.reached(),
                 })
@@ -721,16 +786,17 @@ mod tests {
             id: "keeps-test".to_owned(),
             started: "0".to_owned(),
             session: PracticeSession::open(Arc::new(minuet.reference().clone())),
+            began: Vec::new(),
         });
 
         let nothing = session.as_ref().expect("open").session.begin_attempt();
-        drop(finish(&mut session, nothing, &records, false, None));
+        drop(finish(&mut session, nothing, None, &records, false, None));
         assert_eq!(records.sessions_of(&id), 0, "an empty attempt was kept");
 
         // D5 is the first note of the Minuet.
         let mut one = session.as_ref().expect("open").session.begin_attempt();
         one.play(Pitch::new(74).expect("D5 is a piano key"));
-        drop(finish(&mut session, one, &records, false, None));
+        drop(finish(&mut session, one, None, &records, false, None));
         assert_eq!(
             records.sessions_of(&id),
             1,

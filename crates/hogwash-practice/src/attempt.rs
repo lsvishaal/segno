@@ -2,7 +2,7 @@
 
 use std::sync::Arc;
 
-use hogwash_capture::ObservedPerformance;
+use hogwash_capture::{ObservedPerformance, Touch};
 use hogwash_domain::Pitch;
 use hogwash_notation::ReferencePerformance;
 
@@ -47,6 +47,24 @@ impl Attempt {
     pub fn play(&mut self, pitch: Pitch) -> CursorMovement {
         self.observed.record(pitch);
         self.cursor.observe(pitch)
+    }
+
+    /// The performer played `pitch`, struck as `touch` says. Exactly
+    /// [`play`](Self::play), with how the key was struck recorded beside it.
+    pub fn play_touched(&mut self, pitch: Pitch, touch: Touch) -> CursorMovement {
+        self.observed.record_touched(pitch, touch);
+        self.cursor.observe(pitch)
+    }
+
+    /// The key for `pitch` came up. Recorded; the Cursor never hears of it.
+    pub fn release(&mut self, pitch: Pitch, at_us: u64) {
+        self.observed.release(pitch, at_us);
+    }
+
+    /// The sustain pedal is `down` (or up). Recorded; the Cursor never hears
+    /// of it.
+    pub fn pedal(&mut self, at_us: u64, down: bool) {
+        self.observed.pedal(at_us, down);
     }
 
     /// Where the performer is expected to be.
@@ -118,6 +136,7 @@ impl EndedAttempt {
 
 #[cfg(test)]
 mod tests {
+    use hogwash_capture::Touch;
     use hogwash_domain::Step;
 
     use crate::attempt::Attempt;
@@ -243,5 +262,36 @@ mod tests {
         let ended = attempt.end();
 
         assert_eq!(ended.observed().played(), &[pitch(Step::C), unexpected()]);
+    }
+
+    // Releases and the pedal are facts about the performance, not notes:
+    // the Cursor waits for the same position before and after them. The
+    // notes are the Minuet's first two, D and G.
+    #[test]
+    fn a_release_or_the_pedal_never_moves_the_cursor() {
+        let mut attempt = Attempt::begin(one_bar(&[Step::D, Step::G]));
+        let touch = Touch {
+            at_us: 0,
+            velocity: 80,
+            released_us: None,
+        };
+
+        assert_eq!(
+            attempt.play_touched(pitch(Step::D), touch),
+            CursorMovement::Advanced
+        );
+        let position = attempt.cursor().position();
+
+        attempt.release(pitch(Step::D), 300_000);
+        attempt.pedal(350_000, true);
+        attempt.pedal(900_000, false);
+
+        assert_eq!(attempt.cursor().position(), position);
+        assert_eq!(attempt.observed().played(), &[pitch(Step::D)]);
+        assert_eq!(
+            attempt.observed().touches()[0].and_then(|touch| touch.released_us),
+            Some(300_000)
+        );
+        assert_eq!(attempt.observed().pedal_changes().len(), 2);
     }
 }

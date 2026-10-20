@@ -3,11 +3,10 @@
 use std::sync::mpsc::{Receiver, Sender, TryRecvError, channel};
 use std::time::{Duration, Instant};
 
-use hogwash_capture::{Instrument, Keyboard, MidiSource, NoInstrument};
-use hogwash_domain::Pitch;
+use hogwash_capture::{Heard, Instrument, Keyboard, MidiSource, NoInstrument};
 use midir::{MidiInput, MidiInputConnection};
 
-use crate::message::note_struck;
+use crate::message::decode;
 
 /// The name `midir` is asked to give this application's ports.
 const CLIENT: &str = "Hogwash";
@@ -85,7 +84,7 @@ impl MidiSource for MidiInstruments {
             .port_name(&port)
             .unwrap_or_else(|_| instrument.name().to_owned());
 
-        let (notes, played) = channel();
+        let (notes, heard) = channel();
 
         // `midir` calls this on its own thread, whenever a key moves. It does
         // as little as possible and never blocks: `ADR-0009` keeps every
@@ -108,7 +107,7 @@ impl MidiSource for MidiInstruments {
             })?;
 
         Ok(Box::new(Connected {
-            played,
+            heard,
             connection: Some(connection),
             watcher,
             name,
@@ -117,23 +116,33 @@ impl MidiSource for MidiInstruments {
     }
 }
 
-/// Decodes one message and passes on anything that was a note.
+/// Decodes one message and passes on anything worth recording, stamped with
+/// when it arrived.
 ///
 /// Free-standing so the closure above stays one line, and so the only thing
-/// crossing the thread boundary is a `Pitch` — not a byte slice whose
+/// crossing the thread boundary is a `Heard` — not a byte slice whose
 /// lifetime is `midir`'s business.
-fn forward(message: &[u8], notes: &Sender<Pitch>) {
-    if let Some(pitch) = note_struck(message) {
+///
+/// The stamp is taken here rather than read from `midir`'s timestamp, which
+/// on ALSA counts from each connection and so starts again at zero when a
+/// keyboard is plugged back in mid-attempt. An `Instant` taken on arrival is
+/// as precise and runs on across a reconnect.
+fn forward(message: &[u8], notes: &Sender<Heard>) {
+    if let Some(action) = decode(message) {
+        let heard = Heard {
+            at: Instant::now(),
+            action,
+        };
         // The result is deliberately unexamined: an error means the
         // receiving end has been dropped, which means nobody is practising
         // any more, and there is nothing useful to do about it here.
-        let _ = notes.send(pitch);
+        let _ = notes.send(heard);
     }
 }
 
 /// A live connection to one instrument.
 struct Connected {
-    played: Receiver<Pitch>,
+    heard: Receiver<Heard>,
     // An `Option` only so that `Drop` can take it. `midir` disconnects when
     // the connection is dropped, so the whole lifecycle is ownership.
     connection: Option<MidiInputConnection<()>>,
@@ -185,15 +194,15 @@ impl std::fmt::Debug for Connected {
 }
 
 impl Keyboard for Connected {
-    fn played(&mut self) -> Vec<Pitch> {
-        let mut struck = Vec::new();
+    fn heard(&mut self) -> Vec<Heard> {
+        let mut heard = Vec::new();
 
         // Drains what is there and returns. Never blocks, never waits: this
         // runs inside a frame, and a frame that waited for a note would stop
         // drawing the score the performer is reading from.
         loop {
-            match self.played.try_recv() {
-                Ok(pitch) => struck.push(pitch),
+            match self.heard.try_recv() {
+                Ok(event) => heard.push(event),
                 Err(TryRecvError::Empty) => break,
                 Err(TryRecvError::Disconnected) => {
                     // The sending side is gone — the instrument went away.
@@ -213,7 +222,7 @@ impl Keyboard for Connected {
             }
         }
 
-        struck
+        heard
     }
 
     fn is_connected(&self) -> bool {

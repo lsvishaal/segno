@@ -20,5 +20,5 @@
 mod instrument;
 mod observed;
 
-pub use instrument::{Instrument, Keyboard, MidiSource, NoInstrument};
-pub use observed::ObservedPerformance;
+pub use instrument::{Action, Heard, Instrument, Keyboard, MidiSource, NoInstrument};
+pub use observed::{ObservedPerformance, PedalChange, Touch};

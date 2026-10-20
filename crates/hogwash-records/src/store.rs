@@ -4,10 +4,13 @@ use std::fs;
 use std::path::{Path, PathBuf};
 
 use hogwash_capture::ObservedPerformance;
-use hogwash_domain::{PieceId, Pitch};
+use hogwash_domain::PieceId;
 
 use crate::atomic;
-use crate::stored::{SCHEMA, StoredAttempt, StoredPiece, StoredSession, read_id, stored_pitch};
+use crate::stored::{
+    PIECE_SCHEMA, SESSION_SCHEMA, StoredAttempt, StoredPiece, StoredSession, read_id,
+    read_performance, stored_performance,
+};
 
 /// One session's worth of history, in the terms the application deals in.
 ///
@@ -36,6 +39,9 @@ pub struct SessionRecord {
 /// One attempt, in the terms the application deals in.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct AttemptRecord {
+    /// When it began, in Unix milliseconds, as the caller reported it.
+    /// `None` for attempts kept before this was recorded.
+    pub began_ms: Option<u64>,
     /// What the performer played, in order.
     pub played: ObservedPerformance,
     /// How far they got.
@@ -145,7 +151,7 @@ impl Records {
     /// version is untouched in that case — see [`crate::atomic`].
     pub fn keep(&self, session: &SessionRecord) -> Result<(), RecordsFailure> {
         let stored = StoredSession {
-            schema: SCHEMA,
+            schema: SESSION_SCHEMA,
             id: session.id.clone(),
             piece: session.piece.as_str().to_owned(),
             started: session.started.clone(),
@@ -153,15 +159,15 @@ impl Records {
             attempts: session
                 .attempts
                 .iter()
-                .map(|attempt| StoredAttempt {
-                    played: attempt
-                        .played
-                        .played()
-                        .iter()
-                        .copied()
-                        .map(stored_pitch)
-                        .collect(),
-                    reached: attempt.reached,
+                .map(|attempt| {
+                    let (notes, pedal) = stored_performance(&attempt.played);
+                    StoredAttempt {
+                        began_ms: attempt.began_ms,
+                        reached: attempt.reached,
+                        notes,
+                        pedal,
+                        played: Vec::new(),
+                    }
                 })
                 .collect(),
         };
@@ -266,7 +272,7 @@ impl Records {
         };
 
         let stored = StoredPiece {
-            schema: SCHEMA,
+            schema: PIECE_SCHEMA,
             id: record.id.as_str().to_owned(),
             title: record.title.clone(),
             composer: record.composer.clone(),
@@ -447,7 +453,7 @@ impl Records {
                 detail: failure.to_string(),
             })?;
 
-        if stored.schema > SCHEMA {
+        if stored.schema > SESSION_SCHEMA {
             return Err(RecordsFailure::FromTheFuture {
                 path: path.to_path_buf(),
                 schema: stored.schema,
@@ -462,18 +468,15 @@ impl Records {
         let mut attempts = Vec::new();
 
         for attempt in stored.attempts {
-            let mut played = ObservedPerformance::new();
-
-            for note in attempt.played {
-                let pitch = Pitch::new(note).ok_or_else(|| RecordsFailure::Unreadable {
+            let played = read_performance(stored.schema, &attempt).map_err(|detail| {
+                RecordsFailure::Unreadable {
                     path: path.to_path_buf(),
-                    detail: format!("{note} is not a note any key produces"),
-                })?;
-
-                played.record(pitch);
-            }
+                    detail,
+                }
+            })?;
 
             attempts.push(AttemptRecord {
+                began_ms: attempt.began_ms,
                 played,
                 reached: attempt.reached,
             });

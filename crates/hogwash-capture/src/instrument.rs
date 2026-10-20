@@ -18,6 +18,8 @@
 //! last time. The adapter does the thread-crossing behind it, and the domain
 //! stays single-threaded with no locks (`ADR-0009`).
 
+use std::time::Instant;
+
 use hogwash_domain::Pitch;
 
 /// A MIDI instrument the performer could play.
@@ -91,19 +93,54 @@ impl NoInstrument {
     }
 }
 
+/// Something the performer did at the instrument, and when.
+///
+/// `at` is an [`Instant`] the adapter took as the message arrived. Carrying
+/// one reads no clock; whoever receives it measures it against when the
+/// Attempt began.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct Heard {
+    /// When it arrived.
+    pub at: Instant,
+    /// What it was.
+    pub action: Action,
+}
+
+/// What a performer can do at an instrument that is worth recording.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum Action {
+    /// A key went down: a note played.
+    Pressed {
+        /// Which key.
+        pitch: Pitch,
+        /// How hard, 1–127.
+        velocity: u8,
+    },
+    /// A key came up.
+    Released {
+        /// Which key.
+        pitch: Pitch,
+    },
+    /// The sustain pedal went down, or came up.
+    Pedal {
+        /// Whether it is now down.
+        down: bool,
+    },
+}
+
 /// A live connection to an instrument.
 ///
 /// Dropping it disconnects. There is no `close`: an attempt ends by the
 /// connection going out of scope, which is one fewer state to get wrong.
 pub trait Keyboard {
-    /// Every note struck since this was last called, oldest first.
+    /// Everything heard since this was last called, oldest first.
     ///
-    /// Returns notes that were **pressed**. A key being released is not a
-    /// note played, and `003 §7.5` records what the performer played.
+    /// Only a [`Action::Pressed`] is a note played; releases and the pedal
+    /// are recorded beside the notes, never compared with the Score.
     ///
     /// Empty is the ordinary answer — most of the time, nothing has happened
     /// since the last frame.
-    fn played(&mut self) -> Vec<Pitch>;
+    fn heard(&mut self) -> Vec<Heard>;
 
     /// Whether the instrument is still there.
     ///

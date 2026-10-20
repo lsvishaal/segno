@@ -52,7 +52,7 @@ fn a_keyboard_that_disappears_is_noticed_and_found_again() {
 
     let deadline = Instant::now() + Duration::from_secs(3);
     while keyboard.is_connected() && Instant::now() < deadline {
-        drop(keyboard.played());
+        drop(keyboard.heard());
         sleep(Duration::from_millis(50));
     }
     assert!(

@@ -16,17 +16,40 @@
 //! It also keeps `serde` out of the pure crates, which `scripts/check-arch.sh`
 //! enforces.
 
+use hogwash_capture::{ObservedPerformance, Touch};
 use hogwash_domain::{PieceId, Pitch};
 use serde::{Deserialize, Serialize};
 
-/// The version of the shape below.
+/// The version of the session shape below.
 ///
 /// Bumped whenever the stored shape changes in a way an older reader would
 /// misunderstand. A reader that meets a version it does not know **refuses**
 /// rather than guessing: a half-understood record read as if it were
 /// understood is worse than one that could not be opened, because the first
 /// silently reports the wrong thing about a performer's practice.
-pub(crate) const SCHEMA: u32 = 1;
+///
+/// - **1**: each attempt's notes as bare key numbers, `"played": [74, 67]`.
+///   Still read; never written.
+/// - **2**: each note an object, with when and how hard it was struck and
+///   when it came up, plus the sustain pedal and when the attempt began:
+///
+/// ```json
+/// { "began_ms": 1792270830806, "reached": 2,
+///   "notes": [ { "key": 74, "at_us": 0, "velocity": 80, "released_us": 410000 },
+///              { "key": 67, "at_us": 512000, "velocity": 72 } ],
+///   "pedal": [ { "at_us": 300000, "down": true } ] }
+/// ```
+///
+/// Times are microseconds since the attempt began; `began_ms` is Unix time in
+/// milliseconds, like a session's `started`. A note's timing fields are
+/// absent where they were never known (it came from a schema 1 file), and
+/// `released_us` is absent if the key was still down when the attempt ended.
+pub(crate) const SESSION_SCHEMA: u32 = 2;
+
+/// The version of the piece shape below. Separate from the session's: the
+/// two change for different reasons, and bumping one must not make an older
+/// version refuse the other.
+pub(crate) const PIECE_SCHEMA: u32 = 1;
 
 /// One practice session, as stored.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -52,20 +75,50 @@ pub(crate) struct StoredSession {
 /// One attempt at a piece, as stored.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub(crate) struct StoredAttempt {
-    /// Every note played, in order (`003 §7.5`).
-    ///
-    /// The Observed Performance and **nothing derived from it**. An Analysis
-    /// is a total function of this and the Piece's Reference Performance
-    /// (`003 §7.6`, FR-406), so storing findings as well would mean keeping
-    /// two accounts that could disagree — and if they ever did, there would
-    /// be no way to tell which was right.
-    ///
-    /// FR-601 wants attempt history "including their analysis results", and
-    /// this satisfies it by keeping what those results are *made of*. The
-    /// results themselves are recomputed, identically, every time.
-    pub(crate) played: Vec<u8>,
+    /// When the attempt began, in Unix milliseconds. Absent in schema 1.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub(crate) began_ms: Option<u64>,
     /// How far the performer got, as a position in the Reference Performance.
     pub(crate) reached: usize,
+    /// Every note played, in order.
+    ///
+    /// The Observed Performance and **nothing derived from it**. An Analysis
+    /// is a total function of this and the Piece's Reference Performance, so
+    /// storing findings as well would mean keeping two accounts that could
+    /// disagree — and if they ever did, there would be no way to tell which
+    /// was right. The results are recomputed, identically, every time.
+    #[serde(default)]
+    pub(crate) notes: Vec<StoredNote>,
+    /// Every change of the sustain pedal, in order.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub(crate) pedal: Vec<StoredPedal>,
+    /// Schema 1's notes: bare key numbers. Read, never written.
+    #[serde(default, skip_serializing)]
+    pub(crate) played: Vec<u8>,
+}
+
+/// One played note, as stored.
+///
+/// The key is a bare MIDI number, which is all an instrument reports. No
+/// spelling is kept because none was ever known: the performer pressed a
+/// key, and which of its two readings they had in mind is not something the
+/// instrument said.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub(crate) struct StoredNote {
+    pub(crate) key: u8,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub(crate) at_us: Option<u64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub(crate) velocity: Option<u8>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub(crate) released_us: Option<u64>,
+}
+
+/// A change of the sustain pedal, as stored.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub(crate) struct StoredPedal {
+    pub(crate) at_us: u64,
+    pub(crate) down: bool,
 }
 
 /// A piece in the library, as stored.
@@ -95,14 +148,86 @@ pub(crate) struct StoredPiece {
     pub(crate) renamed: bool,
 }
 
-/// A played note, as stored.
+/// An Observed Performance's notes and pedal, as stored.
+pub(crate) fn stored_performance(
+    observed: &ObservedPerformance,
+) -> (Vec<StoredNote>, Vec<StoredPedal>) {
+    let notes = observed
+        .played()
+        .iter()
+        .zip(observed.touches())
+        .map(|(&pitch, touch)| StoredNote {
+            key: u8::from(pitch),
+            at_us: touch.map(|touch| touch.at_us),
+            velocity: touch.map(|touch| touch.velocity),
+            released_us: touch.and_then(|touch| touch.released_us),
+        })
+        .collect();
+
+    let pedal = observed
+        .pedal_changes()
+        .iter()
+        .map(|change| StoredPedal {
+            at_us: change.at_us,
+            down: change.down,
+        })
+        .collect();
+
+    (notes, pedal)
+}
+
+/// A stored attempt's notes and pedal, read back as an Observed Performance.
 ///
-/// A bare MIDI number, which is all an instrument reports (ADR-0001). No
-/// spelling is kept because none was ever known: the performer pressed a key,
-/// and which of the two readings of that key they had in mind is not
-/// something the instrument said.
-pub(crate) fn stored_pitch(pitch: Pitch) -> u8 {
-    u8::from(pitch)
+/// Schema 1 kept bare key numbers in `played`; schema 2 keeps `notes`.
+///
+/// # Errors
+///
+/// What is wrong, if anything stored is not something a keyboard could
+/// have reported: a key or velocity out of range, or timing that is only
+/// partly there. Refused rather than repaired, for the same reason a record
+/// from a newer version is.
+pub(crate) fn read_performance(
+    schema: u32,
+    attempt: &StoredAttempt,
+) -> Result<ObservedPerformance, String> {
+    let mut observed = ObservedPerformance::new();
+    let key =
+        |note: u8| Pitch::new(note).ok_or_else(|| format!("{note} is not a note any key produces"));
+
+    if schema == 1 {
+        for &note in &attempt.played {
+            observed.record(key(note)?);
+        }
+        return Ok(observed);
+    }
+
+    for note in &attempt.notes {
+        let pitch = key(note.key)?;
+
+        match (note.at_us, note.velocity, note.released_us) {
+            (None, None, None) => observed.record(pitch),
+            (Some(at_us), Some(velocity @ 1..=127), released_us) => observed.record_touched(
+                pitch,
+                Touch {
+                    at_us,
+                    velocity,
+                    released_us,
+                },
+            ),
+            _ => {
+                return Err(format!(
+                    "key {}: its timing is incomplete or out of range",
+                    note.key
+                ));
+            }
+        }
+    }
+
+    for change in &attempt.pedal {
+        observed.pedal(change.at_us, change.down);
+    }
+
+    Ok(observed)
 }
 
 /// A durable name, read back.

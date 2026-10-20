@@ -425,8 +425,19 @@ matches this file, `just ci` green.
 your right hand only, see "3 clean in a row," and go back to the library —
 touching nothing but the score, the keyboard and at most two buttons.
 
-### M1.1 · M · Timestamps and velocity on every played note (never cut)
+### M1.1 · M · Timestamps and velocity on every played note (never cut) — done 20 Oct
 
+- **As built:**
+  - Session schema 2 stores, per attempt, `began_ms` and `notes`. Each note
+    has `key`, `at_us`, `velocity` and `released_us`. The sustain pedal's
+    changes are kept too.
+  - Times are taken as an `Instant` when each message arrives, not from
+    midir's timestamp, which restarts at 0 on an ALSA reconnect.
+  - Schema 1 files still load, with their notes untimed.
+  - Golden files in `crates/hogwash-records/tests/fixtures/` pin the
+    format.
+  - Replay is unchanged: it keeps no record, so timing it would show
+    nothing.
 - **Why:** stall time per bar (M2) is impossible without them.
 - **What:** midir's microsecond timestamp and the note-on velocity travel
   from the MIDI callback → practice thread → `ObservedPerformance` →
