@@ -25,15 +25,21 @@ use hogwash_domain::{MeasureNumber, Pitch, PitchSpelling, Step};
 use hogwash_feedback::Feedback;
 use hogwash_notation::{Measure, Note, Position, ReferencePerformance, Score};
 
-const USAGE: &str = "replay <score.musicxml> <events.json> | expected <score.musicxml>";
+const USAGE: &str =
+    "replay <score.musicxml> <events.json> [--from-bar <n>] | expected <score.musicxml>";
 
 fn main() -> ExitCode {
     let arguments: Vec<String> = std::env::args().skip(1).collect();
 
     let replayed = match arguments.as_slice() {
         [command, score, events] if command == "replay" => {
-            Some(replay::replay(Path::new(score), Path::new(events)))
+            Some(replay::replay(Path::new(score), Path::new(events), None))
         }
+        [command, score, events, flag, bar] if command == "replay" && flag == "--from-bar" => Some(
+            bar.parse()
+                .map_err(|_| format!("`{bar}` is not a bar number"))
+                .and_then(|bar| replay::replay(Path::new(score), Path::new(events), Some(bar))),
+        ),
         [command, score] if command == "expected" => Some(replay::expected(Path::new(score))),
         [command, ..] if command == "replay" || command == "expected" => {
             Some(Err(format!("usage: hogwash-cli {USAGE}")))

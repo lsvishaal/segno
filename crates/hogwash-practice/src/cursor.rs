@@ -55,6 +55,10 @@ pub struct Cursor {
     /// for both (ADR-0001). Requiring two presses would ask for something no
     /// instrument can do.
     satisfied: BTreeSet<Pitch>,
+    /// The step an attempt started on, with the notes held into its measure
+    /// added. In place of the Reference Performance's step until the Cursor
+    /// first moves.
+    opening: Option<ExpectedNotes>,
 }
 
 impl Cursor {
@@ -64,10 +68,27 @@ impl Cursor {
     /// an Attempt begins."*
     #[must_use]
     pub fn at_the_beginning(reference: Arc<ReferencePerformance>) -> Self {
+        Self::starting_at(reference, 0)
+    }
+
+    /// A Cursor resting on step `position` of `reference`, as an attempt
+    /// that starts there begins.
+    ///
+    /// Notes tied into that step's measure are required along with it,
+    /// since starting there they have not been struck. Past the end, the
+    /// Cursor has simply reached it.
+    #[must_use]
+    pub fn starting_at(reference: Arc<ReferencePerformance>, position: usize) -> Self {
+        let opening = reference
+            .at(position)
+            .filter(|step| !step.held_into().is_empty())
+            .map(ExpectedNotes::starting_here);
+
         Self {
             reference,
-            position: 0,
+            position,
             satisfied: BTreeSet::new(),
+            opening,
         }
     }
 
@@ -80,7 +101,9 @@ impl Cursor {
     /// What the performer is expected to play next, or `None` at the end.
     #[must_use]
     pub fn expecting(&self) -> Option<&ExpectedNotes> {
-        self.reference.at(self.position)
+        self.opening
+            .as_ref()
+            .or_else(|| self.reference.at(self.position))
     }
 
     /// Whether `pitch` is tolerated where the Cursor stands: a grace note or
@@ -171,6 +194,7 @@ impl Cursor {
         if complete {
             self.position += 1;
             self.satisfied.clear();
+            self.opening = None;
             CursorMovement::Advanced
         } else {
             CursorMovement::Held
@@ -186,7 +210,8 @@ mod tests {
 
     use crate::cursor::{Cursor, CursorMovement};
     use crate::fixtures::{
-        one_bar, one_chord, one_enharmonic_unison, pitch, two_bars, unexpected, unison_pitch,
+        one_bar, one_chord, one_enharmonic_unison, pitch, tied_into_second, two_bars, unexpected,
+        unison_pitch,
     };
 
     // MVP §5, pause row -- "Long pause to work something out: the cursor
@@ -479,5 +504,41 @@ mod tests {
         assert_eq!(cursor.observe(grace), CursorMovement::Held);
         assert_eq!(cursor.observe(pitch(Step::C)), CursorMovement::Advanced);
         assert!(cursor.tolerates(grace), "the tail, past the end");
+    }
+
+    #[test]
+    fn a_cursor_can_start_at_any_step() {
+        let reference = two_bars(&[Step::D, Step::G], &[Step::A, Step::B]);
+        let mut cursor = Cursor::starting_at(Arc::clone(&reference), 2);
+
+        assert_eq!(cursor.position(), 2);
+        assert_eq!(cursor.expecting(), reference.at(2));
+        assert_eq!(cursor.observe(pitch(Step::A)), CursorMovement::Advanced);
+        assert_eq!(cursor.position(), 3);
+    }
+
+    // C tied over the barline into bar 2: starting at bar 2 it has not been
+    // struck, so the cursor waits for it with bar 2's first note, in either
+    // order, and never again after that.
+    #[test]
+    fn starting_after_a_tie_the_cursor_waits_for_the_held_note() {
+        let reference = tied_into_second(&[Step::D, Step::C], Step::C, &[Step::A, Step::B]);
+        let mut cursor = Cursor::starting_at(reference, 2);
+
+        assert_eq!(cursor.observe(pitch(Step::A)), CursorMovement::Held);
+        assert_eq!(cursor.observe(pitch(Step::C)), CursorMovement::Advanced);
+        assert_eq!(cursor.observe(pitch(Step::B)), CursorMovement::Advanced);
+        assert!(cursor.has_reached_the_end());
+    }
+
+    #[test]
+    fn played_through_a_tied_note_is_not_struck_again() {
+        let reference = tied_into_second(&[Step::D, Step::C], Step::C, &[Step::A, Step::B]);
+        let mut cursor = Cursor::at_the_beginning(reference);
+
+        for step in [Step::D, Step::C, Step::A] {
+            assert_eq!(cursor.observe(pitch(step)), CursorMovement::Advanced);
+        }
+        assert_eq!(cursor.position(), 3);
     }
 }

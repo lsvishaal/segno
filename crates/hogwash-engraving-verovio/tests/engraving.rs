@@ -478,3 +478,52 @@ fn a_narrower_window_reflows_into_more_lines() {
     assert!(systems(&zoomed) > systems(&wide));
     assert_eq!(ids(&zoomed), ids(&wide));
 }
+
+// The Minuet's first half (bars 1-16) is repeated. Starting at bar 3 means
+// its first occurrence: the step after bars 1-2 on the first pass.
+#[test]
+#[ignore = "needs a real libverovio; run `just engraving-test`"]
+fn a_bar_inside_a_repeat_starts_at_its_first_occurrence_in_the_minuet() {
+    let minuet = include_bytes!("../../../app/src-tauri/library/minuet-in-g.musicxml");
+    let engraved = engraver().engrave(minuet).expect("the Minuet engraves");
+    let reference = hogwash_notation::ReferencePerformance::derived_from(engraved.score());
+
+    let occurrences: Vec<usize> = reference
+        .iter()
+        .enumerate()
+        .filter(|(index, step)| {
+            step.measure() == bar(3)
+                && reference
+                    .at(index.wrapping_sub(1))
+                    .is_none_or(|before| before.measure() != bar(3))
+        })
+        .map(|(index, _)| index)
+        .collect();
+
+    assert_eq!(occurrences.len(), 2, "bar 3 is played twice");
+    assert_eq!(reference.first_position_of(bar(3)), Some(occurrences[0]));
+}
+
+// Satie's Gymnopédie No. 1, bar 10: its opening note is tied over from bar 9.
+// Played through, it is not struck again; starting at bar 10, it must be.
+// (One of the repository's test scores; see ROADMAP M0.2.)
+#[test]
+#[ignore = "needs a real libverovio; run `just engraving-test`"]
+fn a_note_tied_into_a_bar_is_required_when_starting_there_in_the_gymnopedie() {
+    let satie = include_bytes!("../../../app/src-tauri/library/Erik_Satie_-_Gymnopedie_No.1.mxl");
+    let engraved = engraver().engrave(satie).expect("the Gymnopédie engraves");
+    let reference = hogwash_notation::ReferencePerformance::derived_from(engraved.score());
+
+    let start = reference
+        .first_position_of(bar(10))
+        .expect("bar 10 has notes");
+    let step = reference.at(start).expect("a step");
+    let struck: Vec<u8> = step.sounding().map(u8::from).collect();
+    let started: Vec<u8> = step.starting_here().sounding().map(u8::from).collect();
+
+    assert!(
+        !step.held_into().is_empty(),
+        "bar 10 opens with a held note"
+    );
+    assert!(started.len() > struck.len(), "{struck:?} -> {started:?}");
+}

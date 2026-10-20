@@ -21,6 +21,7 @@ use crate::cursor::{Cursor, CursorMovement};
 pub struct Attempt {
     cursor: Cursor,
     observed: ObservedPerformance,
+    from: usize,
 }
 
 impl Attempt {
@@ -30,10 +31,24 @@ impl Attempt {
     /// Cursor rests on the first expected position.
     #[must_use]
     pub fn begin(reference: Arc<ReferencePerformance>) -> Self {
+        Self::begin_at(reference, 0)
+    }
+
+    /// Begins an Attempt at step `from` of the Piece: the Cursor rests
+    /// there, waiting also for any note tied into that step's measure.
+    #[must_use]
+    pub fn begin_at(reference: Arc<ReferencePerformance>, from: usize) -> Self {
         Self {
-            cursor: Cursor::at_the_beginning(reference),
+            cursor: Cursor::starting_at(reference, from),
             observed: ObservedPerformance::new(),
+            from,
         }
+    }
+
+    /// The step this Attempt began at.
+    #[must_use]
+    pub const fn from(&self) -> usize {
+        self.from
     }
 
     /// The performer played `pitch`.
@@ -87,6 +102,7 @@ impl Attempt {
     #[must_use]
     pub fn end(self) -> EndedAttempt {
         EndedAttempt {
+            from: self.from,
             reached: self.cursor.position(),
             completed: self.cursor.has_reached_the_end(),
             observed: self.observed,
@@ -106,6 +122,7 @@ impl Attempt {
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct EndedAttempt {
     observed: ObservedPerformance,
+    from: usize,
     reached: usize,
     completed: bool,
 }
@@ -115,6 +132,12 @@ impl EndedAttempt {
     #[must_use]
     pub const fn observed(&self) -> &ObservedPerformance {
         &self.observed
+    }
+
+    /// The step the Attempt began at.
+    #[must_use]
+    pub const fn from(&self) -> usize {
+        self.from
     }
 
     /// How far through the Piece the Cursor got.

@@ -77,6 +77,9 @@ impl Position {
 pub struct Measure {
     number: MeasureNumber,
     positions: Vec<Position>,
+    /// Notes tied over the barline into this measure's opening: struck in
+    /// the measure before and still sounding when this one begins.
+    held_into: Vec<Note>,
 }
 
 impl Measure {
@@ -90,7 +93,25 @@ impl Measure {
     /// hold the notation faithfully (`001 §11`).
     #[must_use]
     pub fn new(number: MeasureNumber, positions: Vec<Position>) -> Self {
-        Self { number, positions }
+        Self {
+            number,
+            positions,
+            held_into: Vec::new(),
+        }
+    }
+
+    /// This measure, opening with `notes` held over from the one before.
+    #[must_use]
+    pub fn holding(mut self, notes: Vec<Note>) -> Self {
+        self.held_into = notes;
+        self
+    }
+
+    /// The notes tied into this measure's opening. Played through, they are
+    /// never struck again; starting here, they have to be.
+    #[must_use]
+    pub fn held_into(&self) -> &[Note] {
+        &self.held_into
     }
 
     /// The number the Score gave this measure.

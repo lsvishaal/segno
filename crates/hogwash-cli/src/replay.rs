@@ -2,7 +2,7 @@
 //! keyboard needed.
 //!
 //! ```text
-//! hogwash-cli replay   <score.musicxml> <events.json>
+//! hogwash-cli replay   <score.musicxml> <events.json> [--from-bar <n>]
 //! hogwash-cli expected <score.musicxml>
 //! ```
 //!
@@ -16,7 +16,7 @@ use std::path::Path;
 use std::sync::Arc;
 
 use hogwash_analysis::Analysis;
-use hogwash_domain::{Pitch, PitchSpelling, Step};
+use hogwash_domain::{MeasureNumber, Pitch, PitchSpelling, Step};
 use hogwash_engraving::{EngravedScore, Engraver as _};
 use hogwash_engraving_verovio::VerovioEngraver;
 use hogwash_feedback::Feedback;
@@ -49,15 +49,22 @@ pub(crate) fn events_from(json: &str) -> Result<Vec<(Pitch, Option<u64>)>, Strin
 }
 
 /// `hogwash-cli replay <score> <events>`: every event, step by step, then the
-/// analysis and feedback the performer would get.
-pub(crate) fn replay(score: &Path, events: &Path) -> Result<String, String> {
+/// analysis and feedback the performer would get. With `from_bar`, the
+/// attempt starts at that bar, as clicking it in the app does.
+pub(crate) fn replay(score: &Path, events: &Path, from_bar: Option<u32>) -> Result<String, String> {
     let engraved = engrave(score)?;
     let text = std::fs::read_to_string(events)
         .map_err(|failure| format!("cannot read {}: {failure}", events.display()))?;
     let events = events_from(&text)?;
 
     let reference = Arc::new(ReferencePerformance::derived_from(engraved.score()));
-    let mut attempt = Attempt::begin(Arc::clone(&reference));
+    let from = match from_bar {
+        None => 0,
+        Some(bar) => MeasureNumber::new(bar)
+            .and_then(|bar| reference.first_position_of(bar))
+            .ok_or_else(|| format!("bar {bar} has nothing to start at"))?,
+    };
+    let mut attempt = Attempt::begin_at(Arc::clone(&reference), from);
 
     let mut out = header(&engraved, &reference);
 
@@ -87,7 +94,7 @@ pub(crate) fn replay(score: &Path, events: &Path) -> Result<String, String> {
     }
 
     let ended = attempt.end();
-    let analysis = Analysis::of(ended.observed(), &reference);
+    let analysis = Analysis::starting_at(ended.observed(), &reference, from);
 
     out.push('\n');
     for line in crate::summarise(analysis.summary()) {

@@ -11,7 +11,7 @@
 //! Pure. Everything here takes strings and returns values, so the whole of
 //! the adapter's judgement is testable with no library present.
 
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, BTreeSet};
 
 use hogwash_domain::{Location, MeasureNumber, Pitch};
 use hogwash_engraving::{Details, ElementId, PageIndex, Placement};
@@ -50,8 +50,16 @@ pub(crate) fn assemble(
     // them at the step after that too, where their main note usually is).
     let mut graces: Vec<Pitch> = Vec::new();
 
+    // Notes tied over a barline into a bar's opening, by bar: held through
+    // when the bar before is played, but struck when starting there. A
+    // bar's opening is the first onset met in it.
+    let mut held_into: BTreeMap<MeasureNumber, Vec<Note>> = BTreeMap::new();
+    let mut opened: BTreeSet<MeasureNumber> = BTreeSet::new();
+
     for sounding in onsets {
         let mut measure = None;
+        let mut held = Vec::new();
+        let mut bars_here = BTreeSet::new();
         let mut notes = Vec::new();
         let mut elements = Vec::new();
         let mut ornaments: Vec<Pitch> = Vec::new();
@@ -69,10 +77,16 @@ pub(crate) fn assemble(
             let Some(written) = read.note(id) else {
                 continue;
             };
+            bars_here.insert(written.measure);
 
             // Held from an earlier note, not struck again. An onset holding
             // nothing else then forms no Position at all.
             if written.continues_a_tie {
+                if !written.grace
+                    && let Some(note) = Note::new(written.spelling)
+                {
+                    held.push((written.measure, note));
+                }
                 continue;
             }
 
@@ -99,6 +113,13 @@ pub(crate) fn assemble(
             elements.push(ElementId::new(id.clone()));
         }
 
+        for (bar, note) in held {
+            if !opened.contains(&bar) {
+                held_into.entry(bar).or_default().push(note);
+            }
+        }
+        opened.extend(bars_here);
+
         let (Some(measure), Some(position)) = (measure, Position::new(notes)) else {
             continue;
         };
@@ -121,7 +142,9 @@ pub(crate) fn assemble(
             .unzip();
 
         drawn.insert(number, elements);
-        measures.push(Measure::new(number, positions));
+        measures.push(
+            Measure::new(number, positions).holding(held_into.remove(&number).unwrap_or_default()),
+        );
     }
 
     let order = play_order(read, played, &original, &drawn);

@@ -60,6 +60,18 @@ pub(crate) fn two_bars(first: &[Step], second: &[Step]) -> Arc<ReferencePerforma
     reference(vec![measure(1, melody(first)), measure(2, melody(second))])
 }
 
+/// Two bars of single notes, `held` tied over the barline into the second.
+pub(crate) fn tied_into_second(
+    first: &[Step],
+    held: Step,
+    second: &[Step],
+) -> Arc<ReferencePerformance> {
+    reference(vec![
+        measure(1, melody(first)),
+        measure(2, melody(second)).holding(vec![note(held)]),
+    ])
+}
+
 /// A single bar holding one chord: every step required together.
 pub(crate) fn one_chord(steps: &[Step]) -> Arc<ReferencePerformance> {
     let notes = steps.iter().copied().map(note).collect();

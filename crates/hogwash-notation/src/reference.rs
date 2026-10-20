@@ -22,6 +22,9 @@ pub struct ExpectedNotes {
     /// Pitches that are neither required nor wrong here. Never one of the
     /// required pitches.
     tolerated: Vec<Pitch>,
+    /// On the first step of a measure: the notes tied into that measure,
+    /// required only when an attempt starts here.
+    held_into: Vec<Note>,
 }
 
 impl ExpectedNotes {
@@ -39,6 +42,7 @@ impl ExpectedNotes {
                 measure,
                 notes,
                 tolerated: Vec::new(),
+                held_into: Vec::new(),
             })
         }
     }
@@ -61,6 +65,31 @@ impl ExpectedNotes {
     /// key has no spelling.
     pub fn sounding(&self) -> impl Iterator<Item = Pitch> + '_ {
         self.notes.iter().map(|note| note.sounding())
+    }
+
+    /// The notes tied into this step's measure, if this is the measure's
+    /// first step. Played through they are already sounding; starting here
+    /// they have to be struck.
+    #[must_use]
+    pub fn held_into(&self) -> &[Note] {
+        &self.held_into
+    }
+
+    /// This step as it is when an attempt starts on it: the held notes join
+    /// the ones struck here, like one chord. A held note the step also
+    /// strikes is asked for once.
+    #[must_use]
+    pub fn starting_here(&self) -> Self {
+        let mut started = self.clone();
+        for held in &self.held_into {
+            if !started.sounding().any(|pitch| pitch == held.sounding()) {
+                started.notes.push(*held);
+            }
+        }
+        started
+            .tolerated
+            .retain(|pitch| !started.notes.iter().any(|note| note.sounding() == *pitch));
+        started
     }
 
     /// Whether `pitch`, played here, is tolerated: a grace note or part of an
@@ -91,6 +120,9 @@ impl ExpectedNotes {
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct ReferencePerformance {
     steps: Vec<ExpectedNotes>,
+    /// Each measure in played order, with the step it starts at: the index
+    /// of its first step, or of the next measure's when it has none.
+    openings: Vec<(MeasureNumber, usize)>,
     /// What the last step tolerates at "the next step", which is past the
     /// end: the tail of a trill on the final note.
     after_the_end: Vec<Pitch>,
@@ -105,10 +137,14 @@ impl ReferencePerformance {
     #[must_use]
     pub fn derived_from(score: &Score) -> Self {
         let mut steps: Vec<ExpectedNotes> = Vec::new();
+        let mut openings = Vec::new();
         // What the previous step tolerates at the next one.
         let mut carried: Vec<Pitch> = Vec::new();
 
         for measure in score.performance() {
+            openings.push((measure.number(), steps.len()));
+            let first = steps.len();
+
             for position in measure.positions() {
                 let Some(mut step) =
                     ExpectedNotes::new(measure.number(), position.notes().to_vec())
@@ -126,6 +162,10 @@ impl ReferencePerformance {
                 tolerated.dedup();
                 step.tolerated = tolerated;
 
+                if steps.len() == first {
+                    step.held_into = measure.held_into().to_vec();
+                }
+
                 carried = position.tolerated().to_vec();
                 steps.push(step);
             }
@@ -133,6 +173,7 @@ impl ReferencePerformance {
 
         Self {
             steps,
+            openings,
             after_the_end: carried,
         }
     }
@@ -160,6 +201,19 @@ impl ReferencePerformance {
     #[must_use]
     pub fn at(&self, index: usize) -> Option<&ExpectedNotes> {
         self.steps.get(index)
+    }
+
+    /// Where an attempt starting at measure `number` begins: the first step
+    /// of its first occurrence in played order. A measure with nothing to
+    /// strike (rests, or only held notes) starts at the next one that has
+    /// something. `None` if the measure does not exist or nothing follows it.
+    #[must_use]
+    pub fn first_position_of(&self, number: MeasureNumber) -> Option<usize> {
+        self.openings
+            .iter()
+            .find(|(measure, _)| *measure == number)
+            .map(|&(_, step)| step)
+            .filter(|&step| step < self.steps.len())
     }
 
     /// The steps in the order the Score requires them.
@@ -403,5 +457,104 @@ mod tests {
         let reference = ReferencePerformance::derived_from(&score);
 
         assert!(reference.is_empty());
+    }
+
+    /// The Minuet in G's right hand, bars 1-3 as written (D5 G4 A4 B4 C5 |
+    /// D5 G4 G4 | E5 C5 D5 E5 F#5).
+    fn minuet_bar(number: u32) -> Measure {
+        let notes: &[(Step, i8, i8)] = match number {
+            1 => &[
+                (Step::D, 0, 5),
+                (Step::G, 0, 4),
+                (Step::A, 0, 4),
+                (Step::B, 0, 4),
+                (Step::C, 0, 5),
+            ],
+            2 => &[(Step::D, 0, 5), (Step::G, 0, 4), (Step::G, 0, 4)],
+            _ => &[
+                (Step::E, 0, 5),
+                (Step::C, 0, 5),
+                (Step::D, 0, 5),
+                (Step::E, 0, 5),
+                (Step::F, 1, 5),
+            ],
+        };
+        let positions = notes
+            .iter()
+            .map(|&(step, alter, octave)| {
+                Position::new(vec![
+                    Note::new(PitchSpelling::new(step, alter, octave)).unwrap(),
+                ])
+                .unwrap()
+            })
+            .collect();
+        Measure::new(MeasureNumber::new(number).unwrap(), positions)
+    }
+
+    fn bar(number: u32) -> MeasureNumber {
+        MeasureNumber::new(number).unwrap()
+    }
+
+    // Bars 1-2 are repeated, as the Minuet's first half is: a bar inside the
+    // repeat starts at its first occurrence in played order.
+    #[test]
+    fn a_repeated_bar_starts_at_its_first_occurrence() {
+        let score = score_of(vec![minuet_bar(1), minuet_bar(2), minuet_bar(3)])
+            .played_as(vec![bar(1), bar(2), bar(1), bar(2), bar(3)])
+            .unwrap();
+        let reference = ReferencePerformance::derived_from(&score);
+
+        assert_eq!(reference.first_position_of(bar(1)), Some(0));
+        assert_eq!(reference.first_position_of(bar(2)), Some(5));
+        assert_eq!(reference.first_position_of(bar(3)), Some(16));
+    }
+
+    #[test]
+    fn a_bar_with_nothing_to_strike_starts_at_the_next_one() {
+        let empty = Measure::new(bar(2), Vec::new());
+        let score = score_of(vec![minuet_bar(1), empty, minuet_bar(3)]);
+        let reference = ReferencePerformance::derived_from(&score);
+
+        assert_eq!(reference.first_position_of(bar(2)), Some(5));
+        assert_eq!(reference.at(5).unwrap().measure(), bar(3));
+    }
+
+    #[test]
+    fn a_bar_that_does_not_exist_or_ends_the_piece_empty_has_no_start() {
+        let empty = Measure::new(bar(2), Vec::new());
+        let reference = ReferencePerformance::derived_from(&score_of(vec![minuet_bar(1), empty]));
+
+        assert_eq!(reference.first_position_of(bar(2)), None);
+        assert_eq!(reference.first_position_of(bar(9)), None);
+    }
+
+    // A note held over the barline into bar 2 is part of bar 2's first step
+    // only when an attempt starts there; played through, it is not struck
+    // again.
+    #[test]
+    fn a_note_tied_into_a_bar_is_required_only_when_starting_there() {
+        let held = Note::new(PitchSpelling::new(Step::C, 0, 5)).unwrap();
+        let score = score_of(vec![minuet_bar(1), minuet_bar(2).holding(vec![held])]);
+        let reference = ReferencePerformance::derived_from(&score);
+        let first_of_bar_2 = reference.at(5).unwrap();
+
+        assert_eq!(first_of_bar_2.held_into(), &[held]);
+        assert_eq!(first_of_bar_2.notes().len(), 1);
+        let started: Vec<u8> = first_of_bar_2
+            .starting_here()
+            .sounding()
+            .map(u8::from)
+            .collect();
+        assert_eq!(started, [74, 72]);
+        assert!(reference.at(6).unwrap().held_into().is_empty());
+    }
+
+    #[test]
+    fn a_held_note_also_struck_at_the_start_is_asked_for_once() {
+        let held = Note::new(PitchSpelling::new(Step::D, 0, 5)).unwrap();
+        let score = score_of(vec![minuet_bar(1), minuet_bar(2).holding(vec![held])]);
+        let reference = ReferencePerformance::derived_from(&score);
+
+        assert_eq!(reference.at(5).unwrap().starting_here().notes().len(), 1);
     }
 }

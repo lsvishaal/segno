@@ -62,6 +62,12 @@ impl PracticeSession {
         Attempt::begin(Arc::clone(&self.reference))
     }
 
+    /// Begins an Attempt at step `from` of this Session's Piece.
+    #[must_use]
+    pub fn begin_attempt_at(&self, from: usize) -> Attempt {
+        Attempt::begin_at(Arc::clone(&self.reference), from)
+    }
+
     /// Adds an ended Attempt to this Session's history.
     pub fn record(&mut self, attempt: EndedAttempt) {
         self.attempts.push(attempt);

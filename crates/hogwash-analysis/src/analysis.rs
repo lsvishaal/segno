@@ -37,12 +37,24 @@ impl Analysis {
     /// alters what it examines"* is carried by the signature.
     #[must_use]
     pub fn of(observed: &ObservedPerformance, reference: &ReferencePerformance) -> Self {
+        Self::starting_at(observed, reference, 0)
+    }
+
+    /// Compares `observed`, an attempt that began at step `from`, against
+    /// `reference`. The Cursor is replayed from `from`, as it ran on screen;
+    /// what lies before `from` was never asked for, so it is not missed.
+    #[must_use]
+    pub fn starting_at(
+        observed: &ObservedPerformance,
+        reference: &ReferencePerformance,
+        from: usize,
+    ) -> Self {
         // A Cursor holds a share of what it indexes into, so one is made here.
         // The copy is deliberate: `004 §8.6` says an Analysis is given an
         // Observed Performance and a Reference Performance, and taking an
         // `Arc` instead would push the Cursor's storage choice out into every
         // caller's signature. It happens once per Attempt, not once per note.
-        let mut cursor = Cursor::at_the_beginning(Arc::new(reference.clone()));
+        let mut cursor = Cursor::starting_at(Arc::new(reference.clone()), from);
         let mut findings = Vec::new();
 
         for &played in observed.played() {
@@ -80,7 +92,14 @@ impl Analysis {
         // mid-piece — the Cursor will not pass it (MVP §5).
         let stopped_at = cursor.position();
         for position in stopped_at..reference.len() {
-            let Some(expected) = reference.at(position) else {
+            // Where it stopped, what the Cursor was asking for: on the step
+            // an attempt began at, that includes any note held into it.
+            let expected = if position == stopped_at {
+                cursor.expecting()
+            } else {
+                reference.at(position)
+            };
+            let Some(expected) = expected else {
                 continue;
             };
 
@@ -564,5 +583,49 @@ mod tests {
 
         assert_eq!(summary.unexpected(), 0);
         assert_eq!(summary.incorrect(), 0);
+    }
+
+    // Started at bar 2 and stopped after one note: bar 1 was never asked
+    // for, so nothing in it is missed.
+    #[test]
+    fn an_attempt_started_at_a_later_bar_misses_nothing_before_it() {
+        let reference = crate::fixtures::two_bars(&[Step::D, Step::G], &[Step::A, Step::B]);
+
+        let analysis = Analysis::starting_at(&played_steps(&[Step::A]), &reference, 2);
+
+        let bars: Vec<u32> = analysis
+            .findings()
+            .iter()
+            .filter_map(Finding::measure)
+            .map(MeasureNumber::get)
+            .collect();
+        assert_eq!(bars, [2, 2]);
+        assert_eq!(analysis.summary().correct(), 1);
+        assert_eq!(analysis.summary().omitted(), 1);
+    }
+
+    // The note tied into bar 2 was required, starting there; stopping
+    // before it was played reports it missed with the bar's first note.
+    #[test]
+    fn a_held_note_required_at_the_start_is_missed_if_never_played() {
+        let reference =
+            crate::fixtures::tied_into_second(&[Step::D, Step::C], Step::C, &[Step::A, Step::B]);
+
+        let analysis = Analysis::starting_at(&played_steps(&[Step::A]), &reference, 2);
+
+        // A correct, then C (held) and B missed.
+        assert_eq!(analysis.summary().correct(), 1);
+        assert_eq!(analysis.summary().omitted(), 2);
+    }
+
+    #[test]
+    fn starting_at_the_beginning_is_the_same_analysis_as_before() {
+        let reference = crate::fixtures::two_bars(&[Step::D, Step::G], &[Step::A, Step::B]);
+        let observed = played_steps(&[Step::D, Step::E, Step::G]);
+
+        assert_eq!(
+            Analysis::starting_at(&observed, &reference, 0),
+            Analysis::of(&observed, &reference)
+        );
     }
 }
