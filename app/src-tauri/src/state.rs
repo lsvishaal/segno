@@ -426,6 +426,7 @@ mod tests {
             attempts: vec![AttemptRecord {
                 began_ms: None,
                 from: 0,
+                to: None,
                 played,
                 reached: 0,
                 ended: Some(Ended::Stop),

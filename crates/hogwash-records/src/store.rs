@@ -46,6 +46,9 @@ pub struct AttemptRecord {
     /// Where it started: a position in the Reference Performance (a step in
     /// played order), not a bar number. 0 for attempts kept before this was.
     pub from: usize,
+    /// For a pass of a loop, where the loop ends (exclusive): a position,
+    /// like `from`. `None` otherwise.
+    pub to: Option<usize>,
     /// What the performer played, in order.
     pub played: ObservedPerformance,
     /// How far they got.
@@ -170,6 +173,7 @@ impl Records {
                     StoredAttempt {
                         began_ms: attempt.began_ms,
                         from: attempt.from,
+                        to: attempt.to,
                         reached: attempt.reached,
                         ended: attempt.ended,
                         notes,
@@ -483,7 +487,8 @@ impl Records {
                 }
             })?;
 
-            // An attempt cannot have got less far than where it started.
+            // An attempt cannot have got less far than where it started, nor
+            // a loop's pass further than the loop's end.
             if attempt.from > attempt.reached {
                 return Err(RecordsFailure::Unreadable {
                     path: path.to_path_buf(),
@@ -493,10 +498,22 @@ impl Records {
                     ),
                 });
             }
+            if let Some(to) = attempt.to
+                && to < attempt.reached
+            {
+                return Err(RecordsFailure::Unreadable {
+                    path: path.to_path_buf(),
+                    detail: format!(
+                        "a loop ends at {to} but its pass reached {}",
+                        attempt.reached
+                    ),
+                });
+            }
 
             attempts.push(AttemptRecord {
                 began_ms: attempt.began_ms,
                 from: attempt.from,
+                to: attempt.to,
                 played,
                 reached: attempt.reached,
                 ended: attempt.ended,

@@ -7,8 +7,9 @@
 //! was not meant fails here first.
 //!
 //! The notes are the Minuet in G: its opening D5 G4 A4 B4 (in schemas 2 and
-//! 3 with a wrong F#4 before the A4), and in schema 3 a second attempt
-//! started at bar 9, which is step 36 of the Minuet's played order.
+//! 3 with a wrong F#4 before the A4), and in schemas 3 and 4 a second
+//! attempt started at bar 9, which is step 36 of the Minuet's played order.
+//! Schema 4 adds one pass of a loop over bar 9: steps 36 to 41.
 
 #![expect(
     clippy::expect_used,
@@ -24,6 +25,7 @@ use hogwash_records::{AttemptRecord, Ended, Records, RecordsFailure, SessionReco
 const SCHEMA_1: &str = include_str!("fixtures/session-schema-1.json");
 const SCHEMA_2: &str = include_str!("fixtures/session-schema-2.json");
 const SCHEMA_3: &str = include_str!("fixtures/session-schema-3.json");
+const SCHEMA_4: &str = include_str!("fixtures/session-schema-4.json");
 
 fn key(number: u8) -> Pitch {
     Pitch::new(number).expect("a piano key")
@@ -85,6 +87,7 @@ fn schema_2_record() -> SessionRecord {
         attempts: vec![AttemptRecord {
             began_ms: Some(1_792_270_831_002),
             from: 0,
+            to: None,
             played: opening(),
             reached: 3,
             ended: None,
@@ -108,6 +111,7 @@ fn schema_3_record() -> SessionRecord {
             AttemptRecord {
                 began_ms: Some(1_792_270_845_310),
                 from: 36,
+                to: None,
                 played: bar_9,
                 reached: 38,
                 ended: Some(Ended::Jump),
@@ -115,6 +119,33 @@ fn schema_3_record() -> SessionRecord {
         ],
         ..schema_2_record()
     }
+}
+
+fn schema_4_record() -> SessionRecord {
+    // Bar 9 of the Minuet, all of it: D5 over B3, G4, A4, B4 over A3, C5.
+    let mut pass = ObservedPerformance::new();
+    for (number, at_us, velocity) in [
+        (74, 0, 66),
+        (59, 18_000, 50),
+        (67, 470_000, 58),
+        (69, 940_000, 61),
+        (71, 1_400_000, 63),
+        (57, 1_420_000, 47),
+        (72, 1_890_000, 60),
+    ] {
+        pass.record_touched(key(number), touch(at_us, velocity, Some(at_us + 380_000)));
+    }
+
+    let mut session = schema_3_record();
+    session.attempts.push(AttemptRecord {
+        began_ms: Some(1_792_270_852_120),
+        from: 36,
+        to: Some(41),
+        played: pass,
+        reached: 41,
+        ended: Some(Ended::Pass),
+    });
+    session
 }
 
 #[test]
@@ -158,13 +189,30 @@ fn from_is_the_step_an_attempt_started_at_not_its_bar_number() {
 }
 
 #[test]
+fn a_schema_4_session_loads_to_exactly_what_it_describes() {
+    let session = read(SCHEMA_4, "minuet-1792270830806").expect("schema 4 loads");
+
+    assert_eq!(session, schema_4_record());
+}
+
+#[test]
 fn todays_format_is_written_byte_for_byte() {
     let directory = tempfile::tempdir().expect("a temporary directory");
 
     assert_eq!(
-        written(&schema_3_record(), directory.path()).trim_end(),
-        SCHEMA_3.trim_end()
+        written(&schema_4_record(), directory.path()).trim_end(),
+        SCHEMA_4.trim_end()
     );
+}
+
+#[test]
+fn a_pass_that_went_past_its_loops_end_is_refused() {
+    let text = SCHEMA_4.replace("\"to\": 41", "\"to\": 40");
+
+    assert!(matches!(
+        read(&text, "minuet-1792270830806"),
+        Err(RecordsFailure::Unreadable { .. })
+    ));
 }
 
 // A schema 1 session practised again is rewritten in today's shape, its old
@@ -176,7 +224,7 @@ fn an_old_session_is_written_back_in_todays_shape_without_losing_a_note() {
 
     let text = written(&session, directory.path());
 
-    assert!(text.contains("\"schema\": 3"));
+    assert!(text.contains("\"schema\": 4"));
     assert!(!text.contains("at_us"));
     assert_eq!(
         read(&text, "minuet-1790435530700").expect("reloads"),
@@ -214,11 +262,11 @@ fn a_note_whose_timing_is_half_there_is_refused() {
 
 #[test]
 fn a_session_from_a_later_schema_is_still_refused() {
-    let text = SCHEMA_3.replace("\"schema\": 3", "\"schema\": 4");
+    let text = SCHEMA_4.replace("\"schema\": 4", "\"schema\": 5");
 
     assert!(matches!(
         read(&text, "minuet-1792270830806"),
-        Err(RecordsFailure::FromTheFuture { schema: 4, .. })
+        Err(RecordsFailure::FromTheFuture { schema: 5, .. })
     ));
 }
 

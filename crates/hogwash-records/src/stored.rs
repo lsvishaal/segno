@@ -33,23 +33,27 @@ use serde::{Deserialize, Serialize};
 /// - **2**: each note an object, with when and how hard it was struck and
 ///   when it came up, plus the sustain pedal and when the attempt began.
 ///   Still read; never written.
-/// - **3**: as 2, plus where each attempt started and how it ended:
+/// - **3**: as 2, plus where each attempt started and how it ended.
+///   Still read; never written.
+/// - **4**: as 3, plus, for one pass of a loop, where the loop ends (`to`,
+///   exclusive), and the ending `"pass"`:
 ///
 /// ```json
-/// { "began_ms": 1792270830806, "from": 36, "reached": 38, "ended": "jump",
+/// { "began_ms": 1792270830806, "from": 36, "to": 41, "reached": 41, "ended": "pass",
 ///   "notes": [ { "key": 74, "at_us": 0, "velocity": 80, "released_us": 410000 },
 ///              { "key": 59, "at_us": 512000, "velocity": 72 } ],
 ///   "pedal": [ { "at_us": 300000, "down": true } ] }
 /// ```
 ///
-/// `from` and `reached` are positions in the Reference Performance (steps in
+/// `from`, `to` and `reached` are positions in the Reference Performance (steps in
 /// played order, repeats included), never bar numbers. Times are
 /// microseconds since the attempt began; `began_ms` is Unix time in
 /// milliseconds, like a session's `started`. A note's timing fields are
 /// absent where they were never known (it came from a schema 1 file), and
 /// `released_us` is absent if the key was still down when the attempt ended.
 /// Read from schemas 1 and 2, `from` is 0 and `ended` is absent (unknown).
-pub(crate) const SESSION_SCHEMA: u32 = 3;
+/// `to` is absent for an attempt that was not a loop's pass.
+pub(crate) const SESSION_SCHEMA: u32 = 4;
 
 /// How an attempt ended, as stored. Each name is fixed by its `rename`, so
 /// renaming a variant cannot change what is on disk; a name not listed here
@@ -74,6 +78,9 @@ pub enum Ended {
     /// The keyboard went away and did not come back in time.
     #[serde(rename = "lost")]
     Lost,
+    /// One pass of a loop reached the loop's end; the next pass began.
+    #[serde(rename = "pass")]
+    Pass,
 }
 
 /// The version of the piece shape below. Separate from the session's: the
@@ -112,6 +119,10 @@ pub(crate) struct StoredAttempt {
     /// Performance. 0 in schemas 1 and 2, where every attempt did.
     #[serde(default)]
     pub(crate) from: usize,
+    /// Where the loop this attempt was a pass of ends (exclusive), as a
+    /// position. Absent when it was not a loop's pass, and before schema 4.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub(crate) to: Option<usize>,
     /// How far the performer got, as a position in the Reference Performance.
     pub(crate) reached: usize,
     /// How it ended. Absent in schemas 1 and 2.
