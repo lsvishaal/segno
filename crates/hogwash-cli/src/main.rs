@@ -19,26 +19,43 @@ mod replay;
 use std::path::Path;
 use std::process::ExitCode;
 
+use replay::Start;
+
 use hogwash_analysis::{Analysis, Finding, Summary};
 use hogwash_capture::ObservedPerformance;
 use hogwash_domain::{MeasureNumber, Pitch, PitchSpelling, Step};
 use hogwash_feedback::Feedback;
 use hogwash_notation::{Measure, Note, Position, ReferencePerformance, Score};
 
-const USAGE: &str =
-    "replay <score.musicxml> <events.json> [--from-bar <n>] | expected <score.musicxml>";
+const USAGE: &str = "replay <score.musicxml> <events.json> [--from-bar <n> | --loop <a>-<b>] | expected <score.musicxml>";
 
 fn main() -> ExitCode {
     let arguments: Vec<String> = std::env::args().skip(1).collect();
 
     let replayed = match arguments.as_slice() {
-        [command, score, events] if command == "replay" => {
-            Some(replay::replay(Path::new(score), Path::new(events), None))
-        }
+        [command, score, events] if command == "replay" => Some(replay::replay(
+            Path::new(score),
+            Path::new(events),
+            Start::Beginning,
+        )),
         [command, score, events, flag, bar] if command == "replay" && flag == "--from-bar" => Some(
             bar.parse()
                 .map_err(|_| format!("`{bar}` is not a bar number"))
-                .and_then(|bar| replay::replay(Path::new(score), Path::new(events), Some(bar))),
+                .and_then(|bar| {
+                    replay::replay(Path::new(score), Path::new(events), Start::Bar(bar))
+                }),
+        ),
+        [command, score, events, flag, bars] if command == "replay" && flag == "--loop" => Some(
+            bars.split_once('-')
+                .and_then(|(first, last)| Some((first.parse().ok()?, last.parse().ok()?)))
+                .ok_or_else(|| format!("`{bars}` is not a range of bars, like 9-12"))
+                .and_then(|(first, last)| {
+                    replay::replay(
+                        Path::new(score),
+                        Path::new(events),
+                        Start::Loop(first, last),
+                    )
+                }),
         ),
         [command, score] if command == "expected" => Some(replay::expected(Path::new(score))),
         [command, ..] if command == "replay" || command == "expected" => {

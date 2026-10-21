@@ -24,12 +24,16 @@
 //! played."* [`CursorMovement`] reports whether the Cursor moved, never
 //! whether a note was right. Correctness is Analysis's concern
 //! (`004 §8.6`), decided after the Attempt ends, over the whole performance.
+//! The one exception is [`Loop`], whose clean-pass counter has to know at
+//! once whether a pass was spoiled.
 
 mod attempt;
 mod cursor;
 mod fixtures;
+mod looping;
 mod session;
 
 pub use attempt::{Attempt, EndedAttempt};
 pub use cursor::{Cursor, CursorMovement};
+pub use looping::{Loop, Pass};
 pub use session::{ClosedSession, PracticeSession};

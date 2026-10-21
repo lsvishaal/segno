@@ -1,5 +1,7 @@
 //! The Reference Performance derived from a Score (`003 §7.4`).
 
+use core::ops::Range;
+
 use hogwash_domain::{MeasureNumber, Pitch};
 
 use crate::{Note, Score};
@@ -214,6 +216,38 @@ impl ReferencePerformance {
             .find(|(measure, _)| *measure == number)
             .map(|&(_, step)| step)
             .filter(|&step| step < self.steps.len())
+    }
+
+    /// The steps a loop over measures `first` to `last` (either order)
+    /// covers: the first place in played order where they are played in a
+    /// row, from the first one's opening to the next measure's. `None` if
+    /// they never are, or there is nothing in them to strike.
+    #[must_use]
+    pub fn range_of(&self, first: MeasureNumber, last: MeasureNumber) -> Option<Range<usize>> {
+        let (first, last) = (first.min(last), first.max(last));
+
+        self.openings
+            .iter()
+            .enumerate()
+            .find_map(|(from, &(measure, start))| {
+                if measure != first {
+                    return None;
+                }
+                let (mut previous, mut end) = (measure, self.steps.len());
+                let mut reached = measure == last;
+                for &(next, step) in self.openings.get(from + 1..)? {
+                    if reached {
+                        end = step;
+                        break;
+                    }
+                    if next <= previous || next > last {
+                        return None;
+                    }
+                    previous = next;
+                    reached = next == last;
+                }
+                (reached && start < end).then_some(start..end)
+            })
     }
 
     /// The steps in the order the Score requires them.
@@ -556,5 +590,34 @@ mod tests {
         let reference = ReferencePerformance::derived_from(&score);
 
         assert_eq!(reference.at(5).unwrap().starting_here().notes().len(), 1);
+    }
+
+    // The Minuet's first half is repeated: a loop that runs into bar 3 can
+    // only be the second time through bar 2.
+    #[test]
+    fn a_loop_is_the_first_place_its_bars_are_played_in_a_row() {
+        let score = score_of(vec![minuet_bar(1), minuet_bar(2), minuet_bar(3)])
+            .played_as(vec![bar(1), bar(2), bar(1), bar(2), bar(3)])
+            .unwrap();
+        let reference = ReferencePerformance::derived_from(&score);
+
+        assert_eq!(reference.range_of(bar(1), bar(2)), Some(0..8));
+        assert_eq!(reference.range_of(bar(2), bar(2)), Some(5..8));
+        assert_eq!(reference.range_of(bar(2), bar(3)), Some(13..21));
+        assert_eq!(reference.range_of(bar(3), bar(1)), Some(8..21));
+        assert_eq!(reference.range_of(bar(1), bar(9)), None);
+    }
+
+    #[test]
+    fn a_loop_of_nothing_to_strike_is_no_loop() {
+        let empty = Measure::new(bar(2), Vec::new());
+        let reference = ReferencePerformance::derived_from(&score_of(vec![
+            minuet_bar(1),
+            empty,
+            minuet_bar(3),
+        ]));
+
+        assert_eq!(reference.range_of(bar(2), bar(2)), None);
+        assert_eq!(reference.range_of(bar(2), bar(3)), Some(5..10));
     }
 }

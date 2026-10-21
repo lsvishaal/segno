@@ -2,7 +2,7 @@
 //! keyboard needed.
 //!
 //! ```text
-//! hogwash-cli replay   <score.musicxml> <events.json> [--from-bar <n>]
+//! hogwash-cli replay   <score.musicxml> <events.json> [--from-bar <n> | --loop <a>-<b>]
 //! hogwash-cli expected <score.musicxml>
 //! ```
 //!
@@ -21,7 +21,7 @@ use hogwash_engraving::{EngravedScore, Engraver as _};
 use hogwash_engraving_verovio::VerovioEngraver;
 use hogwash_feedback::Feedback;
 use hogwash_notation::{ExpectedNotes, ReferencePerformance};
-use hogwash_practice::{Attempt, CursorMovement};
+use hogwash_practice::{Attempt, CursorMovement, Loop};
 use serde::Deserialize;
 
 /// One note from an events file.
@@ -48,23 +48,42 @@ pub(crate) fn events_from(json: &str) -> Result<Vec<(Pitch, Option<u64>)>, Strin
         .collect()
 }
 
+/// Where a replayed attempt starts.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) enum Start {
+    Beginning,
+    /// At this bar, as clicking it in the app does.
+    Bar(u32),
+    /// Looping these bars, as Shift+clicking does: each pass is its own
+    /// attempt, and the count of clean passes is printed at each wrap.
+    Loop(u32, u32),
+}
+
 /// `hogwash-cli replay <score> <events>`: every event, step by step, then the
-/// analysis and feedback the performer would get. With `from_bar`, the
-/// attempt starts at that bar, as clicking it in the app does.
-pub(crate) fn replay(score: &Path, events: &Path, from_bar: Option<u32>) -> Result<String, String> {
+/// analysis and feedback the performer would get, from where `start` says.
+pub(crate) fn replay(score: &Path, events: &Path, start: Start) -> Result<String, String> {
     let engraved = engrave(score)?;
     let text = std::fs::read_to_string(events)
         .map_err(|failure| format!("cannot read {}: {failure}", events.display()))?;
     let events = events_from(&text)?;
 
     let reference = Arc::new(ReferencePerformance::derived_from(engraved.score()));
-    let from = match from_bar {
-        None => 0,
-        Some(bar) => MeasureNumber::new(bar)
-            .and_then(|bar| reference.first_position_of(bar))
-            .ok_or_else(|| format!("bar {bar} has nothing to start at"))?,
+    let bar = |number: u32| {
+        MeasureNumber::new(number).ok_or_else(|| format!("`{number}` is not a bar number"))
     };
-    let mut attempt = Attempt::begin_at(Arc::clone(&reference), from);
+    let steps = match start {
+        Start::Beginning => 0..reference.len(),
+        Start::Bar(number) => reference
+            .first_position_of(bar(number)?)
+            .map(|from| from..reference.len())
+            .ok_or_else(|| format!("bar {number} has nothing to start at"))?,
+        Start::Loop(first, last) => reference
+            .range_of(bar(first)?, bar(last)?)
+            .ok_or_else(|| format!("bars {first}-{last} are not played in a row"))?,
+    };
+    let mut looping = matches!(start, Start::Loop(..)).then(|| Loop::new(steps.clone(), None));
+    let mut attempt = Attempt::begin_at(Arc::clone(&reference), steps.start);
+    let mut passes = 0;
 
     let mut out = header(&engraved, &reference);
 
@@ -72,6 +91,9 @@ pub(crate) fn replay(score: &Path, events: &Path, from_bar: Option<u32>) -> Resu
         let at = attempt.cursor().position();
         let expected = attempt.cursor().expecting().cloned();
         let tolerated = attempt.cursor().tolerates(pitch);
+        if let Some(looping) = looping.as_mut() {
+            looping.heard(attempt.cursor(), pitch);
+        }
         let movement = attempt.play(pitch);
 
         let time = time_us.map_or_else(|| "        ".to_owned(), seconds);
@@ -91,10 +113,30 @@ pub(crate) fn replay(score: &Path, events: &Path, from_bar: Option<u32>) -> Resu
             u8::from(pitch),
             sharp_name(pitch),
         );
+
+        if let Some(looping) = looping.as_mut()
+            && looping.is_at_the_end(attempt.cursor())
+        {
+            passes += 1;
+            let pass = std::mem::replace(
+                &mut attempt,
+                Attempt::begin_at(Arc::clone(&reference), steps.start),
+            )
+            .end();
+            let summary = Analysis::over(pass.observed(), &reference, steps.clone()).summary();
+            let _ = writeln!(
+                out,
+                "--- pass {passes}: {} correct, {} wrong, {} unexpected · {:?}",
+                summary.correct(),
+                summary.incorrect(),
+                summary.unexpected(),
+                looping.wrapped(),
+            );
+        }
     }
 
     let ended = attempt.end();
-    let analysis = Analysis::starting_at(ended.observed(), &reference, from);
+    let analysis = Analysis::over(ended.observed(), &reference, steps);
 
     out.push('\n');
     for line in crate::summarise(analysis.summary()) {

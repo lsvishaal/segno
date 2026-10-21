@@ -1,5 +1,6 @@
 //! Analysis — the comparison itself (`003 §7.6`).
 
+use std::ops::Range;
 use std::sync::Arc;
 
 use hogwash_capture::ObservedPerformance;
@@ -49,6 +50,20 @@ impl Analysis {
         reference: &ReferencePerformance,
         from: usize,
     ) -> Self {
+        Self::over(observed, reference, from..reference.len())
+    }
+
+    /// Compares `observed`, one pass of a loop over the steps in `steps`,
+    /// against `reference`. As [`starting_at`](Self::starting_at), except
+    /// that nothing after the loop's end was asked for either, and reaching
+    /// that end is reaching the end.
+    #[must_use]
+    pub fn over(
+        observed: &ObservedPerformance,
+        reference: &ReferencePerformance,
+        steps: Range<usize>,
+    ) -> Self {
+        let Range { start: from, end } = steps;
         // A Cursor holds a share of what it indexes into, so one is made here.
         // The copy is deliberate: `004 §8.6` says an Analysis is given an
         // Observed Performance and a Reference Performance, and taking an
@@ -91,7 +106,7 @@ impl Analysis {
         // this is the tail and nothing else, because a note cannot be skipped
         // mid-piece — the Cursor will not pass it (MVP §5).
         let stopped_at = cursor.position();
-        for position in stopped_at..reference.len() {
+        for position in stopped_at..end.min(reference.len()) {
             // Where it stopped, what the Cursor was asking for: on the step
             // an attempt began at, that includes any note held into it.
             let expected = if position == stopped_at {
@@ -118,7 +133,7 @@ impl Analysis {
             }
         }
 
-        let summary = Summary::over(&findings, cursor.has_reached_the_end());
+        let summary = Summary::over(&findings, stopped_at >= end);
 
         Self { findings, summary }
     }
@@ -627,5 +642,20 @@ mod tests {
             Analysis::starting_at(&observed, &reference, 0),
             Analysis::of(&observed, &reference)
         );
+    }
+
+    // A pass of a loop over bar 1: bar 2 lies past the loop, so a clean
+    // pass misses nothing and has reached its end.
+    #[test]
+    fn a_pass_of_a_loop_misses_nothing_after_the_loop() {
+        let reference = crate::fixtures::two_bars(&[Step::D, Step::G], &[Step::A, Step::B]);
+
+        let clean = Analysis::over(&played_steps(&[Step::D, Step::G]), &reference, 0..2).summary();
+        assert_eq!((clean.correct(), clean.omitted()), (2, 0));
+        assert!(clean.reached_the_end());
+
+        let stopped = Analysis::over(&played_steps(&[Step::D]), &reference, 0..2).summary();
+        assert_eq!(stopped.omitted(), 1);
+        assert!(!stopped.reached_the_end());
     }
 }
