@@ -59,6 +59,14 @@ impl ReadMei {
         self.measure_ids.get(id).copied()
     }
 
+    /// Every bar's identifier and number. The identifier is also the bar's
+    /// element in the SVG.
+    pub(crate) fn measure_elements(&self) -> impl Iterator<Item = (&str, MeasureNumber)> {
+        self.measure_ids
+            .iter()
+            .map(|(id, number)| (id.as_str(), *number))
+    }
+
     /// The note the document calls `id`.
     pub(crate) fn note(&self, id: &str) -> Option<WrittenNote> {
         self.notes.get(id).copied()

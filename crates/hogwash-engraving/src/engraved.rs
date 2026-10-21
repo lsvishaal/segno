@@ -3,7 +3,7 @@
 use std::collections::BTreeMap;
 use std::collections::btree_map::Iter;
 
-use hogwash_domain::Location;
+use hogwash_domain::{Location, MeasureNumber};
 use hogwash_notation::Score;
 
 /// A drawn element's identifier, as the engraving engine names it.
@@ -137,6 +137,8 @@ pub struct EngravedScore {
     // every run, which FR-406 and NFR-301 require and which the architecture
     // guard enforces for every pure crate.
     placements: BTreeMap<Location, Placement>,
+    /// Each bar's drawn element, so a click on the page can say which bar.
+    bars: Vec<(ElementId, MeasureNumber)>,
 }
 
 impl EngravedScore {
@@ -176,7 +178,21 @@ impl EngravedScore {
             details,
             pages,
             placements: placements.into_iter().collect(),
+            bars: Vec::new(),
         })
+    }
+
+    /// This engraving, knowing which drawn element is which bar.
+    #[must_use]
+    pub fn with_bars(mut self, bars: Vec<(ElementId, MeasureNumber)>) -> Self {
+        self.bars = bars;
+        self
+    }
+
+    /// Each bar's drawn element and its number.
+    #[must_use]
+    pub fn bars(&self) -> &[(ElementId, MeasureNumber)] {
+        &self.bars
     }
 
     /// The written music this was engraved from.

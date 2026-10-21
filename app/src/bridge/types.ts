@@ -77,6 +77,20 @@ export interface OpenedPiece {
   readonly pages: readonly string[];
   /** Where every expected note was drawn, in reading order. */
   readonly marks: readonly Mark[];
+  /** Which drawn `g.measure` element is which bar. */
+  readonly bars: readonly Bar[];
+}
+
+/** A bar as drawn: its `g.measure` element, and its number. */
+export interface Bar {
+  readonly elementId: string;
+  readonly measure: number;
+}
+
+/** Where the next attempt starts: a step in played order, and its bar. */
+export interface StartPoint {
+  readonly position: number;
+  readonly measure: number;
 }
 
 /**

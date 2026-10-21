@@ -38,7 +38,7 @@ export default async function timing() {
   const session = files.at(-1);
   const attempt = session?.attempts.at(-1);
   log("    attempt:", JSON.stringify({ began_ms: attempt?.began_ms, notes: attempt?.notes?.length, pedal: attempt?.pedal }));
-  check("the session file is schema 2", session?.schema === 2, String(session?.schema));
+  check("the session file is schema 3", session?.schema === 3, String(session?.schema));
   check("every note played is in it", attempt?.notes?.length === 10, String(attempt?.notes?.length));
   if (!attempt?.notes) return;
 

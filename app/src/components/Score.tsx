@@ -1,7 +1,7 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 
-import type { DrawnNote, Mark } from "../bridge";
+import type { Bar, DrawnNote, Mark } from "../bridge";
 import { SCORE_MAX_WIDTH } from "../screens/zoom";
 import { NoteNames } from "./NoteNames";
 import { showGeometry as drawGeometry } from "./scoreDebug";
@@ -56,6 +56,9 @@ export interface Box {
 export function Score({
   pages,
   marks,
+  bars = [],
+  onBarClick,
+  startPosition = 0,
   cursor,
   dot,
   followCursor = true,
@@ -65,6 +68,12 @@ export function Score({
 }: {
   readonly pages: readonly string[];
   readonly marks: readonly Mark[];
+  /** Which drawn `g.measure` element is which bar. */
+  readonly bars?: readonly Bar[];
+  /** Called with a bar's number when it is clicked. Without it, bars do nothing. */
+  readonly onBarClick?: ((measure: number) => void) | undefined;
+  /** Where attempts start; marked on the score unless it is the very beginning. */
+  readonly startPosition?: number;
   readonly cursor: CursorState;
   readonly dot: Dot | null;
   readonly followCursor?: boolean;
@@ -84,6 +93,63 @@ export function Score({
   // Bumped by the `ResizeObserver` below — its value is never read, only its
   // identity change matters, to force every measurement effect to re-run.
   const [layoutTick, setLayoutTick] = useState(0);
+
+  const [hovered, setHovered] = useState<{ readonly measure: number; readonly box: Box } | null>(null);
+  const [startBox, setStartBox] = useState<Box | null>(null);
+
+  /** Bar element id → its number. */
+  const barOf = useMemo(() => new Map(bars.map((bar) => [bar.elementId, bar.measure])), [bars]);
+
+  /**
+   * The drawn bar under a point on screen. Measured by area, not by what was
+   * hit: most of a bar is blank paper, and the cursor and marks lie on top.
+   * Where boxes overlap (a slur reaching into the next line), the smallest
+   * one containing the point wins.
+   */
+  const barAt = useCallback(
+    (x: number, y: number) => {
+      let found: { measure: number; id: string; area: number } | null = null;
+      for (const element of container.current?.querySelectorAll("g.measure") ?? []) {
+        const measure = barOf.get(element.id);
+        if (measure === undefined) continue;
+        const rect = element.getBoundingClientRect();
+        if (x < rect.left || x > rect.right || y < rect.top || y > rect.bottom) continue;
+        const area = rect.width * rect.height;
+        if (!found || area < found.area) found = { measure, id: element.id, area };
+      }
+      return found;
+    },
+    [barOf],
+  );
+
+  useEffect(() => {
+    if (!onBarClick) setHovered(null);
+  }, [onBarClick]);
+
+  const onPointerMove = useCallback(
+    (event: React.PointerEvent) => {
+      const root = wrapper.current;
+      const bar = onBarClick && root ? barAt(event.clientX, event.clientY) : null;
+      const box = bar && root ? boxOf(root, bar.id) : null;
+      setHovered((current) =>
+        bar && box
+          ? current?.measure === bar.measure && current.box.top === box.top && current.box.left === box.left
+            ? current
+            : { measure: bar.measure, box }
+          : null,
+      );
+    },
+    [barAt, onBarClick],
+  );
+
+  const onClick = useCallback(
+    (event: React.MouseEvent) => {
+      if (!onBarClick) return;
+      const bar = barAt(event.clientX, event.clientY);
+      if (bar) onBarClick(bar.measure);
+    },
+    [barAt, onBarClick],
+  );
 
   /** Position in the piece → the notes drawn for it. */
   const notesAt = useMemo(() => {
@@ -147,6 +213,17 @@ export function Score({
       }),
     );
   }, [pages]);
+
+  // Each drawn bar carries its number, for anyone reading the page.
+  useEffect(() => {
+    const panel = container.current;
+    if (!panel) return;
+
+    for (const element of panel.querySelectorAll("g.measure")) {
+      const measure = barOf.get(element.id);
+      if (measure !== undefined) element.setAttribute("data-bar", String(measure));
+    }
+  }, [pages, barOf]);
 
   // What the geometry layer reads from each page, drawn inside the page.
   // Declared after the injection effect, so it always sees the pages.
@@ -244,6 +321,19 @@ export function Score({
     setNoteLabels(labels);
   }, [showNoteNames, marks, pages, layoutTick]);
 
+  // The start marker sits on the left edge of the bar the start position is
+  // drawn in. Not shown at the very beginning, where the start is obvious.
+  useEffect(() => {
+    const root = wrapper.current;
+    const first = notesAt.get(startPosition)?.[0];
+    if (startPosition === 0 || !root || !first) {
+      setStartBox(null);
+      return;
+    }
+    const measure = root.querySelector(`#${CSS.escape(first.elementId)}`)?.closest("g.measure");
+    setStartBox(measure ? boxOf(root, measure.id) : null);
+  }, [startPosition, notesAt, pages, layoutTick]);
+
   // Keep the cursor's line of music in view: scrolled to when the cursor
   // reaches a new line, or the music reflows, and not on every note. The
   // scroll container's `scroll-padding` puts it in the upper third, with
@@ -261,11 +351,40 @@ export function Score({
     <div
       ref={wrapper}
       className="relative mx-auto w-full"
-      style={{ maxWidth: SCORE_MAX_WIDTH, visibility: hidden ? "hidden" : undefined }}
+      style={{
+        maxWidth: SCORE_MAX_WIDTH,
+        visibility: hidden ? "hidden" : undefined,
+        cursor: hovered ? "pointer" : undefined,
+      }}
+      title={hovered ? `Start here (bar ${hovered.measure})` : undefined}
+      onPointerMove={onBarClick ? onPointerMove : undefined}
+      onPointerLeave={() => setHovered(null)}
+      onClick={onClick}
     >
       <div ref={container} className="py-6" />
 
       <div className="pointer-events-none absolute inset-0">
+        {hovered && (
+          <div
+            data-bar-hover
+            className="absolute rounded-sm bg-ink/5 transition-[left,top,width,height] duration-[120ms]"
+            style={hovered.box}
+          />
+        )}
+
+        {startBox && (
+          <div
+            data-start-marker
+            className="absolute"
+            style={{ left: startBox.left - 4, top: startBox.top, height: startBox.height }}
+          >
+            <div className="h-full w-[3px] rounded-full bg-accent" />
+            <span className="absolute -top-5 left-0 text-[11px] font-medium tracking-wide text-accent">
+              Start
+            </span>
+          </div>
+        )}
+
         <NoteNames labels={noteLabels} />
 
         {cursorOn?.line &&

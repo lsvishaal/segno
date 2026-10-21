@@ -527,3 +527,29 @@ fn a_note_tied_into_a_bar_is_required_when_starting_there_in_the_gymnopedie() {
     );
     assert!(started.len() > struck.len(), "{struck:?} -> {started:?}");
 }
+
+// A click on the page lands in a `g.measure` element; each one drawn must be
+// known by its number, every bar of the Minuet included.
+#[test]
+#[ignore = "needs a real libverovio; run `just engraving-test`"]
+fn every_bar_drawn_is_known_by_its_number() {
+    let minuet = include_bytes!("../../../app/src-tauri/library/minuet-in-g.musicxml");
+    let engraved = engraver().engrave(minuet).expect("the Minuet engraves");
+
+    let mut numbers: Vec<u32> = engraved
+        .bars()
+        .iter()
+        .map(|(_, number)| number.get())
+        .collect();
+    numbers.sort_unstable();
+    assert_eq!(numbers, (1..=32).collect::<Vec<_>>());
+
+    let pages = engraved.pages().join("");
+    for (element, number) in engraved.bars() {
+        assert!(
+            pages.contains(&format!("id=\"{}\" class=\"measure\"", element.as_str())),
+            "bar {number:?} ({}) is not a drawn measure",
+            element.as_str()
+        );
+    }
+}

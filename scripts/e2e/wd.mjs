@@ -73,3 +73,20 @@ export const press = (name) => {
     actions: [{ type: "key", id: "k", actions: [{ type: "keyDown", value }, { type: "keyUp", value }] }],
   });
 };
+
+/** A real mouse click at a point in the window (CSS pixels from its top left). */
+export const clickAt = (x, y) =>
+  call("POST", `/session/${sid}/actions`, {
+    actions: [
+      {
+        type: "pointer",
+        id: "mouse",
+        parameters: { pointerType: "mouse" },
+        actions: [
+          { type: "pointerMove", origin: "viewport", x: Math.round(x), y: Math.round(y) },
+          { type: "pointerDown", button: 0 },
+          { type: "pointerUp", button: 0 },
+        ],
+      },
+    ],
+  });

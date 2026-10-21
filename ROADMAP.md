@@ -375,6 +375,8 @@ never out of the release dates.
       task, push at the end of every working session.
       *Done when:* `git status` clean and `git log origin/main..main` empty.
 - [ ] **M0.2 · S · Remove unlicensed scores from the repo.**
+      0. The Gymnopédie No. 1 `.mxl` is used by the M1.5 tied-note test
+         (`hogwash-app`, ignored test): move that test's file with the rest.
       1. `mkdir -p ../hogwash-test-scores`, copy the five `.mxl` files there,
          then `git rm` them from `app/src-tauri/library/`.
       2. Add a `test-scores/` line to `.gitignore` in case you keep a local
@@ -499,7 +501,17 @@ touching nothing but the score, the keyboard and at most two buttons.
   by default.
 - **Where:** grouping logic in `hogwash-feedback` (pure, tested), not in React.
 
-### M1.5 · M · Start from any bar (never cut)
+### M1.5 · M · Start from any bar (never cut) — done 22 Oct
+
+- **As built:**
+  - Session schema 3 adds, per attempt, `from` (the step it started at) and
+    `ended` (finished, restart, jump, stop, left, lost). Older files load;
+    a file with an unknown ending is skipped and logged.
+  - A click goes to the bar's first occurrence in played order; a bar with
+    nothing to strike starts at the next one. A note tied into the start
+    bar is waited for.
+  - The start point shows as a green "Start" marker, and resets to bar 1 on
+    leaving the piece. Mid-attempt, a click keeps the attempt (`jump`).
 
 - **Why:** you never want to play bars 1–8 again to practise bar 9.
 - **What:** click a bar on the score → the cursor jumps to the first

@@ -2,7 +2,7 @@
 
 use std::path::{Path, PathBuf};
 
-use hogwash_engraving::{EngravedScore, Engraver, EngravingFailure};
+use hogwash_engraving::{ElementId, EngravedScore, Engraver, EngravingFailure};
 
 use crate::failure::TranslationFailure;
 use crate::toolkit::{Toolkit, ToolkitError};
@@ -207,7 +207,12 @@ impl Engraver for VerovioEngraver {
             translate::assemble(&read, &onsets, &played, &originals, &pages)
                 .map_err(|failure| unreadable(&failure))?;
 
-        Ok(EngravedScore::new(score, details, pages, placements)?)
+        let bars = read
+            .measure_elements()
+            .map(|(id, number)| (ElementId::new(id.to_owned()), number))
+            .collect();
+
+        Ok(EngravedScore::new(score, details, pages, placements)?.with_bars(bars))
     }
 }
 

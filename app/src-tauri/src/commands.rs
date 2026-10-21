@@ -193,6 +193,18 @@ pub struct OpenedPiece {
     pub pages: Vec<String>,
     /// Where every expected note was drawn, in reading order.
     pub marks: Vec<Mark>,
+    /// Which drawn element is which bar, so a click can say which bar.
+    pub bars: Vec<Bar>,
+}
+
+/// A bar as drawn: its element in the SVG, and its number.
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct Bar {
+    /// The identifier of the bar's `g.measure` element.
+    pub element_id: String,
+    /// Its number, as the performer counts bars.
+    pub measure: u32,
 }
 
 /// One place in the music, and the elements drawn for it.
@@ -367,6 +379,14 @@ fn opened_piece(
                     page: placement.page().get(),
                     notes,
                 }
+            })
+            .collect(),
+        bars: engraved
+            .bars()
+            .iter()
+            .map(|(element, number)| Bar {
+                element_id: element.as_str().to_owned(),
+                measure: number.get(),
             })
             .collect(),
     })

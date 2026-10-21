@@ -8,9 +8,18 @@ import {
   exportMusicXml,
   instruments as fetchInstruments,
   listenToPractice,
+  startAtBar,
   startAttempt,
 } from "../bridge";
-import type { AttemptSummary, InstrumentSummary, Mark, OpenedPiece, PracticeEvent } from "../bridge";
+import type {
+  AttemptSummary,
+  Bar,
+  InstrumentSummary,
+  Mark,
+  OpenedPiece,
+  PracticeEvent,
+  StartPoint,
+} from "../bridge";
 import { DeviceSelect } from "../components/DeviceSelect";
 import { Score } from "../components/Score";
 import type { CursorState, Dot } from "../components/Score";
@@ -57,6 +66,9 @@ export function PracticeScreen({
   const [phase, setPhase] = useState<Phase>({ kind: "choosing", refusal: null });
   const [available, setAvailable] = useState<readonly InstrumentSummary[]>([]);
   const [cursor, setCursor] = useState<CursorState>(BEFORE_STARTING);
+  // Where attempts start. Held by the practice thread; this is its echo.
+  const [start, setStart] = useState<StartPoint>({ position: 0, measure: 1 });
+  const [moveRefusal, setMoveRefusal] = useState<string | null>(null);
   const [dot, setDot] = useState<Dot | null>(null);
   const [lost, setLost] = useState<{ instrument: string; secondsRemaining: number } | null>(
     null,
@@ -70,7 +82,8 @@ export function PracticeScreen({
   const [engraving, setEngraving] = useState<{
     pages: readonly string[];
     marks: readonly Mark[];
-  }>({ pages: piece.pages, marks: piece.marks });
+    bars: readonly Bar[];
+  }>({ pages: piece.pages, marks: piece.marks, bars: piece.bars });
   // The piece arrives engraved for no particular window; it stays hidden
   // until it has been engraved for this one, so the music never visibly jumps.
   const [fitted, setFitted] = useState(false);
@@ -95,16 +108,24 @@ export function PracticeScreen({
     return () => window.clearTimeout(timeout);
   }, [zoomError]);
 
+  useEffect(() => {
+    if (!moveRefusal) return;
+
+    const timeout = window.setTimeout(() => setMoveRefusal(null), 5000);
+    return () => window.clearTimeout(timeout);
+  }, [moveRefusal]);
+
   // A piece switch (or leaving and reopening the same one) starts fresh.
   const pieceId = piece.id;
   useEffect(() => {
     setPhase({ kind: "choosing", refusal: null });
     setCursor(BEFORE_STARTING);
+    setStart({ position: 0, measure: 1 });
     setDot(null);
     setLost(null);
-    setEngraving({ pages: piece.pages, marks: piece.marks });
+    setEngraving({ pages: piece.pages, marks: piece.marks, bars: piece.bars });
     setFitted(false);
-  }, [pieceId, piece.pages, piece.marks]);
+  }, [pieceId, piece.pages, piece.marks, piece.bars]);
 
   useEffect(() => saveZoom(scale), [scale]);
 
@@ -138,7 +159,7 @@ export function PracticeScreen({
       () => {
         void engravePiece(pieceId, scale, width)
           .then((opened) => {
-            if (live) setEngraving({ pages: opened.pages, marks: opened.marks });
+            if (live) setEngraving({ pages: opened.pages, marks: opened.marks, bars: opened.bars });
           })
           .catch((error: unknown) => {
             console.error("engrave_piece failed:", error);
@@ -246,11 +267,32 @@ export function PracticeScreen({
       void (async () => {
         try {
           await startAttempt(pieceId, instrument);
-          setCursor(BEFORE_STARTING);
+          setCursor({ position: start.position });
           setDot(null);
           setPhase({ kind: "practicing", instrument, reachedEnd: false });
         } catch (error) {
           setPhase({ kind: "choosing", refusal: String(error) });
+        }
+      })();
+    },
+    [pieceId, start.position],
+  );
+
+  // A bar clicked: the practice thread moves the start there, and, while
+  // practising, keeps the attempt so far and begins a new one at it.
+  const moveTo = useCallback(
+    (measure: number) => {
+      void (async () => {
+        try {
+          const point = await startAtBar(pieceId, measure);
+          setStart(point);
+          setCursor({ position: point.position });
+          setDot(null);
+          setPhase((current) =>
+            current.kind === "practicing" ? { ...current, reachedEnd: false } : current,
+          );
+        } catch (error) {
+          setMoveRefusal(String(error));
         }
       })();
     },
@@ -270,7 +312,7 @@ export function PracticeScreen({
   );
 
   // Starting again while an attempt runs ends it and keeps it (the backend
-  // does that), and begins afresh from the first bar.
+  // does that), and begins afresh at the start point.
   const instrumentInUse = phase.kind === "practicing" ? phase.instrument : null;
   const restart = useCallback(() => {
     if (instrumentInUse) begin(instrumentInUse);
@@ -427,6 +469,22 @@ export function PracticeScreen({
           </motion.div>
         )}
 
+        {moveRefusal && (
+          <motion.div
+            key="move-refusal"
+            variants={PANEL}
+            initial="hidden"
+            animate="shown"
+            exit="hidden"
+            transition={{ duration: 0.16, ease: "easeOut" }}
+            className="shrink-0 overflow-hidden px-8 pt-4"
+          >
+            <p role="status" className="panel rounded-2xl px-5 py-3 text-sm text-ink-muted">
+              {moveRefusal}
+            </p>
+          </motion.div>
+        )}
+
         {phase.kind === "ended" && (
           <motion.div
             key="summary"
@@ -454,6 +512,10 @@ export function PracticeScreen({
           hidden={!fitted}
           pages={engraving.pages}
           marks={engraving.marks}
+          bars={engraving.bars}
+          // No keyboard, nowhere to start: clicks wait for it to come back.
+          onBarClick={lost && phase.kind === "practicing" ? undefined : moveTo}
+          startPosition={start.position}
           cursor={cursor}
           dot={dot}
           showNoteNames={showNoteNames}

@@ -1,7 +1,7 @@
-import { act, render } from "@testing-library/react";
+import { act, fireEvent, render } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import type { Mark } from "../bridge";
+import type { Bar, Mark } from "../bridge";
 import minuet from "./__fixtures__/minuet-in-g.page1.svg?raw";
 import { marksOf } from "./__fixtures__/pages";
 import { Score } from "./Score";
@@ -319,3 +319,100 @@ describe("a wrong note, on the Minuet", () => {
     vi.useRealTimers();
   });
 });
+
+describe("bars, on a two-bar page", () => {
+  const PAGE = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 100">
+    <g id="m1" class="measure"><g id="note-a" class="note"><ellipse cx="40" cy="50" rx="8" ry="6"/></g></g>
+    <g id="m2" class="measure"><g id="note-b" class="note"><ellipse cx="240" cy="50" rx="8" ry="6"/></g></g>
+  </svg>`;
+  const MARKS: readonly Mark[] = [
+    { measure: 1, position: 0, page: 0, notes: [{ elementId: "note-a", step: "D", octave: 5, pitch: 74 }] },
+    { measure: 2, position: 1, page: 0, notes: [{ elementId: "note-b", step: "G", octave: 4, pitch: 67 }] },
+  ];
+  const BARS: readonly Bar[] = [
+    { elementId: "m1", measure: 1 },
+    { elementId: "m2", measure: 2 },
+  ];
+
+  /** Bar 1 is the left half of the page, bar 2 the right; the rest is the page. */
+  function layOut(container: HTMLElement) {
+    const boxes: Record<string, DOMRect> = {
+      m1: stubbedRect(0, 0, 200, 100),
+      m2: stubbedRect(200, 0, 200, 100),
+      "note-a": stubbedRect(32, 44, 16, 12),
+      "note-b": stubbedRect(232, 44, 16, 12),
+    };
+    vi.spyOn(Element.prototype, "getBoundingClientRect").mockImplementation(function (this: Element) {
+      return boxes[this.id] ?? stubbedRect(0, 0, 400, 100);
+    });
+    return container.firstElementChild as HTMLElement;
+  }
+
+  // A click on blank paper inside a bar still lands in that bar: bars are
+  // found by area, not by what was hit.
+  it("says which bar was clicked, anywhere inside it", () => {
+    const onBarClick = vi.fn();
+    const { container } = render(
+      <Score pages={[PAGE]} marks={MARKS} bars={BARS} onBarClick={onBarClick} cursor={{ position: 0 }} dot={null} followCursor={false} />,
+    );
+    const score = layOut(container);
+
+    fireEvent.click(score, { clientX: 350, clientY: 90 });
+    fireEvent.click(score, { clientX: 10, clientY: 10 });
+
+    expect(onBarClick.mock.calls).toEqual([[2], [1]]);
+  });
+
+  it("labels each drawn bar with its number", () => {
+    const { container } = render(
+      <Score pages={[PAGE]} marks={MARKS} bars={BARS} cursor={{ position: 0 }} dot={null} followCursor={false} />,
+    );
+
+    expect(container.querySelector("#m2")).toHaveAttribute("data-bar", "2");
+  });
+
+  it("hints where a click would start, on hover", () => {
+    const { container } = render(
+      <Score pages={[PAGE]} marks={MARKS} bars={BARS} onBarClick={() => undefined} cursor={{ position: 0 }} dot={null} followCursor={false} />,
+    );
+    const score = layOut(container);
+
+    fireEvent.pointerMove(score, { clientX: 250, clientY: 50 });
+
+    expect(score).toHaveAttribute("title", "Start here (bar 2)");
+    expect(container.querySelector("[data-bar-hover]")).not.toBeNull();
+
+    fireEvent.pointerLeave(score);
+    expect(score).not.toHaveAttribute("title");
+  });
+
+  it("does nothing on a click or hover when bars are not clickable", () => {
+    const { container } = render(
+      <Score pages={[PAGE]} marks={MARKS} bars={BARS} cursor={{ position: 0 }} dot={null} followCursor={false} />,
+    );
+    const score = layOut(container);
+
+    fireEvent.pointerMove(score, { clientX: 250, clientY: 50 });
+    fireEvent.click(score, { clientX: 250, clientY: 50 });
+
+    expect(score).not.toHaveAttribute("title");
+    expect(container.querySelector("[data-bar-hover]")).toBeNull();
+  });
+
+  it("marks the start on its bar, but not at the very beginning", () => {
+    const { container, rerender } = render(
+      <Score pages={[PAGE]} marks={MARKS} bars={BARS} startPosition={0} cursor={{ position: 0 }} dot={null} followCursor={false} />,
+    );
+    layOut(container);
+    expect(container.querySelector("[data-start-marker]")).toBeNull();
+
+    rerender(
+      <Score pages={[PAGE]} marks={MARKS} bars={BARS} startPosition={1} cursor={{ position: 1 }} dot={null} followCursor={false} />,
+    );
+
+    const marker = container.querySelector("[data-start-marker]") as HTMLElement;
+    expect(marker).toHaveTextContent("Start");
+    expect(marker.style.left).toBe("196px");
+  });
+});
+

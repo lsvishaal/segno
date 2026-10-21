@@ -17,6 +17,7 @@ import type { UnlistenFn } from "@tauri-apps/api/event";
 
 import type {
   AttemptSummary,
+  Bar,
   DrawnNote,
   ImportedPiece,
   InstrumentSummary,
@@ -26,12 +27,14 @@ import type {
   PieceSummary,
   PracticeEvent,
   StaffPosition,
+  StartPoint,
   Step,
   Unavailable,
 } from "./types";
 
 export type {
   AttemptSummary,
+  Bar,
   DrawnNote,
   ImportedPiece,
   InstrumentSummary,
@@ -41,6 +44,7 @@ export type {
   PieceSummary,
   PracticeEvent,
   StaffPosition,
+  StartPoint,
   Step,
   Unavailable,
 };
@@ -93,6 +97,15 @@ export function instruments(): Promise<InstrumentSummary[]> {
 /** Begins an attempt at `pieceId`, on `instrument` (FR-801). */
 export function startAttempt(pieceId: string, instrument: string): Promise<void> {
   return invoke<void>("start_attempt", { pieceId, instrument });
+}
+
+/**
+ * Moves where attempts at `pieceId` start to bar `measure` (its first
+ * occurrence in played order). While practising, the running attempt is
+ * ended and kept, and a new one begins there.
+ */
+export function startAtBar(pieceId: string, measure: number): Promise<StartPoint> {
+  return invoke<StartPoint>("start_at_bar", { pieceId, measure });
 }
 
 /** How the performer ended an attempt. Leaving also puts the start back at bar 1. */

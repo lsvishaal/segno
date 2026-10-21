@@ -31,7 +31,8 @@ export default async function library() {
   const shown = await titles();
   const imported = scoreIds()
     .map((id) => ({ id, title: stored(id).title, sessions: sessionsOf(id) }))
-    .filter((piece) => shown.includes(piece.title))
+    // Once on screen only: an import may share a bundled piece's title.
+    .filter((piece) => shown.filter((title) => title === piece.title).length === 1)
     .sort((a, b) => b.sessions - a.sessions);
   if (imported.length < 2) {
     log("    SKIPPED: you need two imported pieces to test rename and delete on");
