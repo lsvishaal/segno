@@ -74,19 +74,22 @@ export const press = (name) => {
   });
 };
 
-/** A real mouse click at a point in the window (CSS pixels from its top left). */
-export const clickAt = (x, y) =>
-  call("POST", `/session/${sid}/actions`, {
+/** A real mouse click at a point in the window (CSS pixels from its top left), Shift held if `shift`. */
+export const clickAt = (x, y, { shift = false } = {}) => {
+  const SHIFT = "\uE008";
+  const pointer = [
+    { type: "pointerMove", origin: "viewport", x: Math.round(x), y: Math.round(y) },
+    { type: "pointerDown", button: 0 },
+    { type: "pointerUp", button: 0 },
+    { type: "pause" },
+  ];
+  const keys = shift
+    ? [{ type: "keyDown", value: SHIFT }, { type: "pause" }, { type: "pause" }, { type: "keyUp", value: SHIFT }]
+    : [];
+  return call("POST", `/session/${sid}/actions`, {
     actions: [
-      {
-        type: "pointer",
-        id: "mouse",
-        parameters: { pointerType: "mouse" },
-        actions: [
-          { type: "pointerMove", origin: "viewport", x: Math.round(x), y: Math.round(y) },
-          { type: "pointerDown", button: 0 },
-          { type: "pointerUp", button: 0 },
-        ],
-      },
+      ...(shift ? [{ type: "key", id: "shift", actions: keys }] : []),
+      { type: "pointer", id: "mouse", parameters: { pointerType: "mouse" }, actions: pointer },
     ],
   });
+};

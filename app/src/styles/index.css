@@ -30,6 +30,9 @@
   --color-correct: #2f6f4e;
   --color-wrong: #dc2626;
 
+  /* The band behind looped bars (ROADMAP §16.2), always used faint. */
+  --color-loop-band: #2563eb;
+
   --font-serif: "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, serif;
   /* Named rather than left to Tailwind's implicit default, so the choice is
      documented instead of incidental. */

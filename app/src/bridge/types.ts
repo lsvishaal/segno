@@ -87,6 +87,13 @@ export interface Bar {
   readonly measure: number;
 }
 
+/** A loop over bars `first` to `last`; attempts start at `position`. */
+export interface LoopRange {
+  readonly position: number;
+  readonly first: number;
+  readonly last: number;
+}
+
 /** Where the next attempt starts: a step in played order, and its bar. */
 export interface StartPoint {
   readonly position: number;
@@ -179,4 +186,16 @@ export type PracticeEvent =
       readonly secondsRemaining: number;
     }
   | { readonly kind: "instrumentRestored" }
-  | { readonly kind: "ended"; readonly summary: AttemptSummary };
+  | { readonly kind: "ended"; readonly summary: AttemptSummary }
+  /** A wrong or unexpected note spoiled this pass of the loop. */
+  | { readonly kind: "loopCount"; readonly cleanInARow: number }
+  /** A pass reached the loop's end; the next began at `position`. */
+  | { readonly kind: "looped"; readonly position: number; readonly cleanInARow: number }
+  /** The loop reached its target and is over; the cursor waits at `position`. */
+  | {
+      readonly kind: "loopDone";
+      readonly position: number;
+      readonly passes: number;
+      readonly first: number;
+      readonly last: number;
+    };

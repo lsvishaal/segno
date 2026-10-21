@@ -3,11 +3,14 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { AnimatePresence, motion } from "motion/react";
 
 import {
+  clearLoop,
   endAttempt,
   engravePiece,
   exportMusicXml,
   instruments as fetchInstruments,
   listenToPractice,
+  loopBars,
+  loopTarget,
   startAtBar,
   startAttempt,
 } from "../bridge";
@@ -30,6 +33,22 @@ import { REFLOW_THRESHOLD, clampScale, loadZoom, saveZoom, scoreWidth, stepScale
 /** How long to wait after the last zoom or width change before re-engraving —
  * a real Verovio pass, so not on every wheel tick or resize frame. */
 const REFLOW_DEBOUNCE_MS = 250;
+
+/** Clean passes in a row that end a loop, unless the performer picks otherwise. */
+const LOOP_TARGET = 3;
+
+/** Bars as a performer names them: "bar 9", "bars 9–12". */
+function barsNamed(first: number, last: number): string {
+  return first === last ? `bar ${first}` : `bars ${first}–${last}`;
+}
+
+/** Whether a key press is being typed into something rather than meant for the screen. */
+function typing(event: KeyboardEvent): boolean {
+  return (
+    event.target instanceof Element &&
+    event.target.closest("input, select, textarea, [contenteditable]") !== null
+  );
+}
 
 /** Where the practice loop is, for this piece. */
 type Phase =
@@ -68,7 +87,12 @@ export function PracticeScreen({
   const [cursor, setCursor] = useState<CursorState>(BEFORE_STARTING);
   // Where attempts start. Held by the practice thread; this is its echo.
   const [start, setStart] = useState<StartPoint>({ position: 0, measure: 1 });
+  // Something said about a move or a loop, for a few seconds.
   const [moveRefusal, setMoveRefusal] = useState<string | null>(null);
+  // The bars being looped, and how many clean passes in a row so far.
+  const [loop, setLoop] = useState<{ first: number; last: number } | null>(null);
+  const [cleanInARow, setCleanInARow] = useState(0);
+  const [target, setTarget] = useState<number | null>(LOOP_TARGET);
   const [dot, setDot] = useState<Dot | null>(null);
   const [lost, setLost] = useState<{ instrument: string; secondsRemaining: number } | null>(
     null,
@@ -121,6 +145,8 @@ export function PracticeScreen({
     setPhase({ kind: "choosing", refusal: null });
     setCursor(BEFORE_STARTING);
     setStart({ position: 0, measure: 1 });
+    setLoop(null);
+    setTarget(LOOP_TARGET);
     setDot(null);
     setLost(null);
     setEngraving({ pages: piece.pages, marks: piece.marks, bars: piece.bars });
@@ -246,6 +272,14 @@ export function PracticeScreen({
         case "instrumentRestored":
           setLost(null);
           break;
+        case "loopCount":
+        case "looped":
+          setCleanInARow(event.cleanInARow);
+          break;
+        case "loopDone":
+          setLoop(null);
+          setMoveRefusal(`${event.passes} clean passes · ${barsNamed(event.first, event.last)}`);
+          break;
         case "ended":
           setLost(null);
           setPhase((current) =>
@@ -286,6 +320,7 @@ export function PracticeScreen({
         try {
           const point = await startAtBar(pieceId, measure);
           setStart(point);
+          setLoop(null);
           setCursor({ position: point.position });
           setDot(null);
           setPhase((current) =>
@@ -298,6 +333,77 @@ export function PracticeScreen({
     },
     [pieceId],
   );
+
+  // Loops bars `first` to `last`; while practising, the first pass begins.
+  const loopTo = useCallback(
+    (first: number, last: number) => {
+      void (async () => {
+        try {
+          const range = await loopBars(pieceId, first, last, target);
+          setStart({ position: range.position, measure: range.first });
+          setLoop({ first: range.first, last: range.last });
+          setCleanInARow(0);
+          setCursor({ position: range.position });
+          setDot(null);
+          setPhase((current) =>
+            current.kind === "practicing" ? { ...current, reachedEnd: false } : current,
+          );
+        } catch (error) {
+          setMoveRefusal(String(error));
+        }
+      })();
+    },
+    [pieceId, target],
+  );
+
+  // A click starts there; Shift+click loops from the start bar to there.
+  const onBarClick = useCallback(
+    (measure: number, how: { readonly shift: boolean }) => {
+      if (how.shift) loopTo(start.measure, measure);
+      else moveTo(measure);
+    },
+    [loopTo, moveTo, start.measure],
+  );
+
+  const stopLooping = useCallback(() => {
+    setLoop(null);
+    void clearLoop();
+  }, []);
+
+  // The Loop button and L: loop the bar the cursor is in, or stop looping.
+  const cursorBar =
+    engraving.marks.find((mark) => mark.position === cursor.position)?.measure ?? start.measure;
+  const toggleLoop = useCallback(() => {
+    if (loop) stopLooping();
+    else loopTo(cursorBar, cursorBar);
+  }, [loop, stopLooping, loopTo, cursorBar]);
+
+  const chooseTarget = useCallback(
+    (next: number | null) => {
+      setTarget(next);
+      if (loop) void loopTarget(next);
+    },
+    [loop],
+  );
+
+  const keyboardLost = lost !== null && phase.kind === "practicing";
+
+  // L loops or stops looping; Esc stops looping. Not while typing, nor while
+  // the settings panel has Esc for itself.
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.ctrlKey || event.metaKey || event.altKey || typing(event)) return;
+      if (event.key.toLowerCase() === "l" && !keyboardLost) {
+        event.preventDefault();
+        toggleLoop();
+      } else if (event.key === "Escape" && loop && !settingsOpen) {
+        stopLooping();
+      }
+    };
+
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [toggleLoop, stopLooping, loop, settingsOpen, keyboardLost]);
 
   const reachedEnd = phase.kind === "practicing" && phase.reachedEnd;
   const finish = useCallback(() => {
@@ -324,10 +430,7 @@ export function PracticeScreen({
 
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key.toLowerCase() !== "r" || event.ctrlKey || event.metaKey || event.altKey) return;
-      const typing =
-        event.target instanceof Element &&
-        event.target.closest("input, select, textarea, [contenteditable]");
-      if (typing) return;
+      if (typing(event)) return;
       event.preventDefault();
       restart();
     };
@@ -386,11 +489,50 @@ export function PracticeScreen({
           )}
         </div>
 
+        <div className="flex shrink-0 items-center gap-2">
+          <button
+            type="button"
+            onClick={toggleLoop}
+            disabled={keyboardLost}
+            aria-pressed={loop !== null}
+            title={loop ? "Stop looping (L)" : "Loop this bar (L)"}
+            className={`cursor-pointer rounded-md px-3 py-1.5 text-xs font-medium transition-colors focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-accent disabled:cursor-default disabled:opacity-40 ${
+              loop ? "bg-loop-band/8 text-ink hover:bg-loop-band/14" : "text-ink-muted hover:bg-ink/5 hover:text-accent"
+            }`}
+          >
+            {loop ? `⟲ Loop ${loop.first === loop.last ? loop.first : `${loop.first}–${loop.last}`}` : "⟲ Loop"}
+          </button>
+          {loop && (
+            <>
+              <span role="status" className="text-xs text-ink-muted tabular-nums">
+                {cleanInARow} clean in a row
+              </span>
+              <label className="flex items-center gap-1 text-xs text-ink-muted">
+                stop at
+                <select
+                  value={target ?? ""}
+                  onChange={(event) =>
+                    chooseTarget(event.target.value === "" ? null : Number(event.target.value))
+                  }
+                  className="cursor-pointer rounded-md bg-transparent px-1 py-0.5 text-xs text-ink hover:bg-ink/5 focus-visible:outline-2 focus-visible:outline-accent"
+                >
+                  {Array.from({ length: 10 }, (_, index) => index + 1).map((count) => (
+                    <option key={count} value={count}>
+                      {count}
+                    </option>
+                  ))}
+                  <option value="">never</option>
+                </select>
+              </label>
+            </>
+          )}
+        </div>
+
         {phase.kind === "practicing" && (
           <button
             type="button"
             onClick={restart}
-            title="Start again from the beginning (R)"
+            title={loop ? "Start this pass again (R)" : "Start again from the start (R)"}
             className="cursor-pointer rounded-md px-3 py-1.5 text-xs font-medium text-ink-muted transition-colors hover:bg-ink/5 hover:text-accent focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-accent"
           >
             Restart
@@ -514,8 +656,9 @@ export function PracticeScreen({
           marks={engraving.marks}
           bars={engraving.bars}
           // No keyboard, nowhere to start: clicks wait for it to come back.
-          onBarClick={lost && phase.kind === "practicing" ? undefined : moveTo}
+          onBarClick={keyboardLost ? undefined : onBarClick}
           startPosition={start.position}
+          loop={loop}
           cursor={cursor}
           dot={dot}
           showNoteNames={showNoteNames}

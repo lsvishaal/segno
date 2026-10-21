@@ -22,8 +22,9 @@ export interface Dot {
 export const BEFORE_STARTING: CursorState = { position: 0 };
 
 /**
- * Where the cursor bar moves to, given `event` — unchanged for anything
- * that is not an `Advanced` event.
+ * Where the cursor bar moves to, given `event`: on to the next position, or
+ * back to a loop's start when a pass wraps or the loop ends. Unchanged for
+ * anything else.
  *
  * Never derived from a `Played` event: `003 §7.16` says the Cursor moves
  * only when a position is satisfied, and `Advanced` is Rust's own signal
@@ -32,7 +33,14 @@ export const BEFORE_STARTING: CursorState = { position: 0 };
  * the screen, it does not make one of its own.
  */
 export function cursorFor(event: PracticeEvent, current: CursorState): CursorState {
-  return event.kind === "advanced" ? { position: event.position } : current;
+  switch (event.kind) {
+    case "advanced":
+    case "looped":
+    case "loopDone":
+      return { position: event.position };
+    default:
+      return current;
+  }
 }
 
 /**

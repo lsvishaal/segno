@@ -53,12 +53,16 @@ export interface Box {
  * spelling, so there is nothing to recolor. It is drawn where it would be
  * written instead (`staffGeometry.ts`).
  */
+/** No bars known: one array, so a default does not change on every render. */
+const NO_BARS: readonly Bar[] = [];
+
 export function Score({
   pages,
   marks,
-  bars = [],
+  bars = NO_BARS,
   onBarClick,
   startPosition = 0,
+  loop = null,
   cursor,
   dot,
   followCursor = true,
@@ -71,7 +75,10 @@ export function Score({
   /** Which drawn `g.measure` element is which bar. */
   readonly bars?: readonly Bar[];
   /** Called with a bar's number when it is clicked. Without it, bars do nothing. */
-  readonly onBarClick?: ((measure: number) => void) | undefined;
+  /** A bar was clicked; `shift` if Shift was held, which loops to it. */
+  readonly onBarClick?: ((measure: number, how: { readonly shift: boolean }) => void) | undefined;
+  /** The bars being looped, drawn as a band behind them. */
+  readonly loop?: { readonly first: number; readonly last: number } | null;
   /** Where attempts start; marked on the score unless it is the very beginning. */
   readonly startPosition?: number;
   readonly cursor: CursorState;
@@ -96,6 +103,7 @@ export function Score({
 
   const [hovered, setHovered] = useState<{ readonly measure: number; readonly box: Box } | null>(null);
   const [startBox, setStartBox] = useState<Box | null>(null);
+  const [loopBoxes, setLoopBoxes] = useState<readonly Box[]>([]);
 
   /** Bar element id → its number. */
   const barOf = useMemo(() => new Map(bars.map((bar) => [bar.elementId, bar.measure])), [bars]);
@@ -146,7 +154,7 @@ export function Score({
     (event: React.MouseEvent) => {
       if (!onBarClick) return;
       const bar = barAt(event.clientX, event.clientY);
-      if (bar) onBarClick(bar.measure);
+      if (bar) onBarClick(bar.measure, { shift: event.shiftKey });
     },
     [barAt, onBarClick],
   );
@@ -334,6 +342,26 @@ export function Score({
     setStartBox(measure ? boxOf(root, measure.id) : null);
   }, [startPosition, notesAt, pages, layoutTick]);
 
+  // The loop band: one box per drawn bar in the loop, so a loop across a
+  // line break is two pieces of band.
+  const loopFirst = loop?.first;
+  const loopLast = loop?.last;
+  useEffect(() => {
+    const root = wrapper.current;
+    if (loopFirst === undefined || loopLast === undefined || !root) {
+      setLoopBoxes([]);
+      return;
+    }
+    setLoopBoxes(
+      [...root.querySelectorAll("g.measure")].flatMap((element) => {
+        const measure = barOf.get(element.id);
+        if (measure === undefined || measure < loopFirst || measure > loopLast) return [];
+        const box = boxOf(root, element.id);
+        return box ? [box] : [];
+      }),
+    );
+  }, [loopFirst, loopLast, barOf, pages, layoutTick]);
+
   // Keep the cursor's line of music in view: scrolled to when the cursor
   // reaches a new line, or the music reflows, and not on every note. The
   // scroll container's `scroll-padding` puts it in the upper third, with
@@ -350,13 +378,13 @@ export function Score({
   return (
     <div
       ref={wrapper}
-      className="relative mx-auto w-full"
+      className="relative mx-auto w-full select-none"
       style={{
         maxWidth: SCORE_MAX_WIDTH,
         visibility: hidden ? "hidden" : undefined,
         cursor: hovered ? "pointer" : undefined,
       }}
-      title={hovered ? `Start here (bar ${hovered.measure})` : undefined}
+      title={hovered ? `Start here (bar ${hovered.measure}) · Shift+click to loop to it` : undefined}
       onPointerMove={onBarClick ? onPointerMove : undefined}
       onPointerLeave={() => setHovered(null)}
       onClick={onClick}
@@ -364,6 +392,15 @@ export function Score({
       <div ref={container} className="py-6" />
 
       <div className="pointer-events-none absolute inset-0">
+        {loopBoxes.map((box) => (
+          <div
+            key={`${box.left},${box.top}`}
+            data-loop-band
+            className="absolute rounded-sm bg-loop-band/8"
+            style={box}
+          />
+        ))}
+
         {hovered && (
           <div
             data-bar-hover

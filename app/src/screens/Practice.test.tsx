@@ -9,8 +9,9 @@ import { PracticeScreen } from "./Practice";
 // only the practice loop around it is under test, so the score only records
 // what it was given.
 interface ScoreProps {
-  readonly onBarClick?: (measure: number) => void;
+  readonly onBarClick?: (measure: number, how: { readonly shift: boolean }) => void;
   readonly startPosition?: number;
+  readonly loop?: { readonly first: number; readonly last: number } | null;
   readonly cursor: CursorState;
 }
 const drawn = vi.hoisted(() => ({ last: null as ScoreProps | null }));
@@ -22,11 +23,14 @@ vi.mock("../components/Score", () => ({
 }));
 
 const bridge = vi.hoisted(() => ({
+  clearLoop: vi.fn(),
   endAttempt: vi.fn(),
   engravePiece: vi.fn(),
   exportMusicXml: vi.fn(),
   instruments: vi.fn(),
   listenToPractice: vi.fn(),
+  loopBars: vi.fn(),
+  loopTarget: vi.fn(),
   startAtBar: vi.fn(),
   startAttempt: vi.fn(),
 }));
@@ -62,6 +66,9 @@ beforeEach(() => {
   // Bar 9 of the Minuet is step 36 in played order.
   bridge.startAtBar.mockResolvedValue({ position: 36, measure: 9 });
   bridge.startAttempt.mockResolvedValue(undefined);
+  bridge.loopBars.mockResolvedValue({ position: 36, first: 9, last: 12 });
+  bridge.clearLoop.mockResolvedValue(undefined);
+  bridge.loopTarget.mockResolvedValue(undefined);
   bridge.endAttempt.mockResolvedValue({});
   bridge.engravePiece.mockResolvedValue(PIECE);
 });
@@ -185,7 +192,7 @@ describe("starting from a bar", () => {
     await renderScreen();
 
     await act(async () => {
-      drawn.last?.onBarClick?.(9);
+      drawn.last?.onBarClick?.(9, { shift: false });
     });
 
     expect(bridge.startAtBar).toHaveBeenCalledWith("minuet", 9);
@@ -197,7 +204,7 @@ describe("starting from a bar", () => {
   it("Start and Restart rest the cursor on the start point", async () => {
     await renderScreen();
     await act(async () => {
-      drawn.last?.onBarClick?.(9);
+      drawn.last?.onBarClick?.(9, { shift: false });
     });
     await startPracticing();
     expect(drawn.last?.cursor.position).toBe(36);
@@ -232,7 +239,7 @@ describe("starting from a bar", () => {
     await renderScreen();
 
     await act(async () => {
-      drawn.last?.onBarClick?.(40);
+      drawn.last?.onBarClick?.(40, { shift: false });
     });
 
     expect(screen.getByRole("status")).toHaveTextContent("nothing to start at from bar 40");
@@ -267,3 +274,113 @@ describe("ending", () => {
   });
 });
 
+describe("looping", () => {
+  const click = async (measure: number, shift = false) => {
+    await act(async () => {
+      drawn.last?.onBarClick?.(measure, { shift });
+    });
+  };
+  const press = async (key: string) => {
+    await act(async () => {
+      fireEvent.keyDown(window, { key });
+    });
+  };
+
+  it("Shift+click loops from the start bar to the bar clicked, and shows the band", async () => {
+    await renderScreen();
+    await click(9);
+    await click(12, true);
+
+    expect(bridge.loopBars).toHaveBeenCalledWith("minuet", 9, 12, 3);
+    expect(drawn.last?.loop).toEqual({ first: 9, last: 12 });
+    expect(drawn.last?.startPosition).toBe(36);
+    expect(drawn.last?.cursor.position).toBe(36);
+    expect(screen.getByRole("button", { name: "⟲ Loop 9–12" })).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    );
+  });
+
+  it("a plain click starts there and ends the loop", async () => {
+    await renderScreen();
+    await click(12, true);
+    await click(3);
+
+    expect(drawn.last?.loop).toBeNull();
+  });
+
+  it("L loops the bar the cursor is in, and again stops looping", async () => {
+    await renderScreen();
+    await press("l");
+    expect(bridge.loopBars).toHaveBeenCalledWith("minuet", 1, 1, 3);
+
+    await press("l");
+    expect(bridge.clearLoop).toHaveBeenCalledOnce();
+    expect(drawn.last?.loop).toBeNull();
+  });
+
+  it("Esc stops looping", async () => {
+    await renderScreen();
+    await click(12, true);
+    await press("Escape");
+
+    expect(bridge.clearLoop).toHaveBeenCalledOnce();
+    expect(drawn.last?.loop).toBeNull();
+  });
+
+  it("counts clean passes in a row, and a spoiled pass shows zero at once", async () => {
+    await renderScreen();
+    await startPracticing();
+    await click(12, true);
+
+    await act(async () => {
+      hear({ kind: "looped", position: 36, cleanInARow: 2 });
+    });
+    expect(screen.getByText("2 clean in a row")).toBeInTheDocument();
+    expect(drawn.last?.cursor.position).toBe(36);
+
+    await act(async () => {
+      hear({ kind: "loopCount", cleanInARow: 0 });
+    });
+    expect(screen.getByText("0 clean in a row")).toBeInTheDocument();
+  });
+
+  it("changing the target while looping tells the practice thread", async () => {
+    await renderScreen();
+    await click(12, true);
+
+    await act(async () => {
+      fireEvent.change(screen.getByRole("combobox", { name: "stop at" }), {
+        target: { value: "" },
+      });
+    });
+
+    expect(bridge.loopTarget).toHaveBeenCalledWith(null);
+  });
+
+  it("says so calmly when the target is reached, and the band goes", async () => {
+    await renderScreen();
+    await startPracticing();
+    await click(12, true);
+
+    await act(async () => {
+      hear({ kind: "loopDone", position: 36, passes: 3, first: 9, last: 12 });
+    });
+
+    expect(screen.getByRole("status")).toHaveTextContent("3 clean passes · bars 9–12");
+    expect(drawn.last?.loop).toBeNull();
+    expect(drawn.last?.cursor.position).toBe(36);
+  });
+
+  it("cannot loop while the keyboard is lost", async () => {
+    await renderScreen();
+    await startPracticing();
+    await act(async () => {
+      hear({ kind: "instrumentLost", instrument: "Digital Piano", secondsRemaining: 60 });
+    });
+
+    expect(screen.getByRole("button", { name: "⟲ Loop" })).toBeDisabled();
+    await press("l");
+    expect(bridge.loopBars).not.toHaveBeenCalled();
+  });
+});

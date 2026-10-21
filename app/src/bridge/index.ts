@@ -21,6 +21,7 @@ import type {
   DrawnNote,
   ImportedPiece,
   InstrumentSummary,
+  LoopRange,
   Mark,
   OpenedPiece,
   OutputPortSummary,
@@ -38,6 +39,7 @@ export type {
   DrawnNote,
   ImportedPiece,
   InstrumentSummary,
+  LoopRange,
   Mark,
   OpenedPiece,
   OutputPortSummary,
@@ -106,6 +108,31 @@ export function startAttempt(pieceId: string, instrument: string): Promise<void>
  */
 export function startAtBar(pieceId: string, measure: number): Promise<StartPoint> {
   return invoke<StartPoint>("start_at_bar", { pieceId, measure });
+}
+
+/**
+ * Loops bars `first` to `last` (either order) of `pieceId`, until `target`
+ * clean passes in a row, or for as long as the performer likes if `null`.
+ * While practising, the running attempt is ended and kept, and the first
+ * pass begins.
+ */
+export function loopBars(
+  pieceId: string,
+  first: number,
+  last: number,
+  target: number | null,
+): Promise<LoopRange> {
+  return invoke<LoopRange>("loop_bars", { pieceId, first, last, target });
+}
+
+/** Stops looping; the start stays at the loop's start. */
+export function clearLoop(): Promise<void> {
+  return invoke<void>("clear_loop");
+}
+
+/** How many clean passes in a row end the loop from now on; `null` never. */
+export function loopTarget(target: number | null): Promise<void> {
+  return invoke<void>("loop_target", { target });
 }
 
 /** How the performer ended an attempt. Leaving also puts the start back at bar 1. */

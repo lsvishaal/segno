@@ -66,7 +66,7 @@ export default async function startFromBar() {
   await openPiece("Minuet in G Major");
 
   const hint = await hintOver(9);
-  check("hovering bar 9 hints \"Start here (bar 9)\"", hint === "Start here (bar 9)", String(hint));
+  check("hovering bar 9 hints \"Start here (bar 9)\"", String(hint).startsWith("Start here (bar 9)"), String(hint));
   check("at the beginning there is no start marker", (await marker()) === null);
 
   await clickBar(9);

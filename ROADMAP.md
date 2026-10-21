@@ -525,7 +525,18 @@ touching nothing but the score, the keyboard and at most two buttons.
 - **Tests:** replay from bar 9 of the Minuet; from bar 1 of the second half
   (repeat-aware).
 
-### M1.6 · L · Loop a range of bars (never cut)
+### M1.6 · L · Loop a range of bars (never cut) — done 22 Oct
+
+- **As built:**
+  - Shift+click loops from the start bar to the bar clicked; Loop / L loops
+    the cursor's bar; Esc, Loop again, a plain click or leaving ends it.
+  - Each pass is its own attempt: schema 4 stores `"to"` (the loop's end,
+    a step) and `"ended": "pass"`. A loop over a repeat sign is the first
+    place its bars are played in a row.
+  - "N clean in a row" (D11); a wrong note shows 0 at once. "stop at" 1–10
+    or never, default 3, not yet remembered (M1.9). At the target: "3 clean
+    passes · bars 9–12", the band goes, the cursor waits at the loop start.
+  - Known limit: the key-up of a pass's last note lands in the next pass.
 
 - **Why:** the single most effective practice technique, and the feature
   every competitor has.
@@ -560,7 +571,7 @@ touching nothing but the score, the keyboard and at most two buttons.
   "never played."
 - **Edge:** pieces with one staff (Ode to Joy) hide the selector.
 
-### M1.8 · S · Restart without leaving — done 18 Oct (bar 1; the loop start comes with M1.6)
+### M1.8 · S · Restart without leaving — done 18 Oct (bar 1); from the loop start since M1.6
 
 - **What:** **R** restarts the attempt from the current loop start, or from
   bar 1 if no loop. Saves the current attempt first.

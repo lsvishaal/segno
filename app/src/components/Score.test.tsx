@@ -360,7 +360,13 @@ describe("bars, on a two-bar page", () => {
     fireEvent.click(score, { clientX: 350, clientY: 90 });
     fireEvent.click(score, { clientX: 10, clientY: 10 });
 
-    expect(onBarClick.mock.calls).toEqual([[2], [1]]);
+    fireEvent.click(score, { clientX: 350, clientY: 90, shiftKey: true });
+
+    expect(onBarClick.mock.calls).toEqual([
+      [2, { shift: false }],
+      [1, { shift: false }],
+      [2, { shift: true }],
+    ]);
   });
 
   it("labels each drawn bar with its number", () => {
@@ -379,7 +385,7 @@ describe("bars, on a two-bar page", () => {
 
     fireEvent.pointerMove(score, { clientX: 250, clientY: 50 });
 
-    expect(score).toHaveAttribute("title", "Start here (bar 2)");
+    expect(score).toHaveAttribute("title", "Start here (bar 2) · Shift+click to loop to it");
     expect(container.querySelector("[data-bar-hover]")).not.toBeNull();
 
     fireEvent.pointerLeave(score);
@@ -414,5 +420,24 @@ describe("bars, on a two-bar page", () => {
     expect(marker).toHaveTextContent("Start");
     expect(marker.style.left).toBe("196px");
   });
-});
 
+  it("draws the loop band behind each looped bar, and none without a loop", () => {
+    const { container, rerender } = render(
+      <Score pages={[PAGE]} marks={MARKS} bars={BARS} cursor={{ position: 0 }} dot={null} followCursor={false} />,
+    );
+    layOut(container);
+    expect(container.querySelectorAll("[data-loop-band]")).toHaveLength(0);
+
+    rerender(
+      <Score pages={[PAGE]} marks={MARKS} bars={BARS} loop={{ first: 2, last: 2 }} cursor={{ position: 0 }} dot={null} followCursor={false} />,
+    );
+    const bands = container.querySelectorAll<HTMLElement>("[data-loop-band]");
+    expect(bands).toHaveLength(1);
+    expect(bands[0]?.style.left).toBe("200px");
+
+    rerender(
+      <Score pages={[PAGE]} marks={MARKS} bars={BARS} loop={{ first: 1, last: 2 }} cursor={{ position: 0 }} dot={null} followCursor={false} />,
+    );
+    expect(container.querySelectorAll("[data-loop-band]")).toHaveLength(2);
+  });
+});
