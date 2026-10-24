@@ -345,6 +345,7 @@ These come straight from the code and decide how big several tasks are.
 | **D10** | Heatmap baseline | **Average of the last 3 sessions** of that piece. | Smooths one bad day; still responsive. |
 | **D11** | What counts as a "clean pass" in a loop | **Every position in the range satisfied with zero wrong or unexpected notes.** Stall time doesn't matter in wait mode. | Simple, explainable, matches wait mode. |
 | **D12** | Bundled library size for v1.0 | **12–15 pieces across three levels**, every one with a provenance row. | Enough to try every feature; small enough to verify licences properly. |
+| **D13** | Where Listen's sound comes from (reopened 24 Oct) | (a) Your piano over MIDI only. (b) A built-in piano sound only. (c) **Piano over MIDI when connected, a built-in piano sound when not.** | Your lean is a built-in engine. Recommendation (c): MIDI first has no audio bugs; add the built-in sound as the fallback, choosing a small, permissively licensed soundfont player and checking Linux audio (PipeWire) before committing. Decide when Listen is built. |
 
 ---
 
@@ -485,8 +486,15 @@ touching nothing but the score, the keyboard and at most two buttons.
   - **Auto-start:** with a device selected, the first correct note starts the
     attempt. No Start button needed. (Keep a visible "Start" for clarity on
     first use only; see §15.)
+  - **Auto-detect (added 24 Oct):** while no keyboard is connected, look again
+    every 3 seconds, on the library and the practice screen. When one appears,
+    select it (the remembered one first) and show it at once: no going back,
+    no re-opening the piece. While still empty, the "No MIDI keyboard" panel
+    has a **Rescan** button. Unplugging mid-practice stays as it is (the
+    one-minute reconnect window).
 - **Manual check:** unplug/replug the FP-10 between launches; the app picks
-  it up with zero clicks.
+  it up with zero clicks. Open the Minuet with the piano off, switch it on:
+  within ~3 s it is picked up, with zero clicks.
 
 ### M1.4 · M · A summary you can read in five seconds — done 24 Oct
 
@@ -1378,10 +1386,9 @@ users ask for; log the change in §32.
 - Timing stats join the bar card ("rushes the third beat").
 
 ### Next 2 · Listen
-- Play the score (or the loop range, or one hand) through **MIDI out to the
-  user's piano**. Uses the existing MIDI output path; no synth, no audio
-  device bugs.
-- Cursor follows playback; Space stops.
+- Play the score (or the loop range, or one hand) so you can hear how it
+  goes: the cursor follows and each note lights up as it sounds; Space stops.
+- Sound: **see D13** (your piano over MIDI, a built-in piano sound, or both).
 
 ### Next 3 · MIDI file import
 - Via webmscore in the webview, behind `midiToMusicXml(bytes)` (design in
@@ -1551,7 +1558,7 @@ Carried over from the previous roadmap; each one is real but rare.
 | Flashcards, theory drills, lessons, exams, games | MidiSlayer's lane; we win on depth with pieces |
 | Falling notes as a mode | Synthesia/Neothesia's lane; Hogwash is about reading real notation |
 | PDF / photo scanning (OMR) | A funded multi-year problem (Soundslice); point to Audiveris |
-| A built-in software synth | Linux audio is where MidiSlayer broke; the user's piano has speakers |
+| A built-in software synth (reopened, D13) | Linux audio is where MidiSlayer broke; the user's piano has speakers |
 | Locked or paid features | The point is that it's free |
 | Bundling copyrighted arrangements | Legal risk to the whole repo |
 | An in-app store or content marketplace | Not a business; not the product |
@@ -1670,6 +1677,8 @@ _Date · decision · why · what it replaced._
 - 2026-10-24 · Written rhythm read into the notation (beats, bar lengths), tempo still not · so long notes aren't mistaken for pauses · "no timing in the domain"
 - 2026-10-24 · Stall replaced by pause beyond the rhythm at the performer's own pace; breaks, a cap of 3 wrong per step, restarts/stops count · real playing isn't metronomic; real data had 245 wrong notes in one bar from hunting · raw stall seconds
 - 2026-10-24 · Review after playing is mostly visual (score marks + per-bar strip), little text · your call · M1.4's text list
+- 2026-10-24 · Auto-detect a keyboard plugged in later (every 3 s, plus Rescan) added to M1.3 · re-opening the piece to find it is friction · M1.3 checked only on opening
+- 2026-10-24 · Built-in sound for Listen reopened as D13 · you'd like it · was "piano-only, no synth" (6 and 18 Oct)
 - _(D1–D12 answers go here)_
 
 ---
