@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 
-import type { Bar, DrawnNote, Mark } from "../bridge";
+import type { Bar, DrawnNote, Mark, ReviewMark } from "../bridge";
 import { SCORE_MAX_WIDTH } from "../screens/zoom";
 import { NoteNames } from "./NoteNames";
 import { showGeometry as drawGeometry } from "./scoreDebug";
@@ -53,6 +53,13 @@ export interface Box {
  * spelling, so there is nothing to recolor. It is drawn where it would be
  * written instead (`staffGeometry.ts`).
  */
+/** What to leave drawn once an attempt has ended. */
+export interface ScoreReview {
+  readonly marks: readonly ReviewMark[];
+  /** Bars after where the attempt stopped, faded. */
+  readonly notReached: readonly number[];
+}
+
 /** No bars known: one array, so a default does not change on every render. */
 const NO_BARS: readonly Bar[] = [];
 
@@ -63,6 +70,7 @@ export function Score({
   onBarClick,
   startPosition = 0,
   loop = null,
+  review = null,
   cursor,
   dot,
   followCursor = true,
@@ -79,6 +87,8 @@ export function Score({
   readonly onBarClick?: ((measure: number, how: { readonly shift: boolean }) => void) | undefined;
   /** The bars being looped, drawn as a band behind them. */
   readonly loop?: { readonly first: number; readonly last: number } | null;
+  /** After an attempt: right notes left green, wrong ones crossed, bars not reached faded. */
+  readonly review?: ScoreReview | null;
   /** Where attempts start; marked on the score unless it is the very beginning. */
   readonly startPosition?: number;
   readonly cursor: CursorState;
@@ -104,6 +114,8 @@ export function Score({
   const [hovered, setHovered] = useState<{ readonly measure: number; readonly box: Box } | null>(null);
   const [startBox, setStartBox] = useState<Box | null>(null);
   const [loopBoxes, setLoopBoxes] = useState<readonly Box[]>([]);
+  const [fadedBoxes, setFadedBoxes] = useState<readonly Box[]>([]);
+  const [crosses, setCrosses] = useState<readonly { readonly box: Box; readonly wrong: number }[]>([]);
 
   /** Bar element id → its number. */
   const barOf = useMemo(() => new Map(bars.map((bar) => [bar.elementId, bar.measure])), [bars]);
@@ -362,6 +374,55 @@ export function Score({
     );
   }, [loopFirst, loopLast, barOf, pages, layoutTick]);
 
+  // The review: right notes stay green, a red ✕ above each note waited on
+  // through wrong ones (a repeated bar's two passes add up), and the bars
+  // not reached faded behind a wash of paper.
+  useEffect(() => {
+    const root = wrapper.current;
+    if (!review || !root) {
+      setFadedBoxes([]);
+      setCrosses([]);
+      return;
+    }
+
+    const notReached = new Set(review.notReached);
+    setFadedBoxes(
+      [...root.querySelectorAll("g.measure")].flatMap((element) => {
+        const measure = barOf.get(element.id);
+        if (measure === undefined || !notReached.has(measure)) return [];
+        const box = boxOf(root, element.id);
+        return box ? [box] : [];
+      }),
+    );
+
+    const green: SVGElement[] = [];
+    const wrongAt = new Map<string, number>();
+    for (const mark of review.marks) {
+      const notes = notesAt.get(mark.position) ?? [];
+      if (mark.correct) {
+        for (const note of notes) {
+          const element = root.querySelector(`#${CSS.escape(note.elementId)}`);
+          if (element instanceof SVGElement) green.push(element);
+        }
+      }
+      const first = notes[0];
+      if (mark.wrong > 0 && first) {
+        wrongAt.set(first.elementId, (wrongAt.get(first.elementId) ?? 0) + mark.wrong);
+      }
+    }
+    for (const element of green) element.style.color = "var(--hw-correct)";
+    setCrosses(
+      [...wrongAt].flatMap(([elementId, wrong]) => {
+        const box = boxOf(root, elementId);
+        return box ? [{ box, wrong }] : [];
+      }),
+    );
+
+    return () => {
+      for (const element of green) element.style.color = "";
+    };
+  }, [review, barOf, notesAt, pages, layoutTick]);
+
   // Keep the cursor's line of music in view: scrolled to when the cursor
   // reaches a new line, or the music reflows, and not on every note. The
   // scroll container's `scroll-padding` puts it in the upper third, with
@@ -399,6 +460,26 @@ export function Score({
             className="absolute rounded-sm bg-loop-band/8"
             style={box}
           />
+        ))}
+
+        {fadedBoxes.map((box) => (
+          <div
+            key={`faded-${box.left},${box.top}`}
+            data-not-reached
+            className="absolute bg-paper-raised/70"
+            style={box}
+          />
+        ))}
+
+        {crosses.map(({ box, wrong }) => (
+          <span
+            key={`cross-${box.left},${box.top}`}
+            data-wrong-mark
+            className="absolute -translate-x-1/2 text-xs leading-none font-semibold text-wrong"
+            style={{ left: box.left + box.width / 2, top: box.top - 16 }}
+          >
+            ✕{wrong > 1 ? <sub className="ml-px text-[9px]">{wrong}</sub> : null}
+          </span>
         ))}
 
         {hovered && (

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { AnimatePresence, motion } from "motion/react";
 
@@ -22,10 +22,12 @@ import type {
   OpenedPiece,
   PracticeEvent,
   StartPoint,
+  Suggested,
 } from "../bridge";
+import { BarStrip } from "../components/BarStrip";
 import { DeviceSelect } from "../components/DeviceSelect";
 import { Score } from "../components/Score";
-import type { CursorState, Dot } from "../components/Score";
+import type { CursorState, Dot, ScoreReview } from "../components/Score";
 import { BEFORE_STARTING, cursorFor, dotFor } from "./overlayEvents";
 import { SettingsPanel } from "./PracticeSettings";
 import { REFLOW_THRESHOLD, clampScale, loadZoom, saveZoom, scoreWidth, stepScale } from "./zoom";
@@ -89,6 +91,8 @@ export function PracticeScreen({
   const [start, setStart] = useState<StartPoint>({ position: 0, measure: 1 });
   // Something said about a move or a loop, for a few seconds.
   const [moveRefusal, setMoveRefusal] = useState<string | null>(null);
+  // After a loop's goal: the loop a bar wider, offered beside that message.
+  const [widen, setWiden] = useState<Suggested | null>(null);
   // The bars being looped, and how many clean passes in a row so far.
   const [loop, setLoop] = useState<{ first: number; last: number } | null>(null);
   const [cleanInARow, setCleanInARow] = useState(0);
@@ -135,9 +139,12 @@ export function PracticeScreen({
   useEffect(() => {
     if (!moveRefusal) return;
 
-    const timeout = window.setTimeout(() => setMoveRefusal(null), 5000);
+    const timeout = window.setTimeout(() => {
+      setMoveRefusal(null);
+      setWiden(null);
+    }, widen ? 10000 : 5000);
     return () => window.clearTimeout(timeout);
-  }, [moveRefusal]);
+  }, [moveRefusal, widen]);
 
   // A piece switch (or leaving and reopening the same one) starts fresh.
   const pieceId = piece.id;
@@ -279,9 +286,12 @@ export function PracticeScreen({
         case "loopDone":
           setLoop(null);
           setMoveRefusal(`${event.passes} clean passes · ${barsNamed(event.first, event.last)}`);
+          setWiden(event.widen);
           break;
         case "ended":
           setLost(null);
+          // The review colours the notes now; a flash still fading would undo one.
+          setDot(null);
           setPhase((current) =>
             current.kind === "practicing"
               ? { kind: "ended", instrument: current.instrument, summary: event.summary }
@@ -297,11 +307,11 @@ export function PracticeScreen({
   }, []);
 
   const begin = useCallback(
-    (instrument: string) => {
+    (instrument: string, from: number = start.position) => {
       void (async () => {
         try {
           await startAttempt(pieceId, instrument);
-          setCursor({ position: start.position });
+          setCursor({ position: from });
           setDot(null);
           setPhase({ kind: "practicing", instrument, reachedEnd: false });
         } catch (error) {
@@ -335,23 +345,25 @@ export function PracticeScreen({
   );
 
   // Loops bars `first` to `last`; while practising, the first pass begins.
+  // Answers where the loop starts, or null if it could not.
   const loopTo = useCallback(
-    (first: number, last: number) => {
-      void (async () => {
-        try {
-          const range = await loopBars(pieceId, first, last, target);
-          setStart({ position: range.position, measure: range.first });
-          setLoop({ first: range.first, last: range.last });
-          setCleanInARow(0);
-          setCursor({ position: range.position });
-          setDot(null);
-          setPhase((current) =>
-            current.kind === "practicing" ? { ...current, reachedEnd: false } : current,
-          );
-        } catch (error) {
-          setMoveRefusal(String(error));
-        }
-      })();
+    async (first: number, last: number): Promise<number | null> => {
+      try {
+        const range = await loopBars(pieceId, first, last, target);
+        setStart({ position: range.position, measure: range.first });
+        setLoop({ first: range.first, last: range.last });
+        setCleanInARow(0);
+        setCursor({ position: range.position });
+        setDot(null);
+        setWiden(null);
+        setPhase((current) =>
+          current.kind === "practicing" ? { ...current, reachedEnd: false } : current,
+        );
+        return range.position;
+      } catch (error) {
+        setMoveRefusal(String(error));
+        return null;
+      }
     },
     [pieceId, target],
   );
@@ -359,7 +371,7 @@ export function PracticeScreen({
   // A click starts there; Shift+click loops from the start bar to there.
   const onBarClick = useCallback(
     (measure: number, how: { readonly shift: boolean }) => {
-      if (how.shift) loopTo(start.measure, measure);
+      if (how.shift) void loopTo(start.measure, measure);
       else moveTo(measure);
     },
     [loopTo, moveTo, start.measure],
@@ -375,7 +387,7 @@ export function PracticeScreen({
     engraving.marks.find((mark) => mark.position === cursor.position)?.measure ?? start.measure;
   const toggleLoop = useCallback(() => {
     if (loop) stopLooping();
-    else loopTo(cursorBar, cursorBar);
+    else void loopTo(cursorBar, cursorBar);
   }, [loop, stopLooping, loopTo, cursorBar]);
 
   const chooseTarget = useCallback(
@@ -438,6 +450,41 @@ export function PracticeScreen({
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
   }, [instrumentInUse, restart]);
+
+  // The review's suggestion: loop the bars it names and start playing them.
+  const practise = useCallback(
+    (suggested: Suggested, instrument: string) => {
+      const { first, last } = suggested;
+      if (first === null || last === null) {
+        begin(instrument);
+        return;
+      }
+      void (async () => {
+        // Where the loop starts, which `start` will only say after this render.
+        const at = await loopTo(first, last);
+        if (at !== null) begin(instrument, at);
+      })();
+    },
+    [begin, loopTo],
+  );
+
+  // A column of the review's strip: that bar, brought into view.
+  const showBar = useCallback((measure: number) => {
+    scoreRef.current
+      ?.querySelector(`[data-bar="${measure}"]`)
+      ?.scrollIntoView({ behavior: "smooth", block: "center" });
+  }, []);
+
+  // What stays drawn on the score while the review is showing.
+  const review = phase.kind === "ended" ? phase.summary.review : null;
+  const scoreReview = useMemo<ScoreReview | null>(
+    () =>
+      review && {
+        marks: review.marks,
+        notReached: review.bars.filter((bar) => bar.state === "notReached").map((bar) => bar.measure),
+      },
+    [review],
+  );
 
   const chooseAnother = useCallback(() => {
     setPhase({ kind: "choosing", refusal: null });
@@ -623,6 +670,15 @@ export function PracticeScreen({
           >
             <p role="status" className="panel rounded-2xl px-5 py-3 text-sm text-ink-muted">
               {moveRefusal}
+              {widen && phase.kind === "practicing" && (
+                <button
+                  type="button"
+                  onClick={() => void loopTo(widen.first ?? 1, widen.last ?? 1)}
+                  className="ml-3 cursor-pointer rounded-full border border-rule px-3 py-0.5 text-xs text-ink transition-colors hover:border-accent hover:text-accent focus-visible:outline-2 focus-visible:outline-accent"
+                >
+                  Join it back up · {widen.label}
+                </button>
+              )}
             </p>
           </motion.div>
         )}
@@ -637,10 +693,12 @@ export function PracticeScreen({
             transition={{ duration: 0.2, ease: "easeOut" }}
             className="overflow-hidden px-8 pt-4"
           >
-            <SummaryPanel
+            <ReviewPanel
               summary={phase.summary}
+              onPractise={(suggested) => practise(suggested, phase.instrument)}
               onAgain={() => again(phase.instrument)}
               onChooseAnother={chooseAnother}
+              onShowBar={showBar}
             />
           </motion.div>
         )}
@@ -659,6 +717,7 @@ export function PracticeScreen({
           onBarClick={keyboardLost ? undefined : onBarClick}
           startPosition={start.position}
           loop={loop}
+          review={scoreReview}
           cursor={cursor}
           dot={dot}
           showNoteNames={showNoteNames}
@@ -763,48 +822,61 @@ function Stat({ label, value, tone }: { readonly label: string; readonly value: 
 }
 
 /**
- * What an ended attempt has to say.
- *
- * The four counts and the lines both come straight from Rust — `Feedback`'s
- * `Summary` and `lines()` (`004 §8.8`); this only lays them out. Full design
- * of a history-worthy summary screen is Stage E's job, not this pass's.
+ * What an ended attempt has to say: mostly a picture. The line, the strip's
+ * numbers and the suggestion all come from Rust; this only lays them out.
+ * The four counts and every per-note line wait behind "Show every note".
  */
-function SummaryPanel({
+function ReviewPanel({
   summary,
+  onPractise,
   onAgain,
   onChooseAnother,
+  onShowBar,
 }: {
   readonly summary: AttemptSummary;
+  readonly onPractise: (suggested: Suggested) => void;
   readonly onAgain: () => void;
   readonly onChooseAnother: () => void;
+  readonly onShowBar: (measure: number) => void;
 }) {
+  const { review } = summary;
+  // "Play it again" is the Practice again button; only a loop needs its own.
+  const suggestion = review.suggestion?.first != null ? review.suggestion : null;
+
   return (
     <div className="panel shrink-0 rounded-2xl px-7 py-6">
       {summary.autoEnded && summary.reason && (
         <p className="mb-3 text-sm text-ink-muted">{summary.reason}</p>
       )}
 
-      <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-        <Stat label="Correct" value={summary.correct} tone="correct" />
-        <Stat label="Not as written" value={summary.incorrect} tone="wrong" />
-        <Stat label="Never played" value={summary.omitted} />
-        <Stat label="Unexpected" value={summary.unexpected} />
-      </div>
+      {review.headline && <p className="text-sm text-ink">{review.headline}</p>}
 
-      <ul className="mt-4 space-y-1 text-sm text-ink-muted">
-        {summary.lines.map((line, index) => (
-          // An ordered, fixed-shape report from Rust, not a list a key could
-          // be drawn from on its own — two lines could coincide in text.
-          <li key={`${index}-${line}`}>{line}</li>
-        ))}
-      </ul>
+      {review.bars.length > 0 && (
+        <div className="mt-4">
+          <BarStrip bars={review.bars} onPick={onShowBar} />
+        </div>
+      )}
 
-      <div className="mt-4 flex gap-3">
+      <div className="mt-4 flex flex-wrap gap-3">
+        {suggestion && (
+          <motion.button
+            type="button"
+            onClick={() => onPractise(suggestion)}
+            whileTap={{ scale: 0.96 }}
+            className="cursor-pointer rounded-full bg-ink px-4 py-1.5 text-sm font-medium text-paper transition-opacity hover:opacity-90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
+          >
+            {suggestion.label}
+          </motion.button>
+        )}
         <motion.button
           type="button"
           onClick={onAgain}
           whileTap={{ scale: 0.96 }}
-          className="cursor-pointer rounded-full bg-ink px-4 py-1.5 text-sm font-medium text-paper transition-opacity hover:opacity-90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
+          className={
+            suggestion
+              ? "cursor-pointer rounded-full border border-rule px-4 py-1.5 text-sm transition-colors hover:border-accent hover:text-accent focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-accent"
+              : "cursor-pointer rounded-full bg-ink px-4 py-1.5 text-sm font-medium text-paper transition-opacity hover:opacity-90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
+          }
         >
           Practice again
         </motion.button>
@@ -816,6 +888,23 @@ function SummaryPanel({
           Choose a different instrument
         </button>
       </div>
+
+      <details className="mt-4 text-sm text-ink-muted">
+        <summary className="cursor-pointer select-none hover:text-accent">Show every note</summary>
+        <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4">
+          <Stat label="Correct" value={summary.correct} tone="correct" />
+          <Stat label="Not as written" value={summary.incorrect} tone="wrong" />
+          <Stat label="Never played" value={summary.omitted} />
+          <Stat label="Unexpected" value={summary.unexpected} />
+        </div>
+        <ul className="mt-3 space-y-1">
+          {summary.lines.map((line, index) => (
+            // An ordered, fixed-shape report from Rust, not a list a key could
+            // be drawn from on its own — two lines could coincide in text.
+            <li key={`${index}-${line}`}>{line}</li>
+          ))}
+        </ul>
+      </details>
     </div>
   );
 }

@@ -27,9 +27,13 @@ import type {
   OutputPortSummary,
   PieceSummary,
   PracticeEvent,
+  Review,
+  ReviewBar,
+  ReviewMark,
   StaffPosition,
   StartPoint,
   Step,
+  Suggested,
   Unavailable,
 } from "./types";
 
@@ -45,9 +49,13 @@ export type {
   OutputPortSummary,
   PieceSummary,
   PracticeEvent,
+  Review,
+  ReviewBar,
+  ReviewMark,
   StaffPosition,
   StartPoint,
   Step,
+  Suggested,
   Unavailable,
 };
 

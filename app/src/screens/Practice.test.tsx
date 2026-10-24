@@ -1,8 +1,8 @@
-import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import type { OpenedPiece, PracticeEvent } from "../bridge";
-import type { CursorState } from "../components/Score";
+import type { AttemptSummary, OpenedPiece, PracticeEvent, ReviewBar } from "../bridge";
+import type { CursorState, ScoreReview } from "../components/Score";
 import { PracticeScreen } from "./Practice";
 
 // The score itself is drawn from Verovio's SVG and has its own tests; here
@@ -12,6 +12,7 @@ interface ScoreProps {
   readonly onBarClick?: (measure: number, how: { readonly shift: boolean }) => void;
   readonly startPosition?: number;
   readonly loop?: { readonly first: number; readonly last: number } | null;
+  readonly review?: ScoreReview | null;
   readonly cursor: CursorState;
 }
 const drawn = vi.hoisted(() => ({ last: null as ScoreProps | null }));
@@ -382,5 +383,92 @@ describe("looping", () => {
     expect(screen.getByRole("button", { name: "⟲ Loop" })).toBeDisabled();
     await press("l");
     expect(bridge.loopBars).not.toHaveBeenCalled();
+  });
+});
+
+describe("the review after an attempt", () => {
+  const column = (measure: number, state: ReviewBar["state"], pauseMs = 0, wrong = 0): ReviewBar => ({
+    measure,
+    state,
+    pauseMs,
+    intoMs: pauseMs,
+    wrong,
+    breaks: 0,
+    line: `Bar ${measure}`,
+  });
+  // Started at bar 8, trouble going into bar 9, stopped in bar 10.
+  const summary = (suggestion: AttemptSummary["review"]["suggestion"]): AttemptSummary => ({
+    lines: ["Bar 9: G4 was written; something else was played."],
+    correct: 12,
+    incorrect: 2,
+    omitted: 80,
+    unexpected: 0,
+    reachedTheEnd: false,
+    autoEnded: false,
+    reason: null,
+    review: {
+      headline: "Bars 8–10 · 24 s · most trouble going into bar 9 (3.2 s pause, 2 wrong).",
+      bars: [column(8, "played"), column(9, "played", 3200, 2), column(10, "played"), column(11, "notReached"), column(12, "notReached")],
+      marks: [{ position: 36, correct: true, wrong: 2 }],
+      suggestion,
+    },
+  });
+  const stopWith = async (ended: AttemptSummary) => {
+    await renderScreen();
+    await startPracticing();
+    await act(async () => {
+      hear({ kind: "ended", summary: ended });
+    });
+  };
+
+  it("shows the line, one column per bar, and leaves the marks on the score", async () => {
+    await stopWith(summary({ label: "Loop bars 8–9", first: 8, last: 9 }));
+
+    expect(screen.getByText(/most trouble going into bar 9/)).toBeInTheDocument();
+    const strip = within(screen.getByRole("list", { name: "Bars played" }));
+    expect(strip.getAllByRole("listitem")).toHaveLength(5);
+    expect(strip.getByRole("listitem", { name: "Bar 11" })).toHaveAttribute("data-state", "notReached");
+    expect(drawn.last?.review?.notReached).toEqual([11, 12]);
+    expect(drawn.last?.review?.marks).toEqual([{ position: 36, correct: true, wrong: 2 }]);
+  });
+
+  it("the suggestion loops its bars and starts playing them", async () => {
+    await stopWith(summary({ label: "Loop bars 8–9", first: 8, last: 9 }));
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: "Loop bars 8–9" }));
+    });
+
+    expect(bridge.loopBars).toHaveBeenCalledWith("minuet", 8, 9, 3);
+    expect(bridge.startAttempt).toHaveBeenCalledTimes(2);
+    expect(drawn.last?.review).toBeNull();
+  });
+
+  it("with nothing to loop, Practice again is the one main button", async () => {
+    await stopWith(summary({ label: "Again", first: null, last: null }));
+
+    expect(screen.queryByRole("button", { name: "Again" })).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Practice again" })).toBeInTheDocument();
+  });
+
+  it("after a loop's goal, offers to join it back up", async () => {
+    await renderScreen();
+    await startPracticing();
+    await act(async () => {
+      hear({
+        kind: "loopDone",
+        position: 36,
+        passes: 3,
+        first: 9,
+        last: 9,
+        widen: { label: "Loop bars 8–10", first: 8, last: 10 },
+      });
+    });
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: "Join it back up · Loop bars 8–10" }));
+    });
+
+    expect(bridge.loopBars).toHaveBeenCalledWith("minuet", 8, 10, 3);
   });
 });

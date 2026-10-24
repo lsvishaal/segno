@@ -488,7 +488,14 @@ touching nothing but the score, the keyboard and at most two buttons.
 - **Manual check:** unplug/replug the FP-10 between launches; the app picks
   it up with zero clicks.
 
-### M1.4 · M · A summary you can read in five seconds
+### M1.4 · M · A summary you can read in five seconds — done 24 Oct
+
+- **As built:** `Suggestion` (hogwash-analysis), `review` sentences
+  (hogwash-feedback), `review.rs` in the app builds it in `finish()`;
+  `BarStrip.tsx`, `Score` `review` prop, `ReviewPanel`. A stopped loop reviews
+  every pass of the run; reaching a loop's goal offers "Join it back up" (the
+  loop a bar wider). Stop or Restart only counts against a bar begun. Strip
+  sums repeats by bar number (your call). e2e scenario `review`.
 
 - **Why:** 517 lines is not feedback.
 - **When:** only after playing (Stop, the end, or leaving), never during.
