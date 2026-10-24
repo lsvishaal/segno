@@ -17,6 +17,7 @@
 
 mod feedback;
 mod fixtures;
+pub mod review;
 mod statement;
 
 pub use feedback::Feedback;

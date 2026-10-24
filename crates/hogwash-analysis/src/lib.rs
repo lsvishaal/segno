@@ -37,7 +37,9 @@ mod analysis;
 mod bars;
 mod finding;
 mod fixtures;
+mod suggestion;
 
 pub use analysis::{Analysis, Summary};
 pub use bars::{Bar, Bars};
 pub use finding::Finding;
+pub use suggestion::Suggestion;
