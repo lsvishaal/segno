@@ -110,7 +110,7 @@ fn details(bar: &Bar) -> Vec<String> {
     details
 }
 
-fn span(first: MeasureNumber, last: MeasureNumber) -> String {
+pub(crate) fn span(first: MeasureNumber, last: MeasureNumber) -> String {
     if first == last {
         format!("Bar {}", first.get())
     } else {
@@ -118,7 +118,7 @@ fn span(first: MeasureNumber, last: MeasureNumber) -> String {
     }
 }
 
-fn seconds(us: u64) -> String {
+pub(crate) fn seconds(us: u64) -> String {
     format!("{}.{} s", us / 1_000_000, us / 100_000 % 10)
 }
 
@@ -131,7 +131,7 @@ fn duration(us: u64) -> String {
     }
 }
 
-fn plural(count: u32, one: &str, many: &str) -> String {
+pub(crate) fn plural(count: u32, one: &str, many: &str) -> String {
     format!("{count} {}", if count == 1 { one } else { many })
 }
 

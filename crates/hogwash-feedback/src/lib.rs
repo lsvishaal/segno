@@ -15,6 +15,7 @@
 //! ones, so Feedback holds located, typed [`Statement`]s and produces English
 //! on demand.
 
+pub mod coach;
 mod feedback;
 mod fixtures;
 pub mod review;
