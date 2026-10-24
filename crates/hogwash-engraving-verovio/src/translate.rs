@@ -5,7 +5,7 @@
 //! | Source | Question |
 //! |---|---|
 //! | the MEI ([`crate::mei`]) | what is each note, and which bar is it in? |
-//! | the timemap ([`crate::timemap`]) | which notes are played together, in what order? |
+//! | the timemap ([`crate::timemap`]) | which notes are played together, in what order, on which beat? |
 //! | the rendered pages | which page was each note drawn on? |
 //!
 //! Pure. Everything here takes strings and returns values, so the whole of
@@ -15,11 +15,12 @@ use std::collections::{BTreeMap, BTreeSet};
 
 use hogwash_domain::{Location, MeasureNumber, Pitch};
 use hogwash_engraving::{Details, ElementId, PageIndex, Placement};
-use hogwash_notation::{Measure, Note, Position, Score};
+use hogwash_notation::{Measure, Note, Position, Score, TICKS_PER_QUARTER};
 use roxmltree::Document;
 
 use crate::failure::TranslationFailure;
 use crate::mei::ReadMei;
+use crate::timemap::Beats;
 
 /// A Score, what the source said about it, and where its notes were drawn.
 pub(crate) type Assembled = (Score, Details, Vec<(Location, Placement)>);
@@ -34,11 +35,13 @@ pub(crate) fn assemble(
     read: &ReadMei,
     onsets: &[Vec<String>],
     played: &[String],
+    beats: &Beats,
     originals: &BTreeMap<String, String>,
     pages: &[String],
 ) -> Result<Assembled, TranslationFailure> {
     let page_of = elements_by_page(pages)?;
     let original = |id: &str| originals.get(id).map_or(id, String::as_str).to_owned();
+    let (bar_starts, lengths) = bar_times(read, played, beats, &original);
 
     // Each onset becomes at most one Position, gathered under the bar its
     // notes are in.
@@ -56,7 +59,7 @@ pub(crate) fn assemble(
     let mut held_into: BTreeMap<MeasureNumber, Vec<Note>> = BTreeMap::new();
     let mut opened: BTreeSet<MeasureNumber> = BTreeSet::new();
 
-    for sounding in onsets {
+    for (index, sounding) in onsets.iter().enumerate() {
         let mut measure = None;
         let mut held = Vec::new();
         let mut bars_here = BTreeSet::new();
@@ -123,7 +126,9 @@ pub(crate) fn assemble(
         let (Some(measure), Some(position)) = (measure, Position::new(notes)) else {
             continue;
         };
-        let position = position.tolerating(graces.drain(..).chain(ornaments));
+        let position = position
+            .tolerating(graces.drain(..).chain(ornaments))
+            .at_beat(beat_of(beats, index, bar_starts.get(&measure)));
 
         positions_by_measure
             .entry(measure)
@@ -143,7 +148,9 @@ pub(crate) fn assemble(
 
         drawn.insert(number, elements);
         measures.push(
-            Measure::new(number, positions).holding(held_into.remove(&number).unwrap_or_default()),
+            Measure::new(number, positions)
+                .holding(held_into.remove(&number).unwrap_or_default())
+                .lasting(lengths.get(&number).copied()),
         );
     }
 
@@ -180,6 +187,56 @@ pub(crate) fn assemble(
     }
 
     Ok((score, read.details().clone(), placements))
+}
+
+/// When each bar first begins, in quarter notes, and how long it lasts, in
+/// ticks. A repeat plays a bar again later; its first time through is the
+/// one written down. Empty when the timemap names no bars.
+fn bar_times(
+    read: &ReadMei,
+    played: &[String],
+    beats: &Beats,
+    original: &impl Fn(&str) -> String,
+) -> (BTreeMap<MeasureNumber, f64>, BTreeMap<MeasureNumber, u32>) {
+    let mut starts = BTreeMap::new();
+    let mut lengths = BTreeMap::new();
+    if beats.bars.len() != played.len() {
+        return (starts, lengths);
+    }
+
+    let ends = beats.bars.iter().skip(1).chain([&beats.end]);
+    for ((id, &start), &end) in played.iter().zip(&beats.bars).zip(ends) {
+        let Some(number) = read.measure(&original(id)) else {
+            continue;
+        };
+        if starts.contains_key(&number) {
+            continue;
+        }
+        starts.insert(number, start);
+        if let Some(length) = ticks(end - start) {
+            lengths.insert(number, length);
+        }
+    }
+    (starts, lengths)
+}
+
+/// How far onset `index` falls into the bar that starts at `bar_start`.
+fn beat_of(beats: &Beats, index: usize, bar_start: Option<&f64>) -> Option<u32> {
+    ticks(beats.onsets.get(index)? - bar_start?)
+}
+
+/// A span of quarter notes in ticks, or `None` if it is negative or too long
+/// to count.
+#[expect(
+    clippy::cast_possible_truncation,
+    clippy::cast_sign_loss,
+    reason = "rounded and checked to be in range first"
+)]
+fn ticks(quarters: f64) -> Option<u32> {
+    let ticks = (quarters * f64::from(TICKS_PER_QUARTER)).round();
+    (0.0..=f64::from(u32::MAX))
+        .contains(&ticks)
+        .then_some(ticks as u32)
 }
 
 /// Every pitch within two semitones of `main`, `main` included.
@@ -246,7 +303,7 @@ mod tests {
     use hogwash_domain::{Location, MeasureNumber, Step};
 
     use crate::mei::read;
-    use crate::timemap::onsets;
+    use crate::timemap::{Beats, onsets};
     use crate::translate::assemble;
 
     const MEI: &str = include_str!("../tests/fixtures/two-bars.mei");
@@ -259,6 +316,7 @@ mod tests {
             &read(MEI).expect("readable MEI"),
             &onsets(TIMEMAP).expect("readable timemap"),
             &[],
+            &Beats::default(),
             &BTreeMap::new(),
             &[PAGE.to_owned()],
         )
@@ -333,6 +391,7 @@ mod tests {
             &read(mei).expect("readable"),
             &onsets(timemap).expect("readable"),
             &[],
+            &Beats::default(),
             &BTreeMap::new(),
             &[page.to_owned()],
         )
@@ -368,6 +427,7 @@ mod tests {
             &read(mei).expect("readable"),
             &onsets(timemap).expect("readable"),
             &[],
+            &Beats::default(),
             &BTreeMap::new(),
             &[page.to_owned()],
         )
@@ -394,6 +454,7 @@ mod tests {
             &read(mei).expect("readable"),
             &onsets(timemap).expect("readable"),
             &played.iter().map(|&id| id.to_owned()).collect::<Vec<_>>(),
+            &crate::timemap::beats(timemap).expect("readable"),
             &crate::timemap::originals(expansion).expect("readable"),
             &[page.to_owned()],
         )
@@ -462,6 +523,7 @@ mod tests {
             &read(mei).expect("readable"),
             &onsets(timemap).expect("readable"),
             &[],
+            &Beats::default(),
             &BTreeMap::new(),
             &[page.to_owned()],
         )

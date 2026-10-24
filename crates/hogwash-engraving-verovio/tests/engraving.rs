@@ -36,6 +36,7 @@ use std::path::Path;
 use hogwash_domain::{Location, MeasureNumber, Step};
 use hogwash_engraving::{EngravedScore, Engraver, EngravingFailure};
 use hogwash_engraving_verovio::{Layout, VerovioEngraver};
+use hogwash_notation::{Position, ReferencePerformance};
 
 const TWO_BARS: &[u8] = include_bytes!("fixtures/two-bars.musicxml");
 
@@ -552,4 +553,31 @@ fn every_bar_drawn_is_known_by_its_number() {
             element.as_str()
         );
     }
+}
+
+// The Minuet is in 3/4: every bar lasts three quarters, and bar 1 opens on a
+// quarter then four eighths. Every step after the first has a written gap.
+#[test]
+#[ignore = "needs a real libverovio; run `just engraving-test`"]
+fn the_minuet_keeps_its_written_rhythm() {
+    let minuet = include_bytes!("../../../app/src-tauri/library/minuet-in-g.musicxml");
+    let engraved = engraver().engrave(minuet).expect("the Minuet engraves");
+    let measures = engraved.score().measures();
+
+    assert!(
+        measures
+            .iter()
+            .all(|measure| measure.length() == Some(1440))
+    );
+    assert_eq!(
+        measures[0]
+            .positions()
+            .iter()
+            .map(Position::beat)
+            .collect::<Vec<_>>(),
+        [Some(0), Some(480), Some(720), Some(960), Some(1200)]
+    );
+
+    let reference = ReferencePerformance::derived_from(engraved.score());
+    assert!((1..reference.len()).all(|step| reference.written_gap(step).is_some()));
 }

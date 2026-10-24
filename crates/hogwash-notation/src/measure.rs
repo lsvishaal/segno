@@ -4,21 +4,27 @@ use hogwash_domain::{MeasureNumber, Pitch};
 
 use crate::Note;
 
+/// How finely beats are counted: ticks per quarter note. Fine enough for
+/// triplets and sixty-fourths alike.
+pub const TICKS_PER_QUARTER: u32 = 480;
+
 /// One point in the music, and everything the Score requires there.
 ///
 /// `003 §7.9` — *"Notes may be required together — a chord is several Notes
 /// at one position."* A Position is that point. A single melody note is a
 /// Position holding one Note; a chord is a Position holding several.
 ///
-/// This carries no time. `003 §7.4` scopes the Reference Performance to an
-/// *ordered* sequence with no timing significance, so a Position says
-/// **what comes together**, never **when**.
+/// It may know where in its bar it falls, in written beats, never in
+/// seconds: the performer's speed is the tempo.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct Position {
     notes: Vec<Note>,
     /// Pitches that are not required but are not wrong either, here and at
     /// the next step: a grace note's, or the neighbours of an ornamented note.
     tolerated: Vec<Pitch>,
+    /// Where in its bar this falls, in [`TICKS_PER_QUARTER`]ths of a quarter
+    /// note, when the Score's rhythm is known.
+    beat: Option<u32>,
 }
 
 impl Position {
@@ -37,6 +43,7 @@ impl Position {
             Some(Self {
                 notes,
                 tolerated: Vec::new(),
+                beat: None,
             })
         }
     }
@@ -51,6 +58,19 @@ impl Position {
         self.tolerated.sort_unstable();
         self.tolerated.dedup();
         self
+    }
+
+    /// The same Position, falling `ticks` into its bar, if that is known.
+    #[must_use]
+    pub const fn at_beat(mut self, ticks: Option<u32>) -> Self {
+        self.beat = ticks;
+        self
+    }
+
+    /// Where in its bar this falls, in ticks, if the rhythm is known.
+    #[must_use]
+    pub const fn beat(&self) -> Option<u32> {
+        self.beat
     }
 
     /// The Notes required together here. Never empty.
@@ -80,6 +100,8 @@ pub struct Measure {
     /// Notes tied over the barline into this measure's opening: struck in
     /// the measure before and still sounding when this one begins.
     held_into: Vec<Note>,
+    /// How long the bar is, in ticks, when the Score's rhythm is known.
+    length: Option<u32>,
 }
 
 impl Measure {
@@ -97,7 +119,21 @@ impl Measure {
             number,
             positions,
             held_into: Vec::new(),
+            length: None,
         }
+    }
+
+    /// This measure, lasting `ticks`, if that is known.
+    #[must_use]
+    pub const fn lasting(mut self, ticks: Option<u32>) -> Self {
+        self.length = ticks;
+        self
+    }
+
+    /// How long this measure is, in ticks, if the rhythm is known.
+    #[must_use]
+    pub const fn length(&self) -> Option<u32> {
+        self.length
     }
 
     /// This measure, opening with `notes` held over from the one before.

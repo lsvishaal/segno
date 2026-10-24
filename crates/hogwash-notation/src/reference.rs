@@ -15,8 +15,6 @@ use crate::{Note, Score};
 /// Cursor's position is an index into the sequence (`003 §7.16`) — an index
 /// alone cannot say "bar four".
 ///
-/// It carries no time. `003 §7.4` scopes the Reference Performance to an
-/// ordered sequence with "no timing significance" in Version 1.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct ExpectedNotes {
     measure: MeasureNumber,
@@ -114,14 +112,15 @@ impl ExpectedNotes {
 /// the other. [`derived_from`](Self::derived_from) taking `&Score` and
 /// nothing else is how that is carried rather than merely intended.
 ///
-/// **It carries no timing.** `003 §7.4` is explicit, and gives the reason:
-/// with practice waiting for the performer (`MVP §5`), the tempo *is*
-/// whatever the performer plays, so "when a note was due" has nothing to be
-/// compared against. Should a timed practice mode arrive, this concept gains
-/// a temporal dimension rather than being replaced.
+/// It knows the written rhythm, when the Score does, but never a tempo:
+/// with practice waiting for the performer, the tempo is whatever the
+/// performer plays.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct ReferencePerformance {
     steps: Vec<ExpectedNotes>,
+    /// Each step's beat from the start, in ticks, in played order. Empty
+    /// when any bar's rhythm is unknown.
+    beats: Vec<u32>,
     /// Each measure in played order, with the step it starts at: the index
     /// of its first step, or of the next measure's when it has none.
     openings: Vec<(MeasureNumber, usize)>,
@@ -142,6 +141,9 @@ impl ReferencePerformance {
         let mut openings = Vec::new();
         // What the previous step tolerates at the next one.
         let mut carried: Vec<Pitch> = Vec::new();
+        // Where the bar being read starts, while the rhythm is known.
+        let mut beats = Vec::new();
+        let mut bar_starts = Some(0_u32);
 
         for measure in score.performance() {
             openings.push((measure.number(), steps.len()));
@@ -170,14 +172,38 @@ impl ReferencePerformance {
 
                 carried = position.tolerated().to_vec();
                 steps.push(step);
+                if let (Some(start), Some(beat)) = (bar_starts, position.beat()) {
+                    beats.push(start.saturating_add(beat));
+                } else {
+                    bar_starts = None;
+                }
             }
+
+            bar_starts = bar_starts
+                .zip(measure.length())
+                .map(|(start, length)| start.saturating_add(length));
+        }
+
+        if bar_starts.is_none() {
+            beats.clear();
         }
 
         Self {
             steps,
+            beats,
             openings,
             after_the_end: carried,
         }
+    }
+
+    /// How many ticks the Score writes between step `index - 1` and step
+    /// `index`, in played order. `None` for the first step, or when the
+    /// rhythm is unknown.
+    #[must_use]
+    pub fn written_gap(&self, index: usize) -> Option<u32> {
+        let earlier = self.beats.get(index.checked_sub(1)?)?;
+        let later = self.beats.get(index)?;
+        later.checked_sub(*earlier)
     }
 
     /// Whether `pitch`, played after the last step, is the tail of something
@@ -527,6 +553,55 @@ mod tests {
 
     fn bar(number: u32) -> MeasureNumber {
         MeasureNumber::new(number).unwrap()
+    }
+
+    /// A Minuet bar with its written rhythm: bars 1 and 3 are a quarter then
+    /// four eighths, bar 2 three quarters; every bar is three quarters long.
+    fn minuet_bar_in_time(number: u32) -> Measure {
+        let beats: &[u32] = if number == 2 {
+            &[0, 480, 960]
+        } else {
+            &[0, 480, 720, 960, 1200]
+        };
+        let bar = minuet_bar(number);
+        let positions = bar
+            .positions()
+            .iter()
+            .zip(beats)
+            .map(|(position, &beat)| position.clone().at_beat(Some(beat)))
+            .collect();
+        Measure::new(bar.number(), positions).lasting(Some(1440))
+    }
+
+    #[test]
+    fn the_written_gap_follows_the_rhythm_across_barlines_and_repeats() {
+        let score = score_of(vec![
+            minuet_bar_in_time(1),
+            minuet_bar_in_time(2),
+            minuet_bar_in_time(3),
+        ])
+        .played_as(vec![bar(1), bar(2), bar(1), bar(2), bar(3)])
+        .unwrap();
+        let reference = ReferencePerformance::derived_from(&score);
+
+        assert_eq!(reference.written_gap(0), None);
+        // D5 is a quarter, G4 an eighth.
+        assert_eq!(reference.written_gap(1), Some(480));
+        assert_eq!(reference.written_gap(2), Some(240));
+        // C5, the last eighth of bar 1, to bar 2's D5.
+        assert_eq!(reference.written_gap(5), Some(240));
+        // Bar 2's last G4, a quarter, back to bar 1's D5 at the repeat.
+        assert_eq!(reference.written_gap(8), Some(480));
+        assert_eq!(reference.written_gap(16), Some(480));
+    }
+
+    #[test]
+    fn without_the_rhythm_there_is_no_written_gap() {
+        let score = score_of(vec![minuet_bar_in_time(1), minuet_bar(2)]);
+        let reference = ReferencePerformance::derived_from(&score);
+
+        assert_eq!(reference.written_gap(1), None);
+        assert_eq!(reference.written_gap(6), None);
     }
 
     // Bars 1-2 are repeated, as the Minuet's first half is: a bar inside the

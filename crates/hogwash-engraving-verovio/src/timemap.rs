@@ -26,11 +26,9 @@ use crate::failure::TranslationFailure;
 
 /// One moment in Verovio's timemap.
 ///
-/// Only two fields are read of the several Verovio writes. `tempo` and
-/// `tstamp` are wall-clock quantities, and `003 §15` does not model time —
-/// `MVP §5`'s wait-for-me cursor makes the performer's speed the tempo, so
-/// there is nothing here to compare them against. Reading them would be
-/// storing up a temptation.
+/// `tempo` and `tstamp` are not read: they are wall-clock quantities, and
+/// with the cursor waiting for the performer, the performer's speed is the
+/// tempo. `qstamp` is the written rhythm, which is read.
 #[derive(Debug, Deserialize)]
 struct Moment {
     /// When, in quarter notes from the start.
@@ -54,6 +52,35 @@ pub(crate) fn onsets(timemap: &str) -> Result<Vec<Vec<String>>, TranslationFailu
         .filter(|moment| !moment.on.is_empty())
         .map(|moment| moment.on)
         .collect())
+}
+
+/// When things happen in the written rhythm, in quarter notes from the start.
+#[derive(Debug, Default)]
+pub(crate) struct Beats {
+    /// When each of [`onsets`] sounds, in the same order.
+    pub(crate) onsets: Vec<f64>,
+    /// When each of [`measures`] begins, in the same order.
+    pub(crate) bars: Vec<f64>,
+    /// When the last note stops.
+    pub(crate) end: f64,
+}
+
+/// The written rhythm of what [`onsets`] and [`measures`] list.
+pub(crate) fn beats(timemap: &str) -> Result<Beats, TranslationFailure> {
+    let moments = moments(timemap)?;
+    Ok(Beats {
+        onsets: moments
+            .iter()
+            .filter(|moment| !moment.on.is_empty())
+            .map(|moment| moment.qstamp)
+            .collect(),
+        bars: moments
+            .iter()
+            .filter(|moment| moment.measure_on.is_some())
+            .map(|moment| moment.qstamp)
+            .collect(),
+        end: moments.last().map_or(0.0, |moment| moment.qstamp),
+    })
 }
 
 /// The bars, by identifier, in the order they are played.
@@ -107,7 +134,7 @@ pub(crate) fn originals(
 
 #[cfg(test)]
 mod tests {
-    use crate::timemap::{measures, onsets, originals};
+    use crate::timemap::{beats, measures, onsets, originals};
 
     /// Real Verovio output for `tests/fixtures/two-bars.musicxml`.
     const TWO_BARS: &str = include_str!("../tests/fixtures/two-bars.timemap.json");
@@ -171,6 +198,19 @@ mod tests {
         .expect("readable");
 
         assert_eq!(played, ["m1", "m1-rend2", "m2"]);
+    }
+
+    #[test]
+    fn the_rhythm_is_read_alongside_the_onsets_and_bars() {
+        let beats = beats(
+            r#"[{"on":["a"],"qstamp":0,"measureOn":"m1"},{"on":["b"],"qstamp":1.5},
+                {"off":["b"],"qstamp":3,"measureOn":"m2"},{"off":["c"],"qstamp":6}]"#,
+        )
+        .expect("readable");
+
+        assert_eq!(beats.onsets, [0.0, 1.5]);
+        assert_eq!(beats.bars, [0.0, 3.0]);
+        assert!((beats.end - 6.0).abs() < f64::EPSILON);
     }
 
     // Verovio's own shape: every identifier of a repeated element maps to all

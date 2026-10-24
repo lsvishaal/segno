@@ -202,9 +202,10 @@ impl Engraver for VerovioEngraver {
         let read = mei::read(&document).map_err(|failure| unreadable(&failure))?;
         let onsets = timemap::onsets(&times).map_err(|failure| unreadable(&failure))?;
         let played = timemap::measures(&times).map_err(|failure| unreadable(&failure))?;
+        let beats = timemap::beats(&times).map_err(|failure| unreadable(&failure))?;
         let originals = timemap::originals(&copies).map_err(|failure| unreadable(&failure))?;
         let (score, details, placements) =
-            translate::assemble(&read, &onsets, &played, &originals, &pages)
+            translate::assemble(&read, &onsets, &played, &beats, &originals, &pages)
                 .map_err(|failure| unreadable(&failure))?;
 
         let bars = read

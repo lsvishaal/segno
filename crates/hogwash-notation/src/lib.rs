@@ -12,19 +12,17 @@
 //!
 //! # What is deliberately absent
 //!
-//! **Timing and duration.** `003 §15` lists them among the things the domain
-//! does not model, because Version 1 does not assess them: with practice
-//! waiting for the performer (`MVP §5`), the tempo *is* whatever the performer
-//! plays, so there is no reference to measure against (`003 §7.4`). Modelling
-//! them would model deferred capability. A written Note therefore carries a
-//! pitch and nothing else.
+//! **Tempo.** With practice waiting for the performer, the tempo is whatever
+//! the performer plays, so nothing here says when a note is due in seconds.
+//! The written rhythm is kept (each position's beat in its bar, each bar's
+//! length, when known) so that a long note is not mistaken for a pause.
 
 mod measure;
 mod note;
 mod reference;
 mod score;
 
-pub use measure::{Measure, Position};
+pub use measure::{Measure, Position, TICKS_PER_QUARTER};
 pub use note::Note;
 pub use reference::{ExpectedNotes, ReferencePerformance};
 pub use score::Score;
