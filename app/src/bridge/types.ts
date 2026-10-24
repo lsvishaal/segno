@@ -166,24 +166,55 @@ export interface AttemptSummary {
   readonly review: Review;
 }
 
-/** The review after an attempt: every number and sentence comes from Rust. */
+/** The results after a run (Start to stopping): every number and sentence comes from Rust. */
 export interface Review {
   readonly headline: string;
-  /** One per bar, in bar-number order, from where the attempt began. */
+  readonly numbers: Numbers;
+  /** One per bar, in bar-number order, from where the run began. */
   readonly bars: readonly ReviewBar[];
+  /** One per completed pass, when the run stopped in a loop. */
+  readonly passes: readonly ReviewPass[];
   /** What happened at each step played. */
   readonly marks: readonly ReviewMark[];
   readonly suggestion: Suggested | null;
 }
 
+/** The numbers at a glance. */
+export interface Numbers {
+  /** Right notes out of every note played, in percent. */
+  readonly accuracy: number | null;
+  /** Quarter notes per minute, pauses included. */
+  readonly tempo: number | null;
+  /** Whether `tempo` follows the written rhythm (else every step counts as one). */
+  readonly rhythm: boolean;
+  /** Evenness of tempo across bars, in percent. */
+  readonly steadiness: number | null;
+  readonly right: number;
+  readonly wrong: number;
+  readonly missed: number;
+  readonly longestPauseMs: number;
+  readonly longestPauseBar: number | null;
+  readonly timeMs: number | null;
+  readonly restarts: number;
+}
+
 export interface ReviewBar {
   readonly measure: number;
   readonly state: "played" | "notReached" | "empty";
+  readonly tempo: number | null;
   readonly pauseMs: number;
   readonly intoMs: number;
   readonly wrong: number;
   readonly breaks: number;
-  /** Said when pointing at the column. */
+  /** Said when pointing at it. */
+  readonly line: string;
+}
+
+export interface ReviewPass {
+  readonly number: number;
+  readonly tempo: number | null;
+  readonly wrong: number;
+  readonly clean: boolean;
   readonly line: string;
 }
 

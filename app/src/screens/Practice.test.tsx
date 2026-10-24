@@ -386,18 +386,28 @@ describe("looping", () => {
   });
 });
 
-describe("the review after an attempt", () => {
-  const column = (measure: number, state: ReviewBar["state"], pauseMs = 0, wrong = 0): ReviewBar => ({
+describe("the results after a run", () => {
+  const point = (measure: number, state: ReviewBar["state"], tempo: number | null, wrong = 0): ReviewBar => ({
     measure,
     state,
-    pauseMs,
-    intoMs: pauseMs,
+    tempo,
+    pauseMs: 0,
+    intoMs: 0,
     wrong,
     breaks: 0,
     line: `Bar ${measure}`,
   });
   // Started at bar 8, trouble going into bar 9, stopped in bar 10.
-  const summary = (suggestion: AttemptSummary["review"]["suggestion"]): AttemptSummary => ({
+  const summary = (
+    suggestion: AttemptSummary["review"]["suggestion"],
+    bars: readonly ReviewBar[] = [
+      point(8, "played", 80),
+      point(9, "played", 31, 2),
+      point(10, "played", 76),
+      point(11, "notReached", null),
+      point(12, "notReached", null),
+    ],
+  ): AttemptSummary => ({
     lines: ["Bar 9: G4 was written; something else was played."],
     correct: 12,
     incorrect: 2,
@@ -408,11 +418,26 @@ describe("the review after an attempt", () => {
     reason: null,
     review: {
       headline: "Bars 8–10 · 24 s · most trouble going into bar 9 (3.2 s pause, 2 wrong).",
-      bars: [column(8, "played"), column(9, "played", 3200, 2), column(10, "played"), column(11, "notReached"), column(12, "notReached")],
+      numbers: {
+        accuracy: 86,
+        tempo: 72,
+        rhythm: true,
+        steadiness: 81,
+        right: 12,
+        wrong: 2,
+        missed: 80,
+        longestPauseMs: 3200,
+        longestPauseBar: 9,
+        timeMs: 24000,
+        restarts: 0,
+      },
+      bars,
+      passes: [],
       marks: [{ position: 36, correct: true, wrong: 2 }],
       suggestion,
     },
   });
+  const LOOP = { label: "Loop bars 8–9", first: 8, last: 9 };
   const stopWith = async (ended: AttemptSummary) => {
     await renderScreen();
     await startPracticing();
@@ -420,38 +445,81 @@ describe("the review after an attempt", () => {
       hear({ kind: "ended", summary: ended });
     });
   };
+  const press = async (key: string) => {
+    await act(async () => {
+      fireEvent.keyDown(window, { key });
+    });
+  };
 
-  it("shows the line, one column per bar, and leaves the marks on the score", async () => {
-    await stopWith(summary({ label: "Loop bars 8–9", first: 8, last: 9 }));
+  it("replaces the score with the results: big numbers, the chart, the line", async () => {
+    await stopWith(summary(LOOP));
 
-    expect(screen.getByText(/most trouble going into bar 9/)).toBeInTheDocument();
-    const strip = within(screen.getByRole("list", { name: "Bars played" }));
-    expect(strip.getAllByRole("listitem")).toHaveLength(5);
-    expect(strip.getByRole("listitem", { name: "Bar 11" })).toHaveAttribute("data-state", "notReached");
-    expect(drawn.last?.review?.notReached).toEqual([11, 12]);
-    expect(drawn.last?.review?.marks).toEqual([{ position: 36, correct: true, wrong: 2 }]);
+    const results = within(screen.getByRole("region", { name: "Results" }));
+    expect(results.getByText("86%")).toBeInTheDocument();
+    expect(results.getByText("72")).toBeInTheDocument();
+    expect(results.getByText("tempo · ♩ / min")).toBeInTheDocument();
+    expect(results.getByText("12/2/80")).toBeInTheDocument();
+    expect(results.getByText("81%")).toBeInTheDocument();
+    expect(results.getByText(/most trouble going into bar 9/)).toBeInTheDocument();
+    const chart = within(results.getByRole("list"));
+    expect(chart.getAllByRole("listitem")).toHaveLength(5);
+    expect(chart.getByRole("listitem", { name: "Bar 11 · not reached" })).toHaveAttribute("data-reached", "false");
   });
 
-  it("the suggestion loops its bars and starts playing them", async () => {
-    await stopWith(summary({ label: "Loop bars 8–9", first: 8, last: 9 }));
-
+  it("the suggestion loops its bars and starts playing them, by click or Enter", async () => {
+    await stopWith(summary(LOOP));
     await act(async () => {
-      fireEvent.click(screen.getByRole("button", { name: "Loop bars 8–9" }));
+      fireEvent.click(screen.getByRole("button", { name: "⟲ Loop bars 8–9" }));
     });
-
     expect(bridge.loopBars).toHaveBeenCalledWith("minuet", 8, 9, 3);
     expect(bridge.startAttempt).toHaveBeenCalledTimes(2);
-    expect(drawn.last?.review).toBeNull();
+    // Practising again: the results fade out as the score comes back.
+    expect(screen.getByRole("button", { name: "Stop" })).toBeInTheDocument();
+
+    cleanup();
+    vi.clearAllMocks();
+    bridge.loopBars.mockResolvedValue({ position: 32, first: 8, last: 9 });
+    bridge.startAttempt.mockResolvedValue(undefined);
+    bridge.instruments.mockResolvedValue([{ name: "Digital Piano" }]);
+    await stopWith(summary(LOOP));
+    await press("Enter");
+    expect(bridge.loopBars).toHaveBeenCalledWith("minuet", 8, 9, 3);
   });
 
-  it("with nothing to loop, Practice again is the one main button", async () => {
+  it("R plays again; with nothing to loop, Practice again is the main button", async () => {
     await stopWith(summary({ label: "Again", first: null, last: null }));
+    expect(screen.queryByRole("button", { name: /Again$/ })).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "↻ Practice again" })).toBeInTheDocument();
 
-    expect(screen.queryByRole("button", { name: "Again" })).not.toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Practice again" })).toBeInTheDocument();
+    await press("r");
+    expect(bridge.startAttempt).toHaveBeenCalledTimes(2);
+    expect(bridge.loopBars).not.toHaveBeenCalled();
   });
 
-  it("after a loop's goal, offers to join it back up", async () => {
+  it("Show on the score leaves the marks there; Esc goes back and forth", async () => {
+    await stopWith(summary(LOOP));
+    expect(drawn.last?.review?.notReached).toEqual([11, 12]);
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: "♪ Show on the score" }));
+    });
+    expect(screen.queryByRole("region", { name: "Results" })).not.toBeInTheDocument();
+    expect(screen.getByRole("status")).toHaveTextContent("Your last run is marked on the score");
+    expect(drawn.last?.review?.marks).toEqual([{ position: 36, correct: true, wrong: 2 }]);
+
+    await press("Escape");
+    expect(screen.getByRole("region", { name: "Results" })).toBeInTheDocument();
+  });
+
+  it("nothing played: no results, a quiet note, and Start again", async () => {
+    await stopWith(summary(null, []));
+
+    expect(screen.queryByRole("region", { name: "Results" })).not.toBeInTheDocument();
+    expect(screen.getByRole("status")).toHaveTextContent("Nothing played.");
+    expect(screen.getByRole("button", { name: "Start" })).toBeInTheDocument();
+  });
+
+  it("nothing sits above the score while practising: a loop done goes to the status line", async () => {
     await renderScreen();
     await startPracticing();
     await act(async () => {
@@ -465,10 +533,10 @@ describe("the review after an attempt", () => {
       });
     });
 
+    expect(screen.getByRole("status")).toHaveTextContent("3 clean passes · bar 9");
     await act(async () => {
       fireEvent.click(screen.getByRole("button", { name: "Join it back up · Loop bars 8–10" }));
     });
-
     expect(bridge.loopBars).toHaveBeenCalledWith("minuet", 8, 10, 3);
   });
 });

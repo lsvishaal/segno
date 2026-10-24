@@ -1,0 +1,445 @@
+import { useState } from "react";
+
+import { motion } from "motion/react";
+
+import type {
+  Numbers,
+  Review,
+  ReviewBar,
+  ReviewPass,
+  Suggested,
+} from "../bridge";
+
+/**
+ * The results after a run, in the middle of the screen where the score was:
+ * the big numbers, a chart of how each bar (or each pass of a loop) went,
+ * the small numbers, one line, and what to do next. Every number and
+ * sentence comes from Rust; this only lays them out.
+ */
+export function Results({
+  review,
+  reason,
+  onPractise,
+  onAgain,
+  onShowScore,
+  onLibrary,
+}: {
+  readonly review: Review;
+  /** Why the run ended by itself, if it did. */
+  readonly reason: string | null;
+  readonly onPractise: (suggested: Suggested) => void;
+  readonly onAgain: () => void;
+  /** Back to the score, its marks left on; at a bar, if one was picked. */
+  readonly onShowScore: (measure?: number) => void;
+  readonly onLibrary: () => void;
+}) {
+  const { numbers } = review;
+  // "Play it again" is Practice again; only a loop needs its own button.
+  const suggestion =
+    review.suggestion?.first != null ? review.suggestion : null;
+  const points =
+    review.passes.length > 0
+      ? passPoints(review.passes)
+      : barPoints(review.bars);
+  const charted =
+    points.filter((point) => point.tempo !== null || point.wrong > 0).length >=
+    2;
+
+  return (
+    <section
+      aria-label="Results"
+      className="mx-auto flex w-full max-w-[960px] flex-col gap-8 px-8 py-12"
+    >
+      {reason && <p className="text-sm text-ink-muted">{reason}</p>}
+
+      <div className="flex flex-col gap-8 sm:flex-row sm:items-stretch">
+        <div className="flex shrink-0 flex-col gap-6 sm:w-48">
+          <Big
+            label="accuracy"
+            value={numbers.accuracy === null ? "—" : `${numbers.accuracy}%`}
+          />
+          <Big
+            label={numbers.rhythm ? "tempo · ♩ / min" : "notes / min"}
+            value={numbers.tempo === null ? "—" : String(numbers.tempo)}
+          />
+        </div>
+
+        {charted && (
+          <div className="min-w-0 flex-1">
+            <Chart
+              points={points}
+              byPass={review.passes.length > 0}
+              tempoLabel={numbers.rhythm ? "♩ / min" : "notes / min"}
+              onPick={onShowScore}
+            />
+          </div>
+        )}
+      </div>
+
+      <Small numbers={numbers} />
+
+      <p className="text-subtitle text-ink">{review.headline}</p>
+
+      <div className="flex flex-wrap items-center gap-3">
+        {suggestion && (
+          <motion.button
+            type="button"
+            onClick={() => onPractise(suggestion)}
+            whileTap={{ scale: 0.96 }}
+            title="Enter"
+            className={PRIMARY}
+          >
+            ⟲ {suggestion.label}
+          </motion.button>
+        )}
+        <motion.button
+          type="button"
+          onClick={onAgain}
+          whileTap={{ scale: 0.96 }}
+          title={suggestion ? "R" : "Enter or R"}
+          className={suggestion ? SECONDARY : PRIMARY}
+        >
+          ↻ Practice again
+        </motion.button>
+        <button
+          type="button"
+          onClick={() => onShowScore()}
+          title="Esc"
+          className={SECONDARY}
+        >
+          ♪ Show on the score
+        </button>
+        <button type="button" onClick={onLibrary} className={SECONDARY}>
+          ← Library
+        </button>
+      </div>
+    </section>
+  );
+}
+
+const PRIMARY =
+  "cursor-pointer rounded-full bg-ink px-4 py-1.5 text-sm font-medium text-paper transition-opacity duration-[120ms] hover:opacity-90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent";
+const SECONDARY =
+  "cursor-pointer rounded-full border border-rule px-4 py-1.5 text-sm transition-colors duration-[120ms] hover:border-accent hover:text-accent focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-accent";
+
+/** A label in small caps over a big number. */
+function Big({
+  label,
+  value,
+}: {
+  readonly label: string;
+  readonly value: string;
+}) {
+  return (
+    <div>
+      <p className="text-label text-ink-muted uppercase">{label}</p>
+      <p className="font-mono text-display text-accent tabular-nums">{value}</p>
+    </div>
+  );
+}
+
+/** The row of smaller numbers under the chart. */
+function Small({ numbers }: { readonly numbers: Numbers }) {
+  const items: {
+    label: string;
+    value: string;
+    note?: string;
+    title?: string;
+  }[] = [
+    {
+      label: "notes",
+      value: `${numbers.right}/${numbers.wrong}/${numbers.missed}`,
+      title: "right / wrong / not reached",
+    },
+    {
+      label: "steadiness",
+      value: numbers.steadiness === null ? "—" : `${numbers.steadiness}%`,
+    },
+    {
+      label: "longest pause",
+      value:
+        numbers.longestPauseBar === null
+          ? "—"
+          : seconds(numbers.longestPauseMs),
+      ...(numbers.longestPauseBar === null
+        ? {}
+        : { note: `bar ${numbers.longestPauseBar}` }),
+    },
+    {
+      label: "time",
+      value: numbers.timeMs === null ? "—" : duration(numbers.timeMs),
+    },
+  ];
+  if (numbers.restarts > 0)
+    items.push({ label: "restarts", value: String(numbers.restarts) });
+
+  return (
+    <dl className="grid grid-cols-2 gap-x-8 gap-y-4 sm:grid-cols-5">
+      {items.map((item) => (
+        <div key={item.label} title={item.title}>
+          <dt className="text-label text-ink-muted uppercase">{item.label}</dt>
+          <dd className="font-mono text-title text-ink tabular-nums">
+            {item.value}
+            {item.note && (
+              <span className="ml-2 text-xs text-ink-muted">{item.note}</span>
+            )}
+          </dd>
+        </div>
+      ))}
+    </dl>
+  );
+}
+
+/** One point on the chart: a bar, or a pass of a loop. */
+interface Point {
+  readonly label: string;
+  /** The bar to show when picked; none for a pass. */
+  readonly measure: number | null;
+  readonly tempo: number | null;
+  readonly wrong: number;
+  readonly reached: boolean;
+  readonly breaks: number;
+  readonly clean: boolean;
+  readonly line: string;
+}
+
+function barPoints(bars: readonly ReviewBar[]): Point[] {
+  return bars.map((bar) => ({
+    label: String(bar.measure),
+    measure: bar.measure,
+    tempo: bar.tempo,
+    wrong: bar.wrong,
+    reached: bar.state !== "notReached",
+    breaks: bar.breaks,
+    clean: false,
+    line:
+      bar.state === "notReached"
+        ? `Bar ${bar.measure} · not reached`
+        : bar.line,
+  }));
+}
+
+function passPoints(passes: readonly ReviewPass[]): Point[] {
+  return passes.map((pass) => ({
+    label: String(pass.number),
+    measure: null,
+    tempo: pass.tempo,
+    wrong: pass.wrong,
+    reached: true,
+    breaks: 0,
+    clean: pass.clean,
+    line: pass.line,
+  }));
+}
+
+/** Chart geometry, in the SVG's own units; it stretches to the width. */
+const WIDTH = 1000;
+const HEIGHT = 200;
+
+/**
+ * Tempo across the run, one point per bar (or per pass): dips are where you
+ * slowed or stopped. Red ✕ along the top are wrong notes; the grey band is
+ * what was not reached. Each point is a button, labelled with its line.
+ */
+function Chart({
+  points,
+  byPass,
+  tempoLabel,
+  onPick,
+}: {
+  readonly points: readonly Point[];
+  readonly byPass: boolean;
+  readonly tempoLabel: string;
+  readonly onPick: (measure?: number) => void;
+}) {
+  const [hovered, setHovered] = useState<number | null>(null);
+  const top = niceCeiling(
+    Math.max(1, ...points.map((point) => point.tempo ?? 0)) * 1.15,
+  );
+  const step = WIDTH / points.length;
+  const x = (index: number) => step * (index + 0.5);
+  const y = (tempo: number) => HEIGHT - (tempo / top) * HEIGHT;
+  const every = points.length <= 16 ? 1 : points.length <= 64 ? 4 : 8;
+
+  // The line breaks where a bar has no tempo, so it never draws through
+  // what wasn't played.
+  const runs: string[] = [];
+  let current: string[] = [];
+  points.forEach((point, index) => {
+    if (point.tempo === null) {
+      if (current.length) runs.push(current.join(" "));
+      current = [];
+    } else {
+      current.push(`${x(index)},${y(point.tempo)}`);
+    }
+  });
+  if (current.length) runs.push(current.join(" "));
+
+  const firstUnreached = points.findIndex((point) => !point.reached);
+  const hoveredPoint = hovered === null ? null : points[hovered];
+
+  return (
+    <figure
+      aria-label={
+        byPass
+          ? "Tempo and wrong notes, pass by pass"
+          : "Tempo and wrong notes, bar by bar"
+      }
+    >
+      <div className="flex gap-2">
+        <div
+          className="flex w-10 shrink-0 flex-col justify-between py-0 text-right font-mono text-[10px] text-ink-muted tabular-nums"
+          aria-hidden="true"
+        >
+          <span>{top}</span>
+          <span>{Math.round(top / 2)}</span>
+          <span>0</span>
+        </div>
+
+        <div className="relative h-48 min-w-0 flex-1">
+          <svg
+            viewBox={`0 0 ${WIDTH} ${HEIGHT}`}
+            preserveAspectRatio="none"
+            className="absolute inset-0 h-full w-full overflow-visible"
+            aria-hidden="true"
+          >
+            {[0, 0.5, 1].map((at) => (
+              <line
+                key={at}
+                x1={0}
+                x2={WIDTH}
+                y1={HEIGHT * at}
+                y2={HEIGHT * at}
+                className="stroke-rule"
+                vectorEffect="non-scaling-stroke"
+              />
+            ))}
+            {firstUnreached >= 0 && (
+              <rect
+                data-not-reached-band
+                x={step * firstUnreached}
+                y={0}
+                width={WIDTH - step * firstUnreached}
+                height={HEIGHT}
+                className="fill-ink/5"
+              />
+            )}
+            {runs.map((run) => (
+              <polyline
+                key={run}
+                points={run}
+                fill="none"
+                className="stroke-accent"
+                strokeWidth={2}
+                strokeLinejoin="round"
+                vectorEffect="non-scaling-stroke"
+              />
+            ))}
+          </svg>
+
+          {points.map((point, index) => (
+            <div key={`${point.label}-${index}`} aria-hidden="true">
+              {point.tempo !== null && (
+                <span
+                  className={`absolute size-2 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-accent ${
+                    point.clean || !byPass ? "bg-accent" : "bg-paper-raised"
+                  }`}
+                  style={{
+                    left: `${(x(index) / WIDTH) * 100}%`,
+                    top: `${(y(point.tempo) / HEIGHT) * 100}%`,
+                  }}
+                />
+              )}
+              {point.wrong > 0 && (
+                <span
+                  data-chart-wrong
+                  className="absolute -top-4 -translate-x-1/2 font-mono text-[11px] leading-none text-wrong"
+                  style={{ left: `${(x(index) / WIDTH) * 100}%` }}
+                >
+                  ✕{point.wrong > 1 ? point.wrong : ""}
+                </span>
+              )}
+              {point.breaks > 0 && (
+                <span
+                  className="absolute bottom-1 -translate-x-1/2 text-[10px] text-ink-muted"
+                  style={{ left: `${(x(index) / WIDTH) * 100}%` }}
+                >
+                  ‖
+                </span>
+              )}
+            </div>
+          ))}
+
+          <div className="absolute inset-0 flex" role="list">
+            {points.map((point, index) => (
+              <button
+                key={`${point.label}-${index}`}
+                type="button"
+                role="listitem"
+                aria-label={point.line}
+                data-reached={point.reached}
+                onPointerEnter={() => setHovered(index)}
+                onPointerLeave={() =>
+                  setHovered((current) => (current === index ? null : current))
+                }
+                onFocus={() => setHovered(index)}
+                onBlur={() =>
+                  setHovered((current) => (current === index ? null : current))
+                }
+                onClick={() => onPick(point.measure ?? undefined)}
+                className="h-full min-w-0 flex-1 cursor-pointer hover:bg-ink/5 focus-visible:bg-ink/5 focus-visible:outline-none"
+              />
+            ))}
+          </div>
+
+          {hoveredPoint && hovered !== null && (
+            <div
+              role="tooltip"
+              className="pointer-events-none absolute -top-10 z-10 -translate-x-1/2 rounded-lg border border-rule bg-paper-raised px-3 py-1.5 text-xs whitespace-nowrap text-ink shadow-sm"
+              style={{
+                left: `${Math.min(90, Math.max(10, (x(hovered) / WIDTH) * 100))}%`,
+              }}
+            >
+              {hoveredPoint.line}
+            </div>
+          )}
+        </div>
+      </div>
+
+      <div className="mt-1 flex gap-2" aria-hidden="true">
+        <span className="w-10 shrink-0 text-right text-[10px] text-ink-muted">
+          {tempoLabel}
+        </span>
+        <div className="flex min-w-0 flex-1">
+          {points.map((point, index) => (
+            <span
+              key={`${point.label}-${index}`}
+              className="min-w-0 flex-1 text-center font-mono text-[10px] text-ink-muted tabular-nums"
+            >
+              {index === 0 || (index + 1) % every === 0 ? point.label : ""}
+            </span>
+          ))}
+        </div>
+      </div>
+      <figcaption className="mt-1 text-center text-label text-ink-muted uppercase">
+        {byPass ? "pass" : "bar"}
+      </figcaption>
+    </figure>
+  );
+}
+
+/** A round number at or above `value` for the chart's top: 20, 40, 60, … */
+function niceCeiling(value: number): number {
+  return Math.max(20, Math.ceil(value / 20) * 20);
+}
+
+function seconds(ms: number): string {
+  return `${(ms / 1000).toFixed(1)} s`;
+}
+
+function duration(ms: number): string {
+  const total = Math.round(ms / 1000);
+  return total < 60
+    ? `${total} s`
+    : `${Math.floor(total / 60)} min ${total % 60} s`;
+}

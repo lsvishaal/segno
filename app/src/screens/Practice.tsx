@@ -24,8 +24,8 @@ import type {
   StartPoint,
   Suggested,
 } from "../bridge";
-import { BarStrip } from "../components/BarStrip";
 import { DeviceSelect } from "../components/DeviceSelect";
+import { Results } from "../components/Results";
 import { Score } from "../components/Score";
 import type { CursorState, Dot, ScoreReview } from "../components/Score";
 import { BEFORE_STARTING, cursorFor, dotFor } from "./overlayEvents";
@@ -93,6 +93,8 @@ export function PracticeScreen({
   const [moveRefusal, setMoveRefusal] = useState<string | null>(null);
   // After a loop's goal: the loop a bar wider, offered beside that message.
   const [widen, setWiden] = useState<Suggested | null>(null);
+  // After a run: the score with its marks, instead of the results.
+  const [showingScore, setShowingScore] = useState(false);
   // The bars being looped, and how many clean passes in a row so far.
   const [loop, setLoop] = useState<{ first: number; last: number } | null>(null);
   const [cleanInARow, setCleanInARow] = useState(0);
@@ -292,6 +294,14 @@ export function PracticeScreen({
           setLost(null);
           // The review colours the notes now; a flash still fading would undo one.
           setDot(null);
+          setShowingScore(false);
+          if (event.summary.review.bars.length === 0) {
+            setMoveRefusal(event.summary.reason ?? "Nothing played.");
+            setPhase((current) =>
+              current.kind === "practicing" ? { kind: "choosing", refusal: null } : current,
+            );
+            break;
+          }
           setPhase((current) =>
             current.kind === "practicing"
               ? { kind: "ended", instrument: current.instrument, summary: event.summary }
@@ -408,14 +418,14 @@ export function PracticeScreen({
       if (event.key.toLowerCase() === "l" && !keyboardLost) {
         event.preventDefault();
         toggleLoop();
-      } else if (event.key === "Escape" && loop && !settingsOpen) {
+      } else if (event.key === "Escape" && loop && !settingsOpen && phase.kind !== "ended") {
         stopLooping();
       }
     };
 
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, [toggleLoop, stopLooping, loop, settingsOpen, keyboardLost]);
+  }, [toggleLoop, stopLooping, loop, settingsOpen, keyboardLost, phase.kind]);
 
   const reachedEnd = phase.kind === "practicing" && phase.reachedEnd;
   const finish = useCallback(() => {
@@ -474,6 +484,46 @@ export function PracticeScreen({
       ?.querySelector(`[data-bar="${measure}"]`)
       ?.scrollIntoView({ behavior: "smooth", block: "center" });
   }, []);
+
+  // Back to the score from the results, its marks left on; at a bar if one
+  // was picked on the chart.
+  const showScore = useCallback(
+    (measure?: number) => {
+      setShowingScore(true);
+      if (measure !== undefined) window.setTimeout(() => showBar(measure), 220);
+    },
+    [showBar],
+  );
+
+  const resultsShown = phase.kind === "ended" && !showingScore;
+
+  // On the results: Enter takes the suggestion (or plays again), R plays
+  // again, Esc shows the score. On the score after a run, Esc goes back.
+  useEffect(() => {
+    if (phase.kind !== "ended" || settingsOpen) return;
+    const { instrument, summary } = phase;
+
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.ctrlKey || event.metaKey || event.altKey || typing(event)) return;
+      if (event.key === "Escape") {
+        event.preventDefault();
+        setShowingScore((current) => !current);
+      } else if (!showingScore && event.key === "Enter") {
+        // A focused button answers Enter itself.
+        if (event.target instanceof HTMLButtonElement) return;
+        event.preventDefault();
+        const suggestion = summary.review.suggestion;
+        if (suggestion?.first != null) practise(suggestion, instrument);
+        else again(instrument);
+      } else if (event.key.toLowerCase() === "r") {
+        event.preventDefault();
+        again(instrument);
+      }
+    };
+
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [phase, showingScore, settingsOpen, practise, again]);
 
   // What stays drawn on the score while the review is showing.
   const review = phase.kind === "ended" ? phase.summary.review : null;
@@ -535,6 +585,15 @@ export function PracticeScreen({
             <p className="truncate text-xs text-ink-muted">{piece.composer}</p>
           )}
         </div>
+
+        <StatusLine
+          lost={phase.kind === "practicing" ? lost : null}
+          message={moveRefusal}
+          widen={phase.kind === "practicing" ? widen : null}
+          onWiden={(suggested) => void loopTo(suggested.first ?? 1, suggested.last ?? 1)}
+          afterRun={phase.kind === "ended" && showingScore}
+          onResults={() => setShowingScore(false)}
+        />
 
         <div className="flex shrink-0 items-center gap-2">
           <button
@@ -641,90 +700,105 @@ export function PracticeScreen({
           </motion.div>
         )}
 
-        {lost && phase.kind === "practicing" && (
-          <motion.div
-            key="lost"
-            variants={PANEL}
-            initial="hidden"
-            animate="shown"
-            exit="hidden"
-            transition={{ duration: 0.16, ease: "easeOut" }}
-            className="shrink-0 overflow-hidden px-8 pt-4"
-          >
-            <p className="panel rounded-2xl px-5 py-3 text-sm text-ink-muted">
-              {lost.instrument} stopped reporting. Waiting {lost.secondsRemaining}s for it to
-              reconnect before ending the attempt — what you have played is kept either way.
-            </p>
-          </motion.div>
-        )}
-
-        {moveRefusal && (
-          <motion.div
-            key="move-refusal"
-            variants={PANEL}
-            initial="hidden"
-            animate="shown"
-            exit="hidden"
-            transition={{ duration: 0.16, ease: "easeOut" }}
-            className="shrink-0 overflow-hidden px-8 pt-4"
-          >
-            <p role="status" className="panel rounded-2xl px-5 py-3 text-sm text-ink-muted">
-              {moveRefusal}
-              {widen && phase.kind === "practicing" && (
-                <button
-                  type="button"
-                  onClick={() => void loopTo(widen.first ?? 1, widen.last ?? 1)}
-                  className="ml-3 cursor-pointer rounded-full border border-rule px-3 py-0.5 text-xs text-ink transition-colors hover:border-accent hover:text-accent focus-visible:outline-2 focus-visible:outline-accent"
-                >
-                  Join it back up · {widen.label}
-                </button>
-              )}
-            </p>
-          </motion.div>
-        )}
-
-        {phase.kind === "ended" && (
-          <motion.div
-            key="summary"
-            variants={PANEL}
-            initial="hidden"
-            animate="shown"
-            exit="hidden"
-            transition={{ duration: 0.2, ease: "easeOut" }}
-            className="overflow-hidden px-8 pt-4"
-          >
-            <ReviewPanel
-              summary={phase.summary}
-              onPractise={(suggested) => practise(suggested, phase.instrument)}
-              onAgain={() => again(phase.instrument)}
-              onChooseAnother={chooseAnother}
-              onShowBar={showBar}
-            />
-          </motion.div>
-        )}
       </AnimatePresence>
 
-      <div
-        ref={scoreRef}
-        className="hw-score relative min-h-0 flex-1 px-4 py-6 sm:px-8 sm:py-8 lg:px-12 lg:py-10"
-      >
-        <Score
-          hidden={!fitted}
-          pages={engraving.pages}
-          marks={engraving.marks}
-          bars={engraving.bars}
-          // No keyboard, nowhere to start: clicks wait for it to come back.
-          onBarClick={keyboardLost ? undefined : onBarClick}
-          startPosition={start.position}
-          loop={loop}
-          review={scoreReview}
-          cursor={cursor}
-          dot={dot}
-          showNoteNames={showNoteNames}
-          showGeometry={showGeometry}
-        />
+      <div className="relative min-h-0 flex-1">
+        <div
+          ref={scoreRef}
+          className="hw-score absolute inset-0 px-4 py-6 sm:px-8 sm:py-8 lg:px-12 lg:py-10"
+          style={{ visibility: resultsShown ? "hidden" : undefined }}
+          aria-hidden={resultsShown || undefined}
+        >
+          <Score
+            hidden={!fitted}
+            pages={engraving.pages}
+            marks={engraving.marks}
+            bars={engraving.bars}
+            // No keyboard, nowhere to start: clicks wait for it to come back.
+            onBarClick={keyboardLost ? undefined : onBarClick}
+            startPosition={start.position}
+            loop={loop}
+            review={scoreReview}
+            cursor={cursor}
+            dot={dot}
+            showNoteNames={showNoteNames}
+            showGeometry={showGeometry}
+          />
+        </div>
+
+        <AnimatePresence>
+          {resultsShown && (
+            <motion.div
+              key="results"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.2, ease: "easeOut" }}
+              className="absolute inset-0 flex overflow-y-auto"
+            >
+              {/* Centred when it fits; scrolls from the top when it doesn't. */}
+              <div className="m-auto w-full">
+                <Results
+                  review={phase.summary.review}
+                  reason={phase.summary.autoEnded ? phase.summary.reason : null}
+                  onPractise={(suggested) => practise(suggested, phase.instrument)}
+                  onAgain={() => again(phase.instrument)}
+                  onShowScore={showScore}
+                  onLibrary={leave}
+                />
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
     </div>
+  );
+}
+
+/**
+ * One slim line in the header for anything worth saying while practising,
+ * so nothing ever sits on top of the score: the keyboard gone, a refusal,
+ * a loop done (with its next step), or that the score shows the last run.
+ */
+function StatusLine({
+  lost,
+  message,
+  widen,
+  onWiden,
+  afterRun,
+  onResults,
+}: {
+  readonly lost: { instrument: string; secondsRemaining: number } | null;
+  readonly message: string | null;
+  readonly widen: Suggested | null;
+  readonly onWiden: (suggested: Suggested) => void;
+  readonly afterRun: boolean;
+  readonly onResults: () => void;
+}) {
+  const link =
+    "ml-2 cursor-pointer rounded-full border border-rule px-2.5 py-0.5 text-xs text-ink transition-colors hover:border-accent hover:text-accent focus-visible:outline-2 focus-visible:outline-accent";
+  return (
+    <p role="status" className="min-w-0 shrink truncate text-xs text-ink-muted">
+      {lost ? (
+        `${lost.instrument} stopped reporting · waiting ${lost.secondsRemaining} s · what you played is kept`
+      ) : message ? (
+        <>
+          {message}
+          {widen && (
+            <button type="button" onClick={() => onWiden(widen)} className={link}>
+              Join it back up · {widen.label}
+            </button>
+          )}
+        </>
+      ) : afterRun ? (
+        <>
+          Your last run is marked on the score
+          <button type="button" onClick={onResults} className={link}>
+            Results (Esc)
+          </button>
+        </>
+      ) : null}
+    </p>
   );
 }
 
@@ -801,110 +875,6 @@ function InstrumentPicker({
         Start
       </motion.button>
       {refusal && <p className="text-sm text-ink-muted">{refusal}</p>}
-    </div>
-  );
-}
-
-/** One count, in its own tile. */
-function Stat({ label, value, tone }: { readonly label: string; readonly value: number; readonly tone?: "correct" | "wrong" }) {
-  return (
-    <div className="rounded-xl border border-rule bg-paper-raised/70 px-4 py-3">
-      <p
-        className={`font-mono text-2xl tabular-nums ${
-          tone === "correct" ? "text-correct" : tone === "wrong" ? "text-wrong" : "text-ink"
-        }`}
-      >
-        {value}
-      </p>
-      <p className="mt-0.5 text-xs tracking-wide text-ink-muted uppercase">{label}</p>
-    </div>
-  );
-}
-
-/**
- * What an ended attempt has to say: mostly a picture. The line, the strip's
- * numbers and the suggestion all come from Rust; this only lays them out.
- * The four counts and every per-note line wait behind "Show every note".
- */
-function ReviewPanel({
-  summary,
-  onPractise,
-  onAgain,
-  onChooseAnother,
-  onShowBar,
-}: {
-  readonly summary: AttemptSummary;
-  readonly onPractise: (suggested: Suggested) => void;
-  readonly onAgain: () => void;
-  readonly onChooseAnother: () => void;
-  readonly onShowBar: (measure: number) => void;
-}) {
-  const { review } = summary;
-  // "Play it again" is the Practice again button; only a loop needs its own.
-  const suggestion = review.suggestion?.first != null ? review.suggestion : null;
-
-  return (
-    <div className="panel shrink-0 rounded-2xl px-7 py-6">
-      {summary.autoEnded && summary.reason && (
-        <p className="mb-3 text-sm text-ink-muted">{summary.reason}</p>
-      )}
-
-      {review.headline && <p className="text-sm text-ink">{review.headline}</p>}
-
-      {review.bars.length > 0 && (
-        <div className="mt-4">
-          <BarStrip bars={review.bars} onPick={onShowBar} />
-        </div>
-      )}
-
-      <div className="mt-4 flex flex-wrap gap-3">
-        {suggestion && (
-          <motion.button
-            type="button"
-            onClick={() => onPractise(suggestion)}
-            whileTap={{ scale: 0.96 }}
-            className="cursor-pointer rounded-full bg-ink px-4 py-1.5 text-sm font-medium text-paper transition-opacity hover:opacity-90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
-          >
-            {suggestion.label}
-          </motion.button>
-        )}
-        <motion.button
-          type="button"
-          onClick={onAgain}
-          whileTap={{ scale: 0.96 }}
-          className={
-            suggestion
-              ? "cursor-pointer rounded-full border border-rule px-4 py-1.5 text-sm transition-colors hover:border-accent hover:text-accent focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-accent"
-              : "cursor-pointer rounded-full bg-ink px-4 py-1.5 text-sm font-medium text-paper transition-opacity hover:opacity-90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
-          }
-        >
-          Practice again
-        </motion.button>
-        <button
-          type="button"
-          onClick={onChooseAnother}
-          className="cursor-pointer rounded-full border border-rule px-4 py-1.5 text-sm transition-colors hover:border-accent hover:text-accent focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-accent"
-        >
-          Choose a different instrument
-        </button>
-      </div>
-
-      <details className="mt-4 text-sm text-ink-muted">
-        <summary className="cursor-pointer select-none hover:text-accent">Show every note</summary>
-        <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4">
-          <Stat label="Correct" value={summary.correct} tone="correct" />
-          <Stat label="Not as written" value={summary.incorrect} tone="wrong" />
-          <Stat label="Never played" value={summary.omitted} />
-          <Stat label="Unexpected" value={summary.unexpected} />
-        </div>
-        <ul className="mt-3 space-y-1">
-          {summary.lines.map((line, index) => (
-            // An ordered, fixed-shape report from Rust, not a list a key could
-            // be drawn from on its own — two lines could coincide in text.
-            <li key={`${index}-${line}`}>{line}</li>
-          ))}
-        </ul>
-      </details>
     </div>
   );
 }

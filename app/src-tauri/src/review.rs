@@ -284,7 +284,8 @@ fn numbers(
     let longest = bars
         .iter()
         .max_by_key(|(measure, bar)| (bar.longest_pause_us, std::cmp::Reverse(*measure)))
-        .filter(|(_, bar)| bar.longest_pause_us > 0);
+        // Under a tenth of a second is not worth calling a pause.
+        .filter(|(_, bar)| bar.longest_pause_us >= 100_000);
 
     Numbers {
         accuracy: percent(right, right + wrong),

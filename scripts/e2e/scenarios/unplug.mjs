@@ -19,7 +19,7 @@ export default async function unplug() {
   kb("close");
   const lost = await w.until(BANNER, "the lost banner", 8000).catch(() => null);
   await shot("unplug-banner");
-  check("unplugging shows the waiting banner with a countdown", /Waiting \d+s/.test(lost ?? ""), String(lost));
+  check("unplugging says so in the status line, with a countdown", /waiting \d+ s/.test(lost ?? ""), String(lost));
   await w.sleep(2500);
   kb("open");
   const restored = await w.until("return !([...document.querySelectorAll('p')].some(p=>/stopped reporting/.test(p.textContent)))", "the banner to go", 12000).catch(() => null);

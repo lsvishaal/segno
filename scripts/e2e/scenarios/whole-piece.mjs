@@ -15,13 +15,16 @@ export default async function wholePiece() {
   await clickButton("Finish");
   await w.until("return document.body.innerText.includes('Practice again')", "the summary", 10000);
   await shot("whole-piece-summary");
-  const tiles = await w.run("return [...document.querySelectorAll('p.font-mono')].map(p => p.textContent + ' ' + p.nextElementSibling.textContent)");
-  check("the summary shows the four counts", tiles.length === 4, JSON.stringify(tiles));
-  check("every note correct; none wrong, missed or unexpected", tiles[0]?.startsWith(String(minuet.length)) && tiles.slice(1).every((t) => t.startsWith("0")), JSON.stringify(tiles));
+  const results = await w.run(
+    "const r = document.querySelector('section[aria-label=Results]'); return r ? r.innerText : null",
+  );
+  log("    results:", JSON.stringify(results));
+  check("the results replace the score", results !== null);
+  check("every note right: 100% and " + minuet.length + "/0/0", results?.includes("100%") && results?.includes(`${minuet.length}/0/0`), results);
   check("the attempt was saved with every note", newSessions(before)[0]?.attempts[0] === minuet.length, JSON.stringify(newSessions(before)));
 
-  check("Practice again and Choose a different instrument are offered", (await buttonExists("Practice again")) && (await buttonExists("Choose a different instrument")));
-  await clickButton("Practice again");
+  check("Practice again and Show on the score are offered", (await buttonExists("↻ Practice again")) && (await buttonExists("♪ Show on the score")));
+  await clickButton("↻ Practice again");
   await waitForButton("Stop");
   check("Practice again starts a new attempt", !(await w.bodyText()).includes("Never played"));
 }

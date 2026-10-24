@@ -498,13 +498,16 @@ touching nothing but the score, the keyboard and at most two buttons.
 
 ### M1.4 · M · A summary you can read in five seconds — done 24 Oct
 
-- **As built:** `Suggestion` (hogwash-analysis), `review` sentences
-  (hogwash-feedback), `review.rs` in the app builds it in `finish()`;
-  `BarStrip.tsx`, `Score` `review` prop, `ReviewPanel`. A stopped loop reviews
-  every pass of the run; reaching a loop's goal offers "Join it back up" (the
-  loop a bar wider). Stop or Restart only counts against a bar begun. Strip
-  sums repeats by bar number (your call). e2e scenario `review`.
-
+- **As built (24 Oct, second pass after your test):** stopping swaps the score
+  for a **results view** in the middle of the screen (Monkeytype-style; Esc
+  shows the score with the run's marks, Enter takes the suggestion, R plays
+  again). Big numbers: accuracy and tempo (♩/min); a chart of tempo per bar
+  (per pass in a loop) with ✕ for wrong notes and a grey band for bars not
+  reached; small numbers: notes right/wrong/not reached, steadiness, longest
+  pause and its bar, time, restarts. It covers the whole **run** (Start to
+  stopping: restarts, jumps, loop passes). Nothing sits above the score while
+  practising: messages go to one status line in the header. Scores like
+  accuracy % are allowed now (your call). e2e scenario `review`.
 - **Why:** 517 lines is not feedback.
 - **When:** only after playing (Stop, the end, or leaving), never during.
 - **What:** ~80% picture, ~20% text, like Monkeytype's results screen:
@@ -595,6 +598,27 @@ touching nothing but the score, the keyboard and at most two buttons.
 
 - **What:** **R** restarts the attempt from the current loop start, or from
   bar 1 if no loop. Saves the current attempt first.
+
+### M1.10 · M · Chords held together (next, after you test the results view)
+
+- A chord step counts only when all its notes are **down at the same moment**;
+  releasing one before the last arrives means pressing it again (not a mistake).
+- Exempt: notes tied into it, grace notes, written arpeggios. The pedal isn't holding.
+- The cursor needs releases (already recorded); analysis replays presses and
+  releases in time order so screen and results agree. Old records replay leniently.
+- Both modes.
+
+### M1.11 · M · Learn / Play modes (after M1.10)
+
+- Header toggle **Learn | Play**, remembered.
+- **Learn:** the 3rd wrong note in the current bar sends the cursor back to the
+  bar's start ("↺ bar 9" in the status line; tied-in notes struck, as when
+  starting there). 4+ wrong in one bar in a run, note names off → once per run:
+  "Bar 9 keeps tripping you — turn on note names? [Yes]". Inside a loop the
+  restart goes to the bar's start and the pass isn't clean. Results show
+  restarts per bar.
+- **Play:** today's relaxed wait-for-me (with M1.10's chords).
+- Bar restarts are recorded as attempts ending "restart" inside the run.
 
 ### M1.9 · S · Remember per-piece state
 
@@ -1679,6 +1703,7 @@ _Date · decision · why · what it replaced._
 - 2026-10-24 · Review after playing is mostly visual (score marks + per-bar strip), little text · your call · M1.4's text list
 - 2026-10-24 · Auto-detect a keyboard plugged in later (every 3 s, plus Rescan) added to M1.3 · re-opening the piece to find it is friction · M1.3 checked only on opening
 - 2026-10-24 · Built-in sound for Listen reopened as D13 · you'd like it · was "piano-only, no synth" (6 and 18 Oct)
+- 2026-10-24 · Results after playing replace the score (Monkeytype-style), scores like accuracy % allowed, nothing above the score while practising · your test and call · the review card above the score; "counts only, no %"
 - _(D1–D12 answers go here)_
 
 ---
