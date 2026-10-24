@@ -65,10 +65,11 @@ pub fn label(suggestion: &Suggestion) -> Option<String> {
     }
 }
 
-/// One bar, in a line: shown when pointing at its column.
+/// One bar, in a line: shown when pointing at it.
 #[must_use]
 pub fn bar_line(measure: MeasureNumber, bar: &Bar) -> String {
     let mut parts = vec![format!("Bar {}", measure.get())];
+    parts.extend(bar.tempo().map(|tempo| format!("♩ = {tempo}")));
     let details = details(bar);
     if details.is_empty() {
         parts.push("no trouble".to_owned());
@@ -77,6 +78,19 @@ pub fn bar_line(measure: MeasureNumber, bar: &Bar) -> String {
     }
     if bar.breaks > 0 {
         parts.push(plural(bar.breaks, "break", "breaks"));
+    }
+    parts.join(" · ")
+}
+
+/// One pass of a loop, in a line: shown when pointing at it.
+#[must_use]
+pub fn pass_line(number: usize, bar: &Bar, clean: bool) -> String {
+    let mut parts = vec![format!("Pass {number}")];
+    parts.extend(bar.tempo().map(|tempo| format!("♩ = {tempo}")));
+    if clean {
+        parts.push("clean".to_owned());
+    } else if bar.wrong > 0 {
+        parts.push(format!("{} wrong", bar.wrong));
     }
     parts.join(" · ")
 }
@@ -126,7 +140,7 @@ mod tests {
     use hogwash_analysis::{Bar, Bars, Suggestion};
     use hogwash_domain::MeasureNumber;
 
-    use crate::review::{bar_line, headline, label, loop_headline};
+    use crate::review::{bar_line, headline, label, loop_headline, pass_line};
 
     fn bar(number: u32) -> MeasureNumber {
         MeasureNumber::new(number).expect("a bar number")
@@ -194,6 +208,17 @@ mod tests {
             "Bar 9 · 3.2 s pause · 2 wrong · 1 break"
         );
         assert_eq!(bar_line(bar(4), &Bar::default()), "Bar 4 · no trouble");
+        let timed = Bar {
+            played_us: 1_200_000,
+            written_ticks: 960,
+            ..hard
+        };
+        assert_eq!(
+            bar_line(bar(9), &timed),
+            "Bar 9 · ♩ = 100 · 3.2 s pause · 2 wrong · 1 break"
+        );
+        assert_eq!(pass_line(3, &timed, false), "Pass 3 · ♩ = 100 · 2 wrong");
+        assert_eq!(pass_line(4, &Bar::default(), true), "Pass 4 · clean");
     }
 
     #[test]

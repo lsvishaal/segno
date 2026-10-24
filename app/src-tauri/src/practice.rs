@@ -56,7 +56,7 @@ use hogwash_practice::{Attempt, CursorMovement, Loop, Pass, PracticeSession};
 use hogwash_records::{AttemptRecord, Ended, Records, SessionRecord};
 use serde::Serialize;
 
-use crate::review::{self, LoopRun, Review, Suggested};
+use crate::review::{self, LoopScope, Review, Run, Segment, Suggested};
 use crate::startup::Unavailable;
 
 /// Where every [`PracticeEvent`] this loop produces goes.
@@ -115,7 +115,7 @@ pub enum PracticeEvent {
     /// The same instrument came back before the window ran out.
     InstrumentRestored,
     /// The attempt ended, however it ended.
-    Ended { summary: AttemptSummary },
+    Ended { summary: Box<AttemptSummary> },
     /// A wrong or unexpected note spoiled this pass of the loop: the count
     /// of clean passes in a row is back to zero.
     LoopCount {
@@ -496,6 +496,18 @@ struct OpenSession {
     from: usize,
     /// The loop being practised, if any.
     looping: Option<Looping>,
+    /// Everything played since Start, for the results.
+    run: Run,
+}
+
+impl OpenSession {
+    /// Starts the results afresh: a Start that is not a restart.
+    fn begin_run(&mut self) {
+        self.run = Run::default();
+        if let Some(looping) = self.looping.as_mut() {
+            looping.since = 0;
+        }
+    }
 }
 
 /// What the record says of an attempt, beyond what was played.
@@ -513,8 +525,8 @@ struct Looping {
     pass: Loop,
     first: u32,
     last: u32,
-    /// Every pass so far, added up, for the review if it is stopped.
-    run: LoopRun,
+    /// The part of the run it began at.
+    since: usize,
 }
 
 /// An attempt in progress, and its live keyboard connection.
@@ -591,6 +603,8 @@ fn handle(
             // A restart (or a second piece opened) while one is running: the
             // one running is ended and kept first, never silently dropped. No
             // `Ended` event: the screen is starting again, not reading a summary.
+            // A restart carries the run on; any other Start begins a new one.
+            let restarting = ongoing.is_some();
             if let Some(previous) = ongoing.take() {
                 let kept = previous.kept(Ended::Restart);
                 drop(finish(
@@ -610,6 +624,9 @@ fn handle(
                     let Some(open) = session.as_mut() else {
                         unreachable!("open_session always leaves a session in place")
                     };
+                    if !restarting {
+                        open.begin_run();
+                    }
                     let attempt = open.session.begin_attempt_at(open.from);
                     // A pass begun again: what spoiled the last one is gone.
                     let to = open.looping.as_mut().map(|looping| {
@@ -706,7 +723,7 @@ fn end(
         emit(
             sink,
             &PracticeEvent::Ended {
-                summary: summary.clone(),
+                summary: Box::new(summary.clone()),
             },
         );
         summary
@@ -716,6 +733,7 @@ fn end(
     {
         open.from = 0;
         open.looping = None;
+        open.run = Run::default();
     }
     outcome.ok_or(NotPracticing)
 }
@@ -778,7 +796,12 @@ fn poll(
                     true,
                     Some("The instrument did not reconnect.".to_owned()),
                 );
-                emit(sink, &PracticeEvent::Ended { summary });
+                emit(
+                    sink,
+                    &PracticeEvent::Ended {
+                        summary: Box::new(summary),
+                    },
+                );
             } else if active.last_reconnect_attempt.elapsed() >= RECONNECT_ATTEMPT_EVERY {
                 active.last_reconnect_attempt = Instant::now();
 
@@ -913,11 +936,6 @@ fn wrap(active: &mut Ongoing, session: &mut Option<OpenSession>, records: &Recor
                 Ended::Pass,
                 records,
             );
-            if clean_in_a_row > 0
-                && let Some(looping) = session.as_mut().and_then(|open| open.looping.as_mut())
-            {
-                looping.run.clean += 1;
-            }
             emit(
                 sink,
                 &PracticeEvent::Looped {
@@ -1002,6 +1020,7 @@ fn open_session(
         kept: Vec::new(),
         from: 0,
         looping: None,
+        run: Run::default(),
     });
 }
 
@@ -1104,7 +1123,7 @@ fn loop_bars(
             pass: Loop::new(range.clone(), wanted.target),
             first,
             last,
-            run: LoopRun::new(first, last),
+            since: open.run.segments.len(),
         });
     }
 
@@ -1163,29 +1182,31 @@ fn finish(
         steps.clone(),
         gave_up,
     );
-    // A pass of the loop still running: the review covers the whole run,
-    // and a completed pass joins it.
-    let mut run = open
-        .looping
-        .as_mut()
-        .filter(|_| kept.to.is_some())
-        .map(|looping| &mut looping.run);
-    let this = match run.as_deref_mut() {
-        Some(run) if kept.ended == Ended::Pass => {
-            run.bars.add(&bars);
-            run.passes += 1;
-            Bars::default()
-        }
-        _ => bars,
+    // This attempt joins the run; the results cover the whole run, or the
+    // loop still running when it stopped.
+    let ending = match kept.ended {
+        Ended::Pass => review::Ending::Pass,
+        Ended::Restart => review::Ending::Restart,
+        _ => review::Ending::Other,
     };
-    let review = review::of(
+    open.run.segments.extend(Segment::of(
         open.session.reference(),
+        finished.from(),
         finished.observed(),
-        analysis.findings(),
-        steps,
-        &this,
-        run.as_deref(),
-    );
+        &analysis,
+        bars,
+        ending,
+    ));
+    let looping = open
+        .looping
+        .as_ref()
+        .filter(|_| kept.to.is_some())
+        .map(|looping| LoopScope {
+            first: looping.first,
+            last: looping.last,
+            since: looping.since,
+        });
+    let review = review::of(open.session.reference(), &open.run, looping);
 
     // An attempt in which nothing was played is not practice: it is not
     // added to the session and nothing is written.
@@ -1298,6 +1319,7 @@ mod tests {
             kept: Vec::new(),
             from: 0,
             looping: None,
+            run: crate::review::Run::default(),
         });
 
         let stop = Kept {
@@ -1768,6 +1790,48 @@ mod tests {
             review
                 .suggestion
                 .is_some_and(|button| button.first == Some(9))
+        );
+    }
+
+    // Bar 9 with a wrong C#5, a click back to bar 9, bar 9 clean, then Stop:
+    // the results cover both parts of the run.
+    #[test]
+    #[ignore = "needs a real libverovio; run `just provided-test`"]
+    fn the_results_cover_the_whole_run() {
+        let (records, id, reference) = minuet("review-run");
+        let mut session = None;
+        let mut ongoing = Some(practising(&reference));
+        for keys in [[&[73][..], &BAR_9[..]].concat(), BAR_9.to_vec()] {
+            start_at(
+                &mut session,
+                &mut ongoing,
+                id.clone(),
+                Arc::clone(&reference),
+                bar(9),
+                &records,
+                &quiet(),
+            )
+            .expect("bar 9 starts");
+            let active = ongoing.as_mut().expect("practising");
+            active.keyboard = Box::new(Plays(keys));
+            drain(active, &mut session, &records, &quiet());
+        }
+
+        let review = end(&mut session, &mut ongoing, Ending::Stop, &records, &quiet())
+            .expect("an attempt was running")
+            .review;
+
+        let numbers = &review.numbers;
+        assert_eq!((numbers.right, numbers.wrong), (14, 1));
+        assert_eq!(numbers.accuracy, Some(93));
+        assert!(review.passes.is_empty());
+        assert_eq!(
+            review
+                .bars
+                .iter()
+                .find(|column| column.measure == 9)
+                .map(|column| column.wrong),
+            Some(1)
         );
     }
 

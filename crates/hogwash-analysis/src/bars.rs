@@ -49,6 +49,11 @@ pub struct Bar {
     pub wrong: u32,
     /// Attempts given up (restart or stop) while in this bar.
     pub gave_up: u32,
+    /// Time spent on the timed steps that were not breaks, and the written
+    /// length of those same steps in ticks: together, the tempo the bar was
+    /// played at.
+    pub played_us: u64,
+    pub written_ticks: u64,
 }
 
 impl Bar {
@@ -62,6 +67,17 @@ impl Bar {
         total.checked_div(u64::from(self.passes)).unwrap_or(0)
     }
 
+    /// The tempo the bar was played at, in quarter notes per minute, if any
+    /// of it was timed.
+    #[must_use]
+    pub fn tempo(&self) -> Option<u64> {
+        let quarter_us = self
+            .played_us
+            .checked_mul(u64::from(TICKS_PER_QUARTER))?
+            .checked_div(self.written_ticks)?;
+        60_000_000_u64.checked_div(quarter_us)
+    }
+
     fn add(&mut self, other: &Self) {
         self.passes += other.passes;
         self.timed += other.timed;
@@ -71,6 +87,8 @@ impl Bar {
         self.breaks += other.breaks;
         self.wrong += other.wrong;
         self.gave_up += other.gave_up;
+        self.played_us += other.played_us;
+        self.written_ticks += other.written_ticks;
     }
 }
 
@@ -135,7 +153,13 @@ impl Bars {
             previous = Some(step);
         }
 
-        for (step, gap, expected) in gaps(reference, &completed, steps.start) {
+        for Gap {
+            step,
+            taken: gap,
+            written,
+            expected,
+        } in gaps(reference, &completed, steps.start)
+        {
             let Some(measure) = measure_of(step) else {
                 continue;
             };
@@ -145,6 +169,8 @@ impl Bars {
                 bar.breaks += 1;
                 continue;
             }
+            bar.played_us += gap;
+            bar.written_ticks += written;
             // Half as long again as the music asks is still just playing.
             let pause = gap.saturating_sub(expected * 3 / 2);
             bar.pause_us += pause;
@@ -180,6 +206,42 @@ impl Bars {
         self.0.get(&measure)
     }
 
+    /// Every bar added into one: overall tempo, wrong notes, passes.
+    #[must_use]
+    pub fn total(&self) -> Bar {
+        let mut total = Bar::default();
+        for bar in self.0.values() {
+            total.add(bar);
+        }
+        total
+    }
+
+    /// How even the tempo was from bar to bar, in percent: 100 less the
+    /// spread of the bars' tempos as a percentage of their average. Bars
+    /// with fewer than two timed steps say too little to count; with fewer
+    /// than two such bars, `None`.
+    #[must_use]
+    pub fn steadiness(&self) -> Option<u32> {
+        let tempos: Vec<u64> = self
+            .0
+            .values()
+            .filter(|bar| bar.timed >= 2)
+            .filter_map(Bar::tempo)
+            .collect();
+        if tempos.len() < 2 {
+            return None;
+        }
+        let n = u64::try_from(tempos.len()).ok()?;
+        let mean = tempos.iter().sum::<u64>() / n;
+        let variance = tempos
+            .iter()
+            .map(|&tempo| tempo.abs_diff(mean).pow(2))
+            .sum::<u64>()
+            / n;
+        let spread = variance.isqrt() * 100 / mean.max(1);
+        u32::try_from(100_u64.saturating_sub(spread)).ok()
+    }
+
     /// Every bar reached, in bar order.
     pub fn iter(&self) -> impl Iterator<Item = (MeasureNumber, &Bar)> {
         self.0.iter().map(|(measure, bar)| (*measure, bar))
@@ -192,11 +254,20 @@ impl Bars {
 /// The pace is the attempt's median time per quarter note, so one long
 /// hesitation doesn't make every other note look rushed. Without a written
 /// rhythm every step counts as a quarter.
+/// One timed step: its gap since the step before and what the music asks
+/// of that gap, in ticks and in µs at the performer's pace.
+struct Gap {
+    step: usize,
+    taken: u64,
+    written: u64,
+    expected: u64,
+}
+
 fn gaps(
     reference: &ReferencePerformance,
     completed: &BTreeMap<usize, Option<u64>>,
     from: usize,
-) -> Vec<(usize, u64, u64)> {
+) -> Vec<Gap> {
     let timed: Vec<(usize, u64, u64)> = completed
         .iter()
         .filter(|&(&step, _)| step > from)
@@ -219,7 +290,12 @@ fn gaps(
 
     timed
         .into_iter()
-        .map(|(step, gap, written)| (step, gap, written * pace / u64::from(TICKS_PER_QUARTER)))
+        .map(|(step, taken, written)| Gap {
+            step,
+            taken,
+            written,
+            expected: written * pace / u64::from(TICKS_PER_QUARTER),
+        })
         .collect()
 }
 
@@ -247,6 +323,41 @@ mod tests {
             bars.iter()
                 .all(|(_, bar)| bar.pause_us == 0 && bar.wrong == 0)
         );
+    }
+
+    // A quarter every 600 ms is 100 quarters a minute, in every bar.
+    #[test]
+    fn each_bar_knows_the_tempo_it_was_played_at() {
+        let reference = minuet_in_time();
+        let observed = played_in_time(&reference, 0..reference.len(), QUARTER_US, &[]);
+
+        let bars = Bars::of(&observed, &reference, 0..reference.len(), false);
+
+        assert!(bars.iter().all(|(_, bar)| bar.tempo() == Some(100)));
+    }
+
+    #[test]
+    fn an_even_tempo_is_fully_steady_and_a_hesitation_is_not() {
+        let reference = minuet_in_time();
+        let even = played_in_time(&reference, 0..reference.len(), QUARTER_US, &[]);
+        let halting = played_in_time(
+            &reference,
+            0..reference.len(),
+            QUARTER_US,
+            &[(16, 2_000_000)],
+        );
+
+        let even = Bars::of(&even, &reference, 0..reference.len(), false);
+        let halting = Bars::of(&halting, &reference, 0..reference.len(), false);
+
+        assert_eq!(even.steadiness(), Some(100));
+        assert!(
+            halting
+                .steadiness()
+                .is_some_and(|steadiness| steadiness < 80)
+        );
+        assert_eq!(Bars::default().steadiness(), None);
+        assert_eq!(even.total().tempo(), Some(100));
     }
 
     #[test]
