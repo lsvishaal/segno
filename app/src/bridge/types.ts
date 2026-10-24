@@ -162,6 +162,42 @@ export interface AttemptSummary {
   /** Whether the performer chose to end it, or the instrument never came back. */
   readonly autoEnded: boolean;
   readonly reason: string | null;
+  /** What to draw once playing stops. */
+  readonly review: Review;
+}
+
+/** The review after an attempt: every number and sentence comes from Rust. */
+export interface Review {
+  readonly headline: string;
+  /** One per bar, in bar-number order, from where the attempt began. */
+  readonly bars: readonly ReviewBar[];
+  /** What happened at each step played. */
+  readonly marks: readonly ReviewMark[];
+  readonly suggestion: Suggested | null;
+}
+
+export interface ReviewBar {
+  readonly measure: number;
+  readonly state: "played" | "notReached" | "empty";
+  readonly pauseMs: number;
+  readonly intoMs: number;
+  readonly wrong: number;
+  readonly breaks: number;
+  /** Said when pointing at the column. */
+  readonly line: string;
+}
+
+export interface ReviewMark {
+  readonly position: number;
+  readonly correct: boolean;
+  readonly wrong: number;
+}
+
+/** The suggestion's button: loop `first`–`last`, or play it again when absent. */
+export interface Suggested {
+  readonly label: string;
+  readonly first: number | null;
+  readonly last: number | null;
 }
 
 /**
@@ -198,4 +234,6 @@ export type PracticeEvent =
       readonly passes: number;
       readonly first: number;
       readonly last: number;
+      /** What to practise now: the loop a bar wider each side. */
+      readonly widen: Suggested | null;
     };

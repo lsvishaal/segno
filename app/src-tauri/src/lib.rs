@@ -28,6 +28,7 @@ pub mod commands;
 pub mod engraving;
 pub mod practice;
 pub mod provided;
+pub mod review;
 pub mod startup;
 pub mod state;
 

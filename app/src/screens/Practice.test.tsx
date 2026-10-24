@@ -364,7 +364,7 @@ describe("looping", () => {
     await click(12, true);
 
     await act(async () => {
-      hear({ kind: "loopDone", position: 36, passes: 3, first: 9, last: 12 });
+      hear({ kind: "loopDone", position: 36, passes: 3, first: 9, last: 12, widen: null });
     });
 
     expect(screen.getByRole("status")).toHaveTextContent("3 clean passes · bars 9–12");

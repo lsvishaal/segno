@@ -46,7 +46,7 @@ use std::sync::mpsc::{Receiver, RecvTimeoutError, Sender, SyncSender, channel, s
 use std::thread;
 use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 
-use hogwash_analysis::Analysis;
+use hogwash_analysis::{Analysis, Bars};
 use hogwash_capture::{Action, Instrument, Keyboard, MidiSource, NoInstrument, Touch};
 use hogwash_domain::{MeasureNumber, PieceId};
 use hogwash_feedback::Feedback;
@@ -56,6 +56,7 @@ use hogwash_practice::{Attempt, CursorMovement, Loop, Pass, PracticeSession};
 use hogwash_records::{AttemptRecord, Ended, Records, SessionRecord};
 use serde::Serialize;
 
+use crate::review::{self, LoopRun, Review, Suggested};
 use crate::startup::Unavailable;
 
 /// Where every [`PracticeEvent`] this loop produces goes.
@@ -134,6 +135,8 @@ pub enum PracticeEvent {
         passes: u32,
         first: u32,
         last: u32,
+        /// What to practise now: the loop a bar wider each side.
+        widen: Option<Suggested>,
     },
 }
 
@@ -158,6 +161,8 @@ pub struct AttemptSummary {
     /// instrument never coming back.
     pub auto_ended: bool,
     pub reason: Option<String>,
+    /// What the screen draws once playing stops.
+    pub review: Review,
 }
 
 /// Asked to end an attempt when none is running.
@@ -508,6 +513,8 @@ struct Looping {
     pass: Loop,
     first: u32,
     last: u32,
+    /// Every pass so far, added up, for the review if it is stopped.
+    run: LoopRun,
 }
 
 /// An attempt in progress, and its live keyboard connection.
@@ -906,6 +913,11 @@ fn wrap(active: &mut Ongoing, session: &mut Option<OpenSession>, records: &Recor
                 Ended::Pass,
                 records,
             );
+            if clean_in_a_row > 0
+                && let Some(looping) = session.as_mut().and_then(|open| open.looping.as_mut())
+            {
+                looping.run.clean += 1;
+            }
             emit(
                 sink,
                 &PracticeEvent::Looped {
@@ -917,6 +929,7 @@ fn wrap(active: &mut Ongoing, session: &mut Option<OpenSession>, records: &Recor
         Pass::Done { passes } => {
             let (first, last) = (looping.first, looping.last);
             open.looping = None;
+            let widen = review::widened(first, last, open.session.reference());
             begin_again(session, active, range.start, None, Ended::Pass, records);
             emit(
                 sink,
@@ -925,6 +938,7 @@ fn wrap(active: &mut Ongoing, session: &mut Option<OpenSession>, records: &Recor
                     passes,
                     first,
                     last,
+                    widen,
                 },
             );
         }
@@ -1090,6 +1104,7 @@ fn loop_bars(
             pass: Loop::new(range.clone(), wanted.target),
             first,
             last,
+            run: LoopRun::new(first, last),
         });
     }
 
@@ -1140,6 +1155,38 @@ fn finish(
     let overall = feedback.overall();
     let lines = feedback.lines();
 
+    let steps = finished.from()..end;
+    let gave_up = matches!(kept.ended, Ended::Restart | Ended::Stop);
+    let bars = Bars::of(
+        finished.observed(),
+        open.session.reference(),
+        steps.clone(),
+        gave_up,
+    );
+    // A pass of the loop still running: the review covers the whole run,
+    // and a completed pass joins it.
+    let mut run = open
+        .looping
+        .as_mut()
+        .filter(|_| kept.to.is_some())
+        .map(|looping| &mut looping.run);
+    let this = match run.as_deref_mut() {
+        Some(run) if kept.ended == Ended::Pass => {
+            run.bars.add(&bars);
+            run.passes += 1;
+            Bars::default()
+        }
+        _ => bars,
+    };
+    let review = review::of(
+        open.session.reference(),
+        finished.observed(),
+        analysis.findings(),
+        steps,
+        &this,
+        run.as_deref(),
+    );
+
     // An attempt in which nothing was played is not practice: it is not
     // added to the session and nothing is written.
     if !finished.observed().is_empty() {
@@ -1182,6 +1229,7 @@ fn finish(
         reached_the_end,
         auto_ended,
         reason,
+        review,
     }
 }
 
@@ -1199,7 +1247,7 @@ mod tests {
 
     use super::{
         Command, Ending, Kept, LoopOf, LoopRange, NoStart, Ongoing, OpenSession, Practice,
-        PracticeEvent, Sink, drain, finish, handle, loop_bars, start_at,
+        PracticeEvent, Sink, drain, end, finish, handle, loop_bars, start_at,
     };
 
     // The interface reads `secondsRemaining`. Serde's `rename_all` on the enum
@@ -1660,8 +1708,108 @@ mod tests {
                 .any(|event| event["kind"] == "looped" && event["cleanInARow"] == 0)
         );
         assert!(events.iter().any(|event| {
-            event["kind"] == "loopDone" && event["passes"] == 1 && event["first"] == 9
+            event["kind"] == "loopDone"
+                && event["passes"] == 1
+                && event["first"] == 9
+                && event["widen"]["label"] == "Loop bars 8–10"
         }));
+    }
+
+    // Started at bar 9, one wrong C#5 there, bar 9 played, then Stop: the
+    // review runs from bar 9 to the end, bar 10 on not reached.
+    #[test]
+    #[ignore = "needs a real libverovio; run `just provided-test`"]
+    fn stopping_reviews_the_attempt_from_where_it_began() {
+        let (records, id, reference) = minuet("review-stop");
+        let mut session = None;
+        let mut ongoing = Some(practising(&reference));
+        start_at(
+            &mut session,
+            &mut ongoing,
+            id,
+            Arc::clone(&reference),
+            bar(9),
+            &records,
+            &quiet(),
+        )
+        .expect("bar 9 starts");
+        let active = ongoing.as_mut().expect("practising");
+        let mut keys = vec![73];
+        keys.extend(BAR_9);
+        active.keyboard = Box::new(Plays(keys));
+        drain(active, &mut session, &records, &quiet());
+
+        let review = end(&mut session, &mut ongoing, Ending::Stop, &records, &quiet())
+            .expect("an attempt was running")
+            .review;
+
+        let state = |measure: u32| {
+            review
+                .bars
+                .iter()
+                .find(|column| column.measure == measure)
+                .map(|column| (column.state, column.wrong))
+        };
+        assert_eq!(review.bars.first().map(|column| column.measure), Some(9));
+        assert_eq!(review.bars.last().map(|column| column.measure), Some(32));
+        assert_eq!(state(9), Some((crate::review::BarState::Played, 1)));
+        assert_eq!(
+            state(11).map(|(state, _)| state),
+            Some(crate::review::BarState::NotReached)
+        );
+        assert!(
+            review
+                .marks
+                .iter()
+                .any(|mark| mark.position == 36 && mark.correct && mark.wrong == 1)
+        );
+        assert!(review.headline.starts_with("Bar"), "{}", review.headline);
+        assert!(
+            review
+                .suggestion
+                .is_some_and(|button| button.first == Some(9))
+        );
+    }
+
+    // Two passes of bar 9, the second spoiled by a wrong note, then Stop part
+    // way into a third: the review is of the whole run.
+    #[test]
+    #[ignore = "needs a real libverovio; run `just provided-test`"]
+    fn stopping_a_loop_reviews_every_pass() {
+        let (records, id, reference) = minuet("review-loop");
+        let mut session = None;
+        let mut ongoing = Some(practising(&reference));
+        loop_bars(
+            &mut session,
+            &mut ongoing,
+            id,
+            Arc::clone(&reference),
+            looping(9, 9, None),
+            &records,
+            &quiet(),
+        )
+        .expect("bar 9 loops");
+        let active = ongoing.as_mut().expect("practising");
+        let mut keys = BAR_9.to_vec();
+        keys.push(73);
+        keys.extend(BAR_9);
+        keys.push(74);
+        active.keyboard = Box::new(Plays(keys));
+        drain(active, &mut session, &records, &quiet());
+
+        let review = end(&mut session, &mut ongoing, Ending::Stop, &records, &quiet())
+            .expect("an attempt was running")
+            .review;
+
+        assert_eq!(review.headline, "Bar 9 · 2 passes · 1 clean.");
+        assert_eq!(
+            review
+                .bars
+                .iter()
+                .map(|column| column.measure)
+                .collect::<Vec<_>>(),
+            [9]
+        );
     }
 
     #[test]
