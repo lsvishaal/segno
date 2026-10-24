@@ -491,15 +491,20 @@ touching nothing but the score, the keyboard and at most two buttons.
 ### M1.4 · M · A summary you can read in five seconds
 
 - **Why:** 517 lines is not feedback.
-- **What:** the end-of-attempt panel shows:
-  1. One headline line: *"Bars 1–18 played · 3 bars with problems · 6 min 40 s."*
-  2. Up to **5 bars** with problems, worst first, one line each:
-     *"Bar 9 — 3 wrong notes, longest pause 6.2 s."*
-  3. If stopped early: *"Bars 19–35 not reached."* (one line, never per note).
-  4. Buttons: **Again** · **Loop the worst bar** (after M1.6) · **Library**.
+- **When:** only after playing (Stop, the end, or leaving), never during.
+- **What:** ~80% picture, ~20% text, like Monkeytype's results screen:
+  1. **On the score:** bars not reached greyed; every right note a green
+     dot, every wrong one a red ✕, kept (not faded) until the next attempt.
+  2. **A strip under the score:** one column per bar played, in played
+     order. Column height = pause (M2.1), red dots = wrong notes, grey = not
+     reached. Hover/click a column → that bar on the score.
+  3. **One line of text:** *"Bars 1–18 · 6 min 40 s · most trouble going into bar 9."*
+  4. **One button:** Loop the weakest spot (with the bar before it when the
+     trouble is going into the bar) · plus Again · Library.
 - Detailed per-note lines move behind a "Show every note" disclosure, closed
   by default.
-- **Where:** grouping logic in `hogwash-feedback` (pure, tested), not in React.
+- **Where:** numbers from `Bars` (M2.1) and grouping in `hogwash-feedback`
+  (pure, tested); React only draws.
 
 ### M1.5 · M · Start from any bar (never cut) — done 22 Oct
 
@@ -594,26 +599,36 @@ touching nothing but the score, the keyboard and at most two buttons.
 
 Change these deliberately (log in §32), never by accident.
 
-- **Stall** for a position = timestamp completing it − timestamp completing
-  the previous position. The first position of an attempt or loop pass has
-  no stall.
-- **Bar stall** = average stall per position in the bar.
-- **Bar wrong notes** = wrong + unexpected notes while the cursor was in that
-  bar. Tolerated notes (grace, ornament, unselected hand) are excluded.
-- **Bar difficulty = bar stall (seconds) + wrong notes × 1.0.**
-  One function, `bar_difficulty()`, in `hogwash-analysis`. Tune later.
+Built in M2.1 (`hogwash-analysis/src/bars.rs`, `Bars::of`):
+
+- **Pace** = the attempt's median time per written quarter note. A slow day
+  is not a hesitant one.
+- **Pause** at a step = the time beyond 1.5 × what the written rhythm asks at
+  that pace. A long note or rest is not a pause. The first step of an attempt
+  or loop pass has none. Without a written rhythm every step counts as a quarter.
+- **Into-bar pause** = the pause on a bar's first step: the change from the
+  bar before (suggest looping the two together).
+- **Break** = a gap over 20 s and over 10× what the music asks. Counted, not a pause.
+- **Bar wrong notes** = wrong notes while the cursor waited in the bar, **at
+  most 3 per step** (hunting for one note is one problem). Grace notes and
+  ornaments excluded. Brushed neighbour keys count (your call, 24 Oct).
+- **Gave up** = the attempt ended by Restart or Stop while in this bar.
+- **Passes** = times through the bar; a repeat's bars count once per time through.
+- **Bar difficulty** (`Bar::difficulty`, ranking only, never shown) = per
+  pass: pause seconds + wrong notes × 1 + gave up × 2. Tune later.
 - **Baseline** = average over the last 3 sessions of that piece in which the
   bar was played (D10).
 - A bar needs at least **2 passes** of data before it gets a colour; until
-  then it's "not enough data yet."
+  then it's "not enough data yet." Bars never reached have no data, not "easy".
 
 ### Tasks
 
-- [ ] **M2.1 · M · Per-bar rollup in analysis (never cut).**
-      A pure function: (score, attempt events with times) → per-bar stats
-      (passes, avg stall, max stall, wrong, unexpected, difficulty).
-      Recomputed from raw events (D5). Covered by replay fixtures with
-      invented timings on the Minuet.
+- [x] **M2.1 · M · Per-bar rollup in analysis (never cut).** — done 24 Oct.
+      `Bars::of(observed, reference, steps, gave_up)` → per-bar stats as
+      defined above, recomputed from raw events (D5); `Bars::add` sums
+      attempts and sessions. The written rhythm now comes from Verovio's
+      timemap (each position's beat, each bar's length). Check real data
+      with `hogwash-cli bars <score> <data folder> <piece id>`.
 - [ ] **M2.2 · M · Per-piece history across sessions.**
       Load all sessions of a piece, compute per-bar stats per session, then
       the baseline. Fast enough to run on open (budget: < 100 ms for 50
@@ -625,6 +640,8 @@ Change these deliberately (log in §32), never by accident.
         it works for colour-blind players and doesn't read as "failing."
       - Off while playing (it would distract); on in the idle state and in
         the end summary. Toggle with **W** ("weak bars").
+      - Amber is "hard for you over time"; M1.4's green/red is "this attempt
+        only". The two never show at once.
       - Legend in the corner: "Lighter = easier for you · Deeper = harder."
 - [ ] **M2.4 · M · Bar detail popover.**
       Click a tinted bar (when not playing) → a small card:
@@ -1643,6 +1660,9 @@ _Date · decision · why · what it replaced._
 - 2026-10-06 · Goal widened from "readable" to "polished and frictionless" · v1.0 public launch
 - 2026-10-17 · Five `.mxl` test scores stay in the private repo; move them out, purge history and narrow `resources` before going public · tests read them, no exposure while private · M0.2 as written
 - 2026-10-18 · Listen stays piano-only (MIDI out), no built-in synth · reconfirmed · avoids audio-engine bugs
+- 2026-10-24 · Written rhythm read into the notation (beats, bar lengths), tempo still not · so long notes aren't mistaken for pauses · "no timing in the domain"
+- 2026-10-24 · Stall replaced by pause beyond the rhythm at the performer's own pace; breaks, a cap of 3 wrong per step, restarts/stops count · real playing isn't metronomic; real data had 245 wrong notes in one bar from hunting · raw stall seconds
+- 2026-10-24 · Review after playing is mostly visual (score marks + per-bar strip), little text · your call · M1.4's text list
 - _(D1–D12 answers go here)_
 
 ---
