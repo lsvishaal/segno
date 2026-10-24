@@ -111,12 +111,14 @@ impl Bars {
                 completed.insert(step, time.map(|touch| touch.at_us));
             }
         }
+        // Given up in a bar only if it was begun: stopping just after a
+        // bar's last note gives up on nothing.
         let stopped = cursor.position();
-        if gave_up && stopped < steps.end {
-            visited.insert(stopped);
-            if let Some(measure) = measure_of(stopped) {
-                bars.entry(measure).or_default().gave_up += 1;
-            }
+        if gave_up
+            && visited.contains(&stopped)
+            && let Some(measure) = measure_of(stopped)
+        {
+            bars.entry(measure).or_default().gave_up += 1;
         }
 
         // A pass begins wherever the bar changes or the steps jump.
@@ -346,6 +348,19 @@ mod tests {
             bars.iter().map(|(measure, _)| measure).collect::<Vec<_>>(),
             [bar(2)]
         );
+    }
+
+    // Stopped with the cursor waiting at bar 3's first note, nothing played
+    // there yet.
+    #[test]
+    fn stopping_between_bars_gives_up_on_neither() {
+        let reference = minuet_in_time();
+        let observed = played_in_time(&reference, 0..16, QUARTER_US, &[]);
+
+        let bars = Bars::of(&observed, &reference, 0..reference.len(), true);
+
+        assert_eq!(bars.get(bar(3)), None);
+        assert!(bars.iter().all(|(_, bar)| bar.gave_up == 0));
     }
 
     #[test]

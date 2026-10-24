@@ -72,16 +72,15 @@ impl Suggestion {
             }
         }
 
-        // Trouble mostly on the first note of the spot is trouble with the
-        // change into it: take in the bar before, unless the attempt began
-        // there and there was no change to make.
-        let opening = bars.get(first).copied().unwrap_or_default();
-        let into = first != start
-            && opening.pause_us > 0
-            && 2 * opening.into_bar_pause_us >= opening.pause_us;
-        let trouble = if into { first } else { trouble };
+        // Trouble mostly on the hardest bar's first note is trouble with the
+        // change into it: the bar before belongs in the loop, unless the
+        // attempt began there and there was no change to make.
+        let hardest = bars.get(trouble).copied().unwrap_or_default();
+        let into = trouble != start
+            && hardest.pause_us > 0
+            && 2 * hardest.into_bar_pause_us >= hardest.pause_us;
         let widened = earlier(first)
-            .filter(|_| into && last.get() - first.get() + 1 < MOST_BARS)
+            .filter(|_| into && first == trouble && last.get() - first.get() + 1 < MOST_BARS)
             .unwrap_or(first);
 
         // A loop has to be playable in a row (not across a repeat); the
@@ -193,6 +192,36 @@ mod tests {
     fn trouble_going_into_a_bar_loops_it_with_the_bar_before() {
         assert_eq!(
             Suggestion::after(&whole(&[(16, 3_000_000)]), bar(1), &minuet_in_time()),
+            Suggestion::Loop {
+                first: bar(2),
+                last: bar(3),
+                trouble: bar(3),
+                into: true,
+            }
+        );
+    }
+
+    // A wrong note in bar 2 joins it to the loop, and the long pause going
+    // into bar 3 is still named as such.
+    #[test]
+    fn trouble_going_into_a_bar_is_named_even_when_the_bar_before_joins() {
+        let reference = minuet_in_time();
+        // Up to bar 2's second time through (step 14), two wrong notes
+        // there, then on from there with the pause going into bar 3.
+        let mut start = played_in_time(&reference, 0..14, QUARTER_US, &[]);
+        start.record(Pitch::LOWEST);
+        start.record(Pitch::LOWEST);
+        let mut bars = Bars::of(&start, &reference, 0..reference.len(), false);
+        let rest = played_in_time(
+            &reference,
+            14..reference.len(),
+            QUARTER_US,
+            &[(16, 3_000_000)],
+        );
+        bars.add(&Bars::of(&rest, &reference, 14..reference.len(), false));
+
+        assert_eq!(
+            Suggestion::after(&bars, bar(1), &reference),
             Suggestion::Loop {
                 first: bar(2),
                 last: bar(3),

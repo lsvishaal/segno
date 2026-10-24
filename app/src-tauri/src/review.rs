@@ -107,9 +107,10 @@ pub fn of(
     run: Option<&LoopRun>,
 ) -> Review {
     let bar_at = |step: usize| reference.at(step).map(ExpectedNotes::measure);
-    let Some(start) = bar_at(steps.start) else {
+    let start = bar_at(steps.start).filter(|_| !observed.is_empty() || run.is_some());
+    let Some(start) = start else {
         return Review {
-            headline: String::new(),
+            headline: "Nothing played.".to_owned(),
             bars: Vec::new(),
             marks: Vec::new(),
             suggestion: None,
