@@ -1,4 +1,4 @@
-import { act, cleanup, fireEvent, render, screen, within } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { AttemptSummary, OpenedPiece, PracticeEvent, ReviewBar } from "../bridge";
@@ -260,6 +260,36 @@ describe("ending", () => {
     expect(bridge.endAttempt).toHaveBeenCalledWith("stop");
   });
 
+  it("the end of the piece finishes by itself, a moment after the last note", async () => {
+    // Only the timeouts: the screen's animations keep their own clock.
+    vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
+    try {
+      await renderScreen();
+      await startPracticing();
+      await act(async () => {
+        hear({ kind: "reachedEnd" });
+      });
+      await act(async () => {
+        vi.advanceTimersByTime(1000);
+      });
+      // A trill's tail: the wait starts again.
+      await act(async () => {
+        hear({ kind: "played", position: 407, pitch: 67, correct: true });
+      });
+      await act(async () => {
+        vi.advanceTimersByTime(1000);
+      });
+      expect(bridge.endAttempt).not.toHaveBeenCalled();
+
+      await act(async () => {
+        vi.advanceTimersByTime(600);
+      });
+      expect(bridge.endAttempt).toHaveBeenCalledWith("finished");
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it("Finish at the end of the piece says finished", async () => {
     await renderScreen();
     await startPracticing();
@@ -503,7 +533,8 @@ describe("the results after a run", () => {
     await act(async () => {
       fireEvent.click(screen.getByRole("button", { name: "♪ Show on the score" }));
     });
-    expect(screen.queryByRole("region", { name: "Results" })).not.toBeInTheDocument();
+    // The results fade out before they go.
+    await waitFor(() => expect(screen.queryByRole("region", { name: "Results" })).not.toBeInTheDocument());
     expect(screen.getByRole("status")).toHaveTextContent("Your last run is marked on the score");
     expect(drawn.last?.review?.marks).toEqual([{ position: 36, correct: true, wrong: 2 }]);
 

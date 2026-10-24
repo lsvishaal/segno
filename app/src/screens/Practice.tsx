@@ -36,6 +36,9 @@ import { REFLOW_THRESHOLD, clampScale, loadZoom, saveZoom, scoreWidth, stepScale
  * a real Verovio pass, so not on every wheel tick or resize frame. */
 const REFLOW_DEBOUNCE_MS = 250;
 
+/** How long after the last note of the piece the run finishes by itself. */
+const AUTO_FINISH_MS = 1500;
+
 /** Clean passes in a row that end a loop, unless the performer picks otherwise. */
 const LOOP_TARGET = 3;
 
@@ -431,6 +434,16 @@ export function PracticeScreen({
   const finish = useCallback(() => {
     void endAttempt(reachedEnd ? "finished" : "stop");
   }, [reachedEnd]);
+
+  // The last note played (not looping): the run finishes by itself a moment
+  // later, so the last chord rings and a trill's tail isn't cut off. Every
+  // note heard meanwhile (each one is a new `dot`) starts the wait again;
+  // Stop, R or a click on a bar leave the end and so cancel it.
+  useEffect(() => {
+    if (!reachedEnd || loop) return;
+    const timeout = window.setTimeout(() => void endAttempt("finished"), AUTO_FINISH_MS);
+    return () => window.clearTimeout(timeout);
+  }, [reachedEnd, loop, dot]);
 
   const again = useCallback(
     (instrument: string) => {

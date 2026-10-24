@@ -1,4 +1,4 @@
-// The whole Minuet, from its real expected notes: end of piece, summary, practise again.
+// The whole Minuet, from its real expected notes: the end finishes the run by itself, the results, practise again.
 import * as w from "../wd.mjs";
 import { check, log, sessions, newSessions, minuet, startPractising, buttonExists, clickButton, waitForButton, play, shot } from "../lib.mjs";
 
@@ -12,8 +12,9 @@ export default async function wholePiece() {
   await shot("whole-piece-end");
   check("reaching the end of the piece changes Stop to Finish", await buttonExists("Finish"));
 
-  await clickButton("Finish");
-  await w.until("return document.body.innerText.includes('Practice again')", "the summary", 10000);
+  // No click: the run finishes by itself a moment after the last note.
+  await w.until("return !!document.querySelector('section[aria-label=Results]')", "the run to finish by itself", 5000);
+  check("the end of the piece finishes the run by itself", true);
   await shot("whole-piece-summary");
   const results = await w.run(
     "const r = document.querySelector('section[aria-label=Results]'); return r ? r.innerText : null",
