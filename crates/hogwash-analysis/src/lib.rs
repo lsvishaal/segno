@@ -34,8 +34,10 @@
 //! wrong. `004 §6.5` requires one source of truth, and this is it.
 
 mod analysis;
+mod bars;
 mod finding;
 mod fixtures;
 
 pub use analysis::{Analysis, Summary};
+pub use bars::{Bar, Bars};
 pub use finding::Finding;

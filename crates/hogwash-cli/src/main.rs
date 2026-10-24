@@ -11,8 +11,8 @@
 //! hogwash-cli 60 62 64 65 67
 //! ```
 //!
-//! **Replay** (`replay`, `expected`): a real `MusicXML` file through the real
-//! practice and analysis path, with no keyboard. See [`replay`].
+//! **Replay** (`replay`, `expected`, `bars`): a real `MusicXML` file through
+//! the real practice and analysis path, with no keyboard. See [`replay`].
 
 mod replay;
 
@@ -27,7 +27,7 @@ use hogwash_domain::{MeasureNumber, Pitch, PitchSpelling, Step};
 use hogwash_feedback::Feedback;
 use hogwash_notation::{Measure, Note, Position, ReferencePerformance, Score};
 
-const USAGE: &str = "replay <score.musicxml> <events.json> [--from-bar <n> | --loop <a>-<b>] | expected <score.musicxml>";
+const USAGE: &str = "replay <score.musicxml> <events.json> [--from-bar <n> | --loop <a>-<b>] | expected <score.musicxml> | bars <score.musicxml> <data folder> <piece id>";
 
 fn main() -> ExitCode {
     let arguments: Vec<String> = std::env::args().skip(1).collect();
@@ -58,7 +58,10 @@ fn main() -> ExitCode {
                 }),
         ),
         [command, score] if command == "expected" => Some(replay::expected(Path::new(score))),
-        [command, ..] if command == "replay" || command == "expected" => {
+        [command, score, data, piece] if command == "bars" => {
+            Some(replay::bars(Path::new(score), Path::new(data), piece))
+        }
+        [command, ..] if ["replay", "expected", "bars"].contains(&command.as_str()) => {
             Some(Err(format!("usage: hogwash-cli {USAGE}")))
         }
         _ => None,

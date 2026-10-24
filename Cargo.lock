@@ -1315,6 +1315,7 @@ dependencies = [
  "hogwash-feedback",
  "hogwash-notation",
  "hogwash-practice",
+ "hogwash-records",
  "serde",
  "serde_json",
 ]

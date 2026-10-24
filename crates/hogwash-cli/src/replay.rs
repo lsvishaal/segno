@@ -4,6 +4,7 @@
 //! ```text
 //! hogwash-cli replay   <score.musicxml> <events.json> [--from-bar <n> | --loop <a>-<b>]
 //! hogwash-cli expected <score.musicxml>
+//! hogwash-cli bars     <score.musicxml> <data folder> <piece id>
 //! ```
 //!
 //! An events file is a JSON array of played notes, in the order they were
@@ -15,13 +16,14 @@ use std::fmt::Write as _;
 use std::path::Path;
 use std::sync::Arc;
 
-use hogwash_analysis::Analysis;
-use hogwash_domain::{MeasureNumber, Pitch, PitchSpelling, Step};
+use hogwash_analysis::{Analysis, Bars};
+use hogwash_domain::{MeasureNumber, PieceId, Pitch, PitchSpelling, Step};
 use hogwash_engraving::{EngravedScore, Engraver as _};
 use hogwash_engraving_verovio::VerovioEngraver;
 use hogwash_feedback::Feedback;
 use hogwash_notation::{ExpectedNotes, ReferencePerformance};
 use hogwash_practice::{Attempt, CursorMovement, Loop};
+use hogwash_records::{Ended, Records};
 use serde::Deserialize;
 
 /// One note from an events file.
@@ -173,6 +175,65 @@ pub(crate) fn expected(score: &Path) -> Result<String, String> {
         .collect();
 
     Ok(format!("[\n{}\n]\n", entries.join(",\n")))
+}
+
+/// `hogwash-cli bars <score> <data> <piece>`: every session of the piece
+/// kept under the data folder `data`, added up bar by bar. Only reads.
+pub(crate) fn bars(score: &Path, data: &Path, piece: &str) -> Result<String, String> {
+    let engraved = engrave(score)?;
+    let reference = ReferencePerformance::derived_from(engraved.score());
+    let piece = PieceId::new(piece).ok_or_else(|| format!("`{piece}` is not a piece id"))?;
+    let (sessions, unreadable) = Records::under(data)
+        .sessions()
+        .map_err(|failure| format!("cannot read sessions: {failure:?}"))?;
+
+    let mut out = header(&engraved, &reference);
+    let mut total = Bars::default();
+    let mut attempts = 0;
+    for session in sessions.iter().filter(|session| session.piece == piece) {
+        for attempt in &session.attempts {
+            let steps = attempt.from..attempt.to.unwrap_or(reference.len());
+            let gave_up = matches!(attempt.ended, Some(Ended::Restart | Ended::Stop));
+            total.add(&Bars::of(&attempt.played, &reference, steps, gave_up));
+            attempts += 1;
+        }
+    }
+    let _ = writeln!(
+        out,
+        "{attempts} attempts; {} session files unreadable\n",
+        unreadable.len()
+    );
+
+    out.push_str(
+        "bar  passes  timed  pause s  into s  longest s  breaks  wrong  gave up  difficulty\n",
+    );
+    let tenths = |us: u64| format!("{}.{}", us / 1_000_000, us / 100_000 % 10);
+    for (measure, bar) in total.iter() {
+        let _ = writeln!(
+            out,
+            "{:>3}  {:>6}  {:>5}  {:>7}  {:>6}  {:>9}  {:>6}  {:>5}  {:>7}  {:>10}",
+            measure.get(),
+            bar.passes,
+            bar.timed,
+            tenths(bar.pause_us),
+            tenths(bar.into_bar_pause_us),
+            tenths(bar.longest_pause_us),
+            bar.breaks,
+            bar.wrong,
+            bar.gave_up,
+            bar.difficulty(),
+        );
+    }
+
+    let mut hardest: Vec<_> = total.iter().filter(|(_, bar)| bar.passes >= 2).collect();
+    hardest.sort_by_key(|(measure, bar)| (std::cmp::Reverse(bar.difficulty()), *measure));
+    let names: Vec<String> = hardest
+        .iter()
+        .take(3)
+        .map(|(measure, _)| measure.get().to_string())
+        .collect();
+    let _ = writeln!(out, "\nhardest (2+ passes): bars {}", names.join(", "));
+    Ok(out)
 }
 
 fn engrave(score: &Path) -> Result<EngravedScore, String> {

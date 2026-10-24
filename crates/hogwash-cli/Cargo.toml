@@ -17,6 +17,7 @@ hogwash-engraving-verovio = { path = "../hogwash-engraving-verovio" }
 hogwash-feedback = { path = "../hogwash-feedback" }
 hogwash-notation = { path = "../hogwash-notation" }
 hogwash-practice = { path = "../hogwash-practice" }
+hogwash-records = { path = "../hogwash-records" }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 
