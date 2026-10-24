@@ -35,11 +35,12 @@
 
 mod analysis;
 mod bars;
+pub mod coach;
 mod finding;
 mod fixtures;
 mod suggestion;
 
 pub use analysis::{Analysis, Summary};
-pub use bars::{Bar, Bars};
+pub use bars::{Bar, Bars, StepTrace, Timing, Trace};
 pub use finding::Finding;
 pub use suggestion::Suggestion;

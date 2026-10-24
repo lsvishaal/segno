@@ -168,11 +168,11 @@ _require-verovio:
         exit 1
     fi
 
-# the engraving adapter against a real engine (everything else about it is tested without one)
+# the engraving adapter, and the coach on real scores, against a real engine (everything else about them is tested without one)
 [group('verovio')]
 engraving-test: _require-verovio
     HOGWASH_VEROVIO_LIB="{{verovio_lib}}" HOGWASH_VEROVIO_DATA="{{verovio_data}}" \
-        cargo test --package hogwash-engraving-verovio -- --ignored
+        cargo test --package hogwash-engraving-verovio --package hogwash-analysis -- --ignored
 
 # the shipped practice pieces, against a real engine — guards that they actually load
 [group('verovio')]

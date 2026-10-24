@@ -14,5 +14,11 @@ hogwash-domain = { path = "../hogwash-domain" }
 hogwash-notation = { path = "../hogwash-notation" }
 hogwash-practice = { path = "../hogwash-practice" }
 
+[dev-dependencies]
+# Only for the ignored tests on real scores (`just engraving-test`): the coach
+# read against music as Verovio engraves it.
+hogwash-engraving = { path = "../hogwash-engraving" }
+hogwash-engraving-verovio = { path = "../hogwash-engraving-verovio" }
+
 [lints]
 workspace = true

@@ -109,85 +109,51 @@ impl Bars {
         steps: Range<usize>,
         gave_up: bool,
     ) -> Self {
-        let mut bars = BTreeMap::<MeasureNumber, Bar>::new();
-        let measure_of = |step: usize| reference.at(step).map(ExpectedNotes::measure);
+        Self::from_trace(&Trace::of(observed, reference, steps, gave_up))
+    }
 
-        // The same replay as Analysis and the screen: when each step was
-        // completed, and which steps the performer was ever waiting at.
-        let mut cursor = Cursor::starting_at(Arc::new(reference.clone()), steps.start);
-        let mut completed: BTreeMap<usize, Option<u64>> = BTreeMap::new();
-        let mut visited = BTreeSet::new();
-        for (index, &pitch) in observed.played().iter().enumerate() {
-            let at = cursor.position();
-            if at >= steps.end {
-                break;
-            }
-            visited.insert(at);
-            cursor.observe(pitch);
-            let time = observed.touches().get(index).copied().flatten();
-            for step in at..cursor.position() {
-                completed.insert(step, time.map(|touch| touch.at_us));
-            }
-        }
-        // Given up in a bar only if it was begun: stopping just after a
-        // bar's last note gives up on nothing.
-        let stopped = cursor.position();
-        if gave_up
-            && visited.contains(&stopped)
-            && let Some(measure) = measure_of(stopped)
-        {
+    /// The stats of the attempt `trace` follows.
+    #[must_use]
+    pub fn from_trace(trace: &Trace) -> Self {
+        let mut bars = BTreeMap::<MeasureNumber, Bar>::new();
+
+        if let Some(measure) = trace.gave_up_in {
             bars.entry(measure).or_default().gave_up += 1;
         }
 
         // A pass begins wherever the bar changes or the steps jump.
-        let mut previous: Option<usize> = None;
-        for &step in &visited {
-            let Some(measure) = measure_of(step) else {
-                continue;
-            };
-            let continues = previous
-                .is_some_and(|before| before + 1 == step && measure_of(before) == Some(measure));
+        let mut previous: Option<&StepTrace> = None;
+        for step in &trace.steps {
+            let continues = previous.is_some_and(|before| {
+                before.step + 1 == step.step && before.measure == step.measure
+            });
             if !continues {
-                bars.entry(measure).or_default().passes += 1;
+                bars.entry(step.measure).or_default().passes += 1;
             }
             previous = Some(step);
         }
 
-        for Gap {
-            step,
-            taken: gap,
-            written,
-            expected,
-        } in gaps(reference, &completed, steps.start)
-        {
-            let Some(measure) = measure_of(step) else {
+        for step in &trace.steps {
+            let bar = bars.entry(step.measure).or_default();
+            bar.wrong += u32::try_from(step.wrong.len())
+                .unwrap_or(u32::MAX)
+                .min(SEARCHING);
+            let Some(timing) = step.timing else {
                 continue;
             };
-            let bar = bars.entry(measure).or_default();
             bar.timed += 1;
-            if gap > BREAK_FLOOR_US.max(BREAK_FACTOR * expected) {
+            if timing.is_break {
                 bar.breaks += 1;
                 continue;
             }
-            bar.played_us += gap;
-            bar.written_ticks += written;
-            // Half as long again as the music asks is still just playing.
-            let pause = gap.saturating_sub(expected * 3 / 2);
+            bar.played_us += timing.taken_us;
+            bar.written_ticks += timing.written_ticks;
+            let pause = timing.pause_us();
             bar.pause_us += pause;
             bar.longest_pause_us = bar.longest_pause_us.max(pause);
-            if measure_of(step - 1) != Some(measure) {
+            if step.opens_bar {
                 bar.into_bar_pause_us += pause;
             }
-        }
-
-        let mut wrong_at = BTreeMap::<usize, (MeasureNumber, u32)>::new();
-        for finding in Analysis::over(observed, reference, steps).findings() {
-            if let Finding::IncorrectPitch { at, .. } = finding {
-                wrong_at.entry(at.position()).or_insert((at.measure(), 0)).1 += 1;
-            }
-        }
-        for (measure, wrong) in wrong_at.into_values() {
-            bars.entry(measure).or_default().wrong += wrong.min(SEARCHING);
         }
 
         Self(bars)
@@ -248,12 +214,151 @@ impl Bars {
     }
 }
 
-/// Each timed step after the first: its gap since the step before, and how
-/// long the music asks that gap to be at the performer's pace, both in µs.
-///
-/// The pace is the attempt's median time per quarter note, so one long
-/// hesitation doesn't make every other note look rushed. Without a written
-/// rhythm every step counts as a quarter.
+/// One attempt, step by step: what the coach and the bar stats are both
+/// worked out from.
+#[derive(Debug, Clone, Default, PartialEq, Eq, Hash)]
+pub struct Trace {
+    /// Every step the performer was ever waiting at, in order.
+    pub steps: Vec<StepTrace>,
+    /// The bar the attempt was given up in (restart or stop), if it was
+    /// given up after something was played there.
+    pub gave_up_in: Option<MeasureNumber>,
+}
+
+/// One step of an attempt.
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub struct StepTrace {
+    pub step: usize,
+    pub measure: MeasureNumber,
+    /// The first step of its bar, coming from the bar before.
+    pub opens_bar: bool,
+    /// How long it took to reach, when that could be timed.
+    pub timing: Option<Timing>,
+    /// Each wrong key played while the cursor waited here, as how far it
+    /// was from the nearest written note, in keys (semitones): -1 is the key
+    /// just below. Grace notes and ornaments are not wrong.
+    pub wrong: Vec<i8>,
+}
+
+/// How long one step took against what the music asks.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub struct Timing {
+    /// From the step before to this one.
+    pub taken_us: u64,
+    /// What the written rhythm asks for, at the performer's pace.
+    pub expected_us: u64,
+    /// The written gap, in ticks.
+    pub written_ticks: u64,
+    /// Long enough to be a break, not a pause.
+    pub is_break: bool,
+}
+
+impl Timing {
+    /// Time beyond what the music asks: half as long again is still just
+    /// playing.
+    #[must_use]
+    pub const fn pause_us(&self) -> u64 {
+        if self.is_break {
+            0
+        } else {
+            self.taken_us.saturating_sub(self.expected_us * 3 / 2)
+        }
+    }
+}
+
+impl Trace {
+    /// Follows one attempt that began at `steps.start` and could go no
+    /// further than `steps.end`, with the same Cursor as Analysis and the
+    /// screen. `gave_up` is whether it ended by restarting or stopping.
+    #[must_use]
+    pub fn of(
+        observed: &ObservedPerformance,
+        reference: &ReferencePerformance,
+        steps: Range<usize>,
+        gave_up: bool,
+    ) -> Self {
+        let measure_of = |step: usize| reference.at(step).map(ExpectedNotes::measure);
+
+        // When each step was completed, and which steps the performer was
+        // ever waiting at.
+        let mut cursor = Cursor::starting_at(Arc::new(reference.clone()), steps.start);
+        let mut completed: BTreeMap<usize, Option<u64>> = BTreeMap::new();
+        let mut visited = BTreeSet::new();
+        for (index, &pitch) in observed.played().iter().enumerate() {
+            let at = cursor.position();
+            if at >= steps.end {
+                break;
+            }
+            visited.insert(at);
+            cursor.observe(pitch);
+            let time = observed.touches().get(index).copied().flatten();
+            for step in at..cursor.position() {
+                completed.insert(step, time.map(|touch| touch.at_us));
+            }
+        }
+        // Given up in a bar only if it was begun: stopping just after a
+        // bar's last note gives up on nothing.
+        let stopped = cursor.position();
+        let gave_up_in = (gave_up && visited.contains(&stopped))
+            .then(|| measure_of(stopped))
+            .flatten();
+
+        let timings: BTreeMap<usize, Timing> = gaps(reference, &completed, steps.start)
+            .into_iter()
+            .map(|gap| {
+                let is_break = gap.taken > BREAK_FLOOR_US.max(BREAK_FACTOR * gap.expected);
+                let timing = Timing {
+                    taken_us: gap.taken,
+                    expected_us: gap.expected,
+                    written_ticks: gap.written,
+                    is_break,
+                };
+                (gap.step, timing)
+            })
+            .collect();
+
+        let mut wrong: BTreeMap<usize, Vec<i8>> = BTreeMap::new();
+        for finding in Analysis::over(observed, reference, steps).findings() {
+            if let Finding::IncorrectPitch {
+                at,
+                played,
+                expected,
+            } = finding
+            {
+                let offset = expected
+                    .iter()
+                    .map(|note| i16::from(u8::from(*played)) - i16::from(u8::from(note.sounding())))
+                    .min_by_key(|offset| offset.unsigned_abs())
+                    .and_then(|offset| i8::try_from(offset).ok())
+                    .unwrap_or(i8::MAX);
+                wrong.entry(at.position()).or_default().push(offset);
+            }
+        }
+
+        let steps = visited
+            .iter()
+            .chain(timings.keys())
+            .copied()
+            .collect::<BTreeSet<usize>>()
+            .into_iter()
+            .filter_map(|step| {
+                let measure = measure_of(step)?;
+                Some(StepTrace {
+                    step,
+                    measure,
+                    opens_bar: step
+                        .checked_sub(1)
+                        .is_some_and(|before| measure_of(before) != Some(measure)),
+                    timing: timings.get(&step).copied(),
+                    wrong: wrong.remove(&step).unwrap_or_default(),
+                })
+            })
+            .collect();
+
+        Self { steps, gave_up_in }
+    }
+}
+
 /// One timed step: its gap since the step before and what the music asks
 /// of that gap, in ticks and in µs at the performer's pace.
 struct Gap {
@@ -263,6 +368,12 @@ struct Gap {
     expected: u64,
 }
 
+/// Each timed step after the first: its gap since the step before, and how
+/// long the music asks that gap to be at the performer's pace, both in µs.
+///
+/// The pace is the attempt's median time per quarter note, so one long
+/// hesitation doesn't make every other note look rushed. Without a written
+/// rhythm every step counts as a quarter.
 fn gaps(
     reference: &ReferencePerformance,
     completed: &BTreeMap<usize, Option<u64>>,

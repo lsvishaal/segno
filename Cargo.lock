@@ -1268,6 +1268,8 @@ version = "0.0.0"
 dependencies = [
  "hogwash-capture",
  "hogwash-domain",
+ "hogwash-engraving",
+ "hogwash-engraving-verovio",
  "hogwash-notation",
  "hogwash-practice",
 ]
