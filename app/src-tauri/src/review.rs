@@ -7,10 +7,12 @@
 
 use std::collections::BTreeMap;
 
-use hogwash_analysis::{Analysis, Bar, Bars, Finding, Suggestion};
+use hogwash_analysis::coach::{Coach, Kind};
+use hogwash_analysis::{Analysis, Bar, Bars, Finding, Suggestion, Trace};
 use hogwash_capture::ObservedPerformance;
 use hogwash_domain::MeasureNumber;
-use hogwash_feedback::review::{bar_line, headline, label, loop_headline, pass_line};
+use hogwash_feedback::coach::{self as words, CardText};
+use hogwash_feedback::review::{bar_line, label, loop_headline, pass_line, played};
 use hogwash_notation::{ExpectedNotes, ReferencePerformance};
 use serde::Serialize;
 
@@ -31,6 +33,36 @@ pub struct Review {
     pub marks: Vec<ReviewMark>,
     /// The one thing worth doing next, if anything.
     pub suggestion: Option<Suggested>,
+    /// What to work on, most important first: at most three, or one saying
+    /// the run was clean.
+    pub cards: Vec<ReviewCard>,
+    /// What went well, a line each.
+    pub went_well: Vec<String>,
+    /// Said instead of cards when too little was played.
+    pub note: Option<String>,
+}
+
+/// One thing to work on.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ReviewCard {
+    /// What kind of spot: `intoBar`, `jump`, `fastNotes`, `wrongNotes`,
+    /// `rushedLongNotes`, `slowBars`, `keepsStopping`, `bigStep`, `clean`.
+    pub kind: &'static str,
+    /// The bars to show from the score.
+    pub first: u32,
+    pub last: u32,
+    /// The bars its button practises; absent for a clean run.
+    pub drill_first: Option<u32>,
+    pub drill_last: Option<u32>,
+    /// The bar a pause going into it was before, to mark on the cut-out.
+    pub pause_into: Option<u32>,
+    pub title: String,
+    pub what: String,
+    pub why: String,
+    pub steps: Vec<String>,
+    pub button: Option<String>,
+    pub also: Option<String>,
 }
 
 /// The numbers at a glance.
@@ -131,6 +163,8 @@ pub enum Ending {
 pub struct Segment {
     /// The bar it began in.
     start: MeasureNumber,
+    /// Step by step, for the coach.
+    trace: Trace,
     bars: Bars,
     ending: Ending,
     right: usize,
@@ -142,14 +176,14 @@ pub struct Segment {
 
 impl Segment {
     /// The part of a run an attempt that began at step `from` was, given
-    /// its analysis and per-bar stats. `None` if nothing was played.
+    /// its analysis and the trace of it. `None` if nothing was played.
     #[must_use]
     pub fn of(
         reference: &ReferencePerformance,
         from: usize,
         observed: &ObservedPerformance,
         analysis: &Analysis,
-        bars: Bars,
+        trace: Trace,
         ending: Ending,
     ) -> Option<Self> {
         if observed.is_empty() {
@@ -158,7 +192,8 @@ impl Segment {
         let summary = analysis.summary();
         Some(Self {
             start: reference.at(from).map(ExpectedNotes::measure)?,
-            bars,
+            bars: Bars::from_trace(&trace),
+            trace,
             ending,
             right: summary.correct(),
             wrong: summary.incorrect() + summary.unexpected(),
@@ -198,6 +233,9 @@ pub fn of(reference: &ReferencePerformance, run: &Run, looping: Option<LoopScope
             passes: Vec::new(),
             marks: Vec::new(),
             suggestion: None,
+            cards: Vec::new(),
+            went_well: Vec::new(),
+            note: None,
         };
     };
 
@@ -247,12 +285,29 @@ pub fn of(reference: &ReferencePerformance, run: &Run, looping: Option<LoopScope
             .map(|(measure, _)| measure)
             .max()
             .unwrap_or(start);
-        headline(start, reached, time(segments), &bars, &suggestion)
+        played(start, reached, time(segments))
     };
+
+    let numbers = numbers(reference, segments, &bars, looping.is_none());
+    let traces: Vec<Trace> = segments
+        .iter()
+        .map(|segment| segment.trace.clone())
+        .collect();
+    let coach = Coach::of(reference, &traces, numbers.accuracy);
+    let too_short = suggestion == Suggestion::TooShort;
+    let cards = if too_short {
+        Vec::new()
+    } else if coach.cards.is_empty() {
+        vec![clean_card(start, end, numbers.steadiness)]
+    } else {
+        coach.cards.iter().map(card).collect()
+    };
+    let mut went_well: Vec<String> = coach.went_well.iter().map(words::went_well).collect();
+    went_well.extend(better_passes(&passes));
 
     Review {
         headline,
-        numbers: numbers(reference, segments, &bars, looping.is_none()),
+        numbers,
         bars: (start.get()..=end.get())
             .filter_map(bar)
             .map(|measure| column(measure, bars.get(measure), reference))
@@ -260,7 +315,89 @@ pub fn of(reference: &ReferencePerformance, run: &Run, looping: Option<LoopScope
         passes,
         marks: merged(segments),
         suggestion: suggested(&suggestion),
+        cards,
+        went_well,
+        note: too_short.then(words::too_short),
     }
+}
+
+fn card(card: &hogwash_analysis::coach::Card) -> ReviewCard {
+    let spot = &card.main;
+    let CardText {
+        title,
+        what,
+        why,
+        steps,
+        button,
+        also,
+    } = words::card(card);
+    // A pause going into a bar is shown with the bar before it.
+    let (first, last) = if spot.kind == Kind::IntoBar {
+        spot.drill
+    } else {
+        (spot.first, spot.last)
+    };
+    ReviewCard {
+        kind: match spot.kind {
+            Kind::IntoBar => "intoBar",
+            Kind::Jump => "jump",
+            Kind::FastNotes { .. } => "fastNotes",
+            Kind::WrongNotes => "wrongNotes",
+            Kind::RushedLongNotes => "rushedLongNotes",
+            Kind::SlowBars => "slowBars",
+            Kind::KeepsStopping => "keepsStopping",
+            Kind::BigStep => "bigStep",
+        },
+        first: first.get(),
+        last: last.get(),
+        drill_first: Some(spot.drill.0.get()),
+        drill_last: Some(spot.drill.1.get()),
+        pause_into: (spot.kind == Kind::IntoBar).then(|| spot.first.get()),
+        title,
+        what,
+        why,
+        steps,
+        button: Some(button),
+        also,
+    }
+}
+
+fn clean_card(start: MeasureNumber, end: MeasureNumber, steadiness: Option<u32>) -> ReviewCard {
+    let CardText {
+        title, what, steps, ..
+    } = words::clean_run(steadiness);
+    ReviewCard {
+        kind: "clean",
+        first: start.get(),
+        last: end.get().min(start.get() + 3),
+        drill_first: None,
+        drill_last: None,
+        pause_into: None,
+        title,
+        what,
+        why: String::new(),
+        steps,
+        button: None,
+        also: None,
+    }
+}
+
+/// In a loop: the last pass against the first, when it was both faster and
+/// no less clean.
+fn better_passes(passes: &[ReviewPass]) -> Option<String> {
+    let (first, last) = (passes.first()?, passes.last()?);
+    let faster = last.tempo? > first.tempo?;
+    (passes.len() >= 2 && faster && last.wrong <= first.wrong).then(|| {
+        format!(
+            "Pass {} was faster than pass 1{}",
+            last.number,
+            if last.wrong < first.wrong {
+                " and cleaner"
+            } else {
+                ""
+            }
+        )
+    })
 }
 
 /// The button after a loop reached its goal: the loop a bar wider each side.

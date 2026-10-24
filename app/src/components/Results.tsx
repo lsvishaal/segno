@@ -2,24 +2,23 @@ import { useState } from "react";
 
 import { motion } from "motion/react";
 
-import type {
-  Numbers,
-  Review,
-  ReviewBar,
-  ReviewPass,
-  Suggested,
-} from "../bridge";
+import type { DrawnNote, Numbers, Review, ReviewBar, ReviewCard, ReviewPass } from "../bridge";
+import { BarCutout } from "./BarCutout";
 
 /**
- * The results after a run, in the middle of the screen where the score was:
- * the big numbers, a chart of how each bar (or each pass of a loop) went,
- * the small numbers, one line, and what to do next. Every number and
- * sentence comes from Rust; this only lays them out.
+ * The results after a run, where the score was: what to work on (at most
+ * three cards, each with the bars cut out of your score, what happened, why,
+ * and how to fix it), what went well, and what to do next. The numbers and
+ * the chart wait under Details. Every word and number comes from Rust; this
+ * only lays them out.
  */
 export function Results({
   review,
   reason,
-  onPractise,
+  scoreRoot,
+  notesAt,
+  onCard,
+  onNoteNames,
   onAgain,
   onShowScore,
   onLibrary,
@@ -27,93 +26,229 @@ export function Results({
   readonly review: Review;
   /** Why the run ended by itself, if it did. */
   readonly reason: string | null;
-  readonly onPractise: (suggested: Suggested) => void;
+  /** The engraved score, laid out behind the results: where cut-outs come from. */
+  readonly scoreRoot: HTMLElement | null;
+  /** Position in the piece → the notes drawn for it. */
+  readonly notesAt: ReadonlyMap<number, readonly DrawnNote[]>;
+  /** A card's button: practise what it is about. */
+  readonly onCard: (card: ReviewCard) => void;
+  /** Turn note names on, from a card about reading. */
+  readonly onNoteNames: () => void;
   readonly onAgain: () => void;
   /** Back to the score, its marks left on; at a bar, if one was picked. */
   readonly onShowScore: (measure?: number) => void;
   readonly onLibrary: () => void;
 }) {
   const { numbers } = review;
-  // "Play it again" is Practice again; only a loop needs its own button.
-  const suggestion =
-    review.suggestion?.first != null ? review.suggestion : null;
-  const points =
-    review.passes.length > 0
-      ? passPoints(review.passes)
-      : barPoints(review.bars);
-  const charted =
-    points.filter((point) => point.tempo !== null || point.wrong > 0).length >=
-    2;
+  const [main, ...more] = review.cards;
+  const toFix = review.cards.some((card) => card.kind !== "clean");
 
   return (
-    <section
-      aria-label="Results"
-      className="mx-auto flex w-full max-w-[960px] flex-col gap-8 px-8 py-12"
-    >
+    <section aria-label="Results" className="mx-auto flex w-full max-w-[1040px] flex-col gap-8 px-8 py-10">
+      <header className="flex flex-wrap items-baseline justify-between gap-x-8 gap-y-2">
+        <p className="text-subtitle text-ink">{review.headline}</p>
+        <p className="font-mono text-xs text-ink-muted tabular-nums">
+          {[
+            numbers.accuracy !== null && `accuracy ${numbers.accuracy}%`,
+            numbers.tempo !== null && (numbers.rhythm ? `♩ ${numbers.tempo}` : `${numbers.tempo} notes/min`),
+            numbers.steadiness !== null && `steady ${numbers.steadiness}%`,
+            numbers.restarts > 0 && `restarts ${numbers.restarts}`,
+          ]
+            .filter(Boolean)
+            .join("   ")}
+        </p>
+      </header>
+
       {reason && <p className="text-sm text-ink-muted">{reason}</p>}
+      {review.note && <p className="text-sm text-ink-muted">{review.note}</p>}
 
-      <div className="flex flex-col gap-8 sm:flex-row sm:items-stretch">
-        <div className="flex shrink-0 flex-col gap-6 sm:w-48">
-          <Big
-            label="accuracy"
-            value={numbers.accuracy === null ? "—" : `${numbers.accuracy}%`}
+      {main && (
+        <div className="flex flex-col gap-4">
+          {toFix && <h2 className="text-label text-ink-muted uppercase">Work on these</h2>}
+          <CoachCard
+            card={main}
+            number={toFix ? 1 : null}
+            large
+            marks={review.marks}
+            scoreRoot={scoreRoot}
+            notesAt={notesAt}
+            onCard={onCard}
+            onNoteNames={onNoteNames}
+            onShowScore={onShowScore}
           />
-          <Big
-            label={numbers.rhythm ? "tempo · ♩ / min" : "notes / min"}
-            value={numbers.tempo === null ? "—" : String(numbers.tempo)}
-          />
+          {more.length > 0 && (
+            <div className="grid gap-4 md:grid-cols-2">
+              {more.map((card, index) => (
+                <CoachCard
+                  key={`${card.kind}-${card.first}`}
+                  card={card}
+                  number={index + 2}
+                  large={false}
+                  marks={review.marks}
+                  scoreRoot={scoreRoot}
+                  notesAt={notesAt}
+                  onCard={onCard}
+                  onNoteNames={onNoteNames}
+                  onShowScore={onShowScore}
+                />
+              ))}
+            </div>
+          )}
         </div>
+      )}
 
-        {charted && (
-          <div className="min-w-0 flex-1">
-            <Chart
-              points={points}
-              byPass={review.passes.length > 0}
-              tempoLabel={numbers.rhythm ? "♩ / min" : "notes / min"}
-              onPick={onShowScore}
-            />
-          </div>
-        )}
-      </div>
-
-      <Small numbers={numbers} />
-
-      <p className="text-subtitle text-ink">{review.headline}</p>
+      {review.wentWell.length > 0 && (
+        <div className="flex flex-wrap items-center gap-2" aria-label="Went well">
+          <h2 className="mr-2 text-label text-ink-muted uppercase">Went well</h2>
+          {review.wentWell.map((line) => (
+            <span key={line} className="rounded-full border border-rule px-3 py-1 text-sm text-ink">
+              <span aria-hidden="true" className="mr-1.5 text-correct">✓</span>
+              {line}
+            </span>
+          ))}
+        </div>
+      )}
 
       <div className="flex flex-wrap items-center gap-3">
-        {suggestion && (
-          <motion.button
-            type="button"
-            onClick={() => onPractise(suggestion)}
-            whileTap={{ scale: 0.96 }}
-            title="Enter"
-            className={PRIMARY}
-          >
-            ⟲ {suggestion.label}
-          </motion.button>
-        )}
         <motion.button
           type="button"
           onClick={onAgain}
           whileTap={{ scale: 0.96 }}
-          title={suggestion ? "R" : "Enter or R"}
-          className={suggestion ? SECONDARY : PRIMARY}
+          title={toFix ? "R" : "Enter or R"}
+          className={toFix ? SECONDARY : PRIMARY}
         >
           ↻ Practice again
         </motion.button>
-        <button
-          type="button"
-          onClick={() => onShowScore()}
-          title="Esc"
-          className={SECONDARY}
-        >
+        <button type="button" onClick={() => onShowScore()} title="Esc" className={SECONDARY}>
           ♪ Show on the score
         </button>
         <button type="button" onClick={onLibrary} className={SECONDARY}>
           ← Library
         </button>
       </div>
+
+      <Details review={review} onShowScore={onShowScore} />
     </section>
+  );
+}
+
+/** One thing to work on: the bars, what happened, why, how to fix it, and a button. */
+function CoachCard({
+  card,
+  number,
+  large,
+  marks,
+  scoreRoot,
+  notesAt,
+  onCard,
+  onNoteNames,
+  onShowScore,
+}: {
+  readonly card: ReviewCard;
+  /** Its place in the list; none for a clean run. */
+  readonly number: number | null;
+  readonly large: boolean;
+  readonly marks: Review["marks"];
+  readonly scoreRoot: HTMLElement | null;
+  readonly notesAt: ReadonlyMap<number, readonly DrawnNote[]>;
+  readonly onCard: (card: ReviewCard) => void;
+  readonly onNoteNames: () => void;
+  readonly onShowScore: (measure?: number) => void;
+}) {
+  return (
+    <article
+      aria-label={card.title}
+      data-card={card.kind}
+      className={`panel flex gap-6 rounded-2xl p-6 ${large ? "flex-col md:flex-row" : "flex-col"}`}
+    >
+      <div className={large ? "h-40 shrink-0 md:h-auto md:min-h-40 md:w-[44%]" : "h-28 shrink-0"}>
+        <BarCutout
+          root={scoreRoot}
+          first={card.first}
+          last={card.last}
+          marks={marks}
+          notesAt={notesAt}
+          pauseInto={card.pauseInto}
+          onPick={onShowScore}
+        />
+      </div>
+
+      <div className="flex min-w-0 flex-1 flex-col gap-3">
+        <h3 className={`font-serif ${large ? "text-heading" : "text-title"} leading-tight`}>
+          {number !== null && <span className="mr-2 font-mono text-base text-ink-muted">{number}</span>}
+          {card.title}
+        </h3>
+        <p className="text-sm text-ink">{card.what}</p>
+        {card.why && <p className="text-sm text-ink-muted">{card.why}</p>}
+        {card.steps.length > 0 && (
+          <ol className="list-decimal space-y-1 pl-5 text-sm text-ink marker:font-mono marker:text-ink-muted">
+            {card.steps.map((step) => (
+              <li key={step}>{step}</li>
+            ))}
+          </ol>
+        )}
+        {card.also && <p className="text-xs text-ink-muted">{card.also}</p>}
+        {card.button && (
+          <div className="mt-auto flex flex-wrap gap-2 pt-1">
+            <motion.button
+              type="button"
+              onClick={() => onCard(card)}
+              whileTap={{ scale: 0.96 }}
+              title={number === 1 ? "Enter" : undefined}
+              className={number === 1 ? PRIMARY : SECONDARY}
+            >
+              ⟲ {card.button}
+            </motion.button>
+            {card.kind === "wrongNotes" && (
+              <button type="button" onClick={onNoteNames} className={SECONDARY}>
+                Turn on note names
+              </button>
+            )}
+          </div>
+        )}
+      </div>
+    </article>
+  );
+}
+
+/** The numbers and the chart, for whoever wants them. */
+function Details({
+  review,
+  onShowScore,
+}: {
+  readonly review: Review;
+  readonly onShowScore: (measure?: number) => void;
+}) {
+  const { numbers } = review;
+  const points = review.passes.length > 0 ? passPoints(review.passes) : barPoints(review.bars);
+  const charted = points.filter((point) => point.tempo !== null || point.wrong > 0).length >= 2;
+
+  return (
+    <details className="group">
+      <summary className="cursor-pointer text-sm text-ink-muted select-none hover:text-accent">Details</summary>
+      <div className="mt-6 flex flex-col gap-8">
+        <div className="flex flex-col gap-8 sm:flex-row sm:items-stretch">
+          <div className="flex shrink-0 flex-col gap-6 sm:w-48">
+            <Big label="accuracy" value={numbers.accuracy === null ? "—" : `${numbers.accuracy}%`} />
+            <Big
+              label={numbers.rhythm ? "tempo · ♩ / min" : "notes / min"}
+              value={numbers.tempo === null ? "—" : String(numbers.tempo)}
+            />
+          </div>
+          {charted && (
+            <div className="min-w-0 flex-1">
+              <Chart
+                points={points}
+                byPass={review.passes.length > 0}
+                tempoLabel={numbers.rhythm ? "♩ / min" : "notes / min"}
+                onPick={onShowScore}
+              />
+            </div>
+          )}
+        </div>
+        <Small numbers={numbers} />
+      </div>
+    </details>
   );
 }
 

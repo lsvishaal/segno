@@ -46,7 +46,7 @@ use std::sync::mpsc::{Receiver, RecvTimeoutError, Sender, SyncSender, channel, s
 use std::thread;
 use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 
-use hogwash_analysis::{Analysis, Bars};
+use hogwash_analysis::{Analysis, Trace};
 use hogwash_capture::{Action, Instrument, Keyboard, MidiSource, NoInstrument, Touch};
 use hogwash_domain::{MeasureNumber, PieceId};
 use hogwash_feedback::Feedback;
@@ -1176,7 +1176,7 @@ fn finish(
 
     let steps = finished.from()..end;
     let gave_up = matches!(kept.ended, Ended::Restart | Ended::Stop);
-    let bars = Bars::of(
+    let trace = Trace::of(
         finished.observed(),
         open.session.reference(),
         steps.clone(),
@@ -1194,7 +1194,7 @@ fn finish(
         finished.from(),
         finished.observed(),
         &analysis,
-        bars,
+        trace,
         ending,
     ));
     let looping = open
@@ -1793,15 +1793,19 @@ mod tests {
         );
     }
 
-    // Bar 9 with a wrong C#5, a click back to bar 9, bar 9 clean, then Stop:
-    // the results cover both parts of the run.
+    // Bar 9 with a wrong C#5, a click back to bar 9, bar 9 with the same
+    // wrong C#5, then Stop: the results cover both parts of the run, and the
+    // same mistake both times is worth a card.
     #[test]
     #[ignore = "needs a real libverovio; run `just provided-test`"]
     fn the_results_cover_the_whole_run() {
         let (records, id, reference) = minuet("review-run");
         let mut session = None;
         let mut ongoing = Some(practising(&reference));
-        for keys in [[&[73][..], &BAR_9[..]].concat(), BAR_9.to_vec()] {
+        for keys in [
+            [&[73][..], &BAR_9[..]].concat(),
+            [&[73][..], &BAR_9[..]].concat(),
+        ] {
             start_at(
                 &mut session,
                 &mut ongoing,
@@ -1822,8 +1826,12 @@ mod tests {
             .review;
 
         let numbers = &review.numbers;
-        assert_eq!((numbers.right, numbers.wrong), (14, 1));
-        assert_eq!(numbers.accuracy, Some(93));
+        assert_eq!((numbers.right, numbers.wrong), (14, 2));
+        // Something to work on in bar 9, worded, with a button.
+        let card = review.cards.first().expect("a card");
+        assert!(card.first <= 9 && 9 <= card.last, "{card:?}");
+        assert!(!card.title.is_empty() && !card.steps.is_empty() && card.button.is_some());
+        assert_eq!(numbers.accuracy, Some(88));
         assert!(review.passes.is_empty());
         assert_eq!(
             review
@@ -1831,7 +1839,7 @@ mod tests {
                 .iter()
                 .find(|column| column.measure == 9)
                 .map(|column| column.wrong),
-            Some(1)
+            Some(2)
         );
     }
 

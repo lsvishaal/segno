@@ -21,7 +21,8 @@ export default async function wholePiece() {
   );
   log("    results:", JSON.stringify(results));
   check("the results replace the score", results !== null);
-  check("every note right: 100% and " + minuet.length + "/0/0", results?.includes("100%") && results?.includes(`${minuet.length}/0/0`), results);
+  const details = await w.run("const r = document.querySelector('section[aria-label=Results] details'); return r ? r.textContent : ''");
+  check("every note right: accuracy 100% and " + minuet.length + "/0/0 under Details", results?.includes("accuracy 100%") && details.includes(`${minuet.length}/0/0`), results);
   check("the attempt was saved with every note", newSessions(before)[0]?.attempts[0] === minuet.length, JSON.stringify(newSessions(before)));
 
   check("Practice again and Show on the score are offered", (await buttonExists("↻ Practice again")) && (await buttonExists("♪ Show on the score")));

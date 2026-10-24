@@ -1,7 +1,7 @@
 import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import type { AttemptSummary, OpenedPiece, PracticeEvent, ReviewBar } from "../bridge";
+import type { AttemptSummary, OpenedPiece, PracticeEvent, ReviewBar, ReviewCard } from "../bridge";
 import type { CursorState, ScoreReview } from "../components/Score";
 import { PracticeScreen } from "./Practice";
 
@@ -13,6 +13,7 @@ interface ScoreProps {
   readonly startPosition?: number;
   readonly loop?: { readonly first: number; readonly last: number } | null;
   readonly review?: ScoreReview | null;
+  readonly showNoteNames?: boolean;
   readonly cursor: CursorState;
 }
 const drawn = vi.hoisted(() => ({ last: null as ScoreProps | null }));
@@ -427,9 +428,24 @@ describe("the results after a run", () => {
     breaks: 0,
     line: `Bar ${measure}`,
   });
+  const card = (kind: ReviewCard["kind"], first: number, last: number, title: string): ReviewCard => ({
+    kind,
+    first,
+    last,
+    drillFirst: kind === "clean" ? null : first,
+    drillLast: kind === "clean" ? null : last,
+    pauseInto: kind === "intoBar" ? last : null,
+    title,
+    what: `What happened in ${title}.`,
+    why: kind === "clean" ? "" : "Why it happens.",
+    steps: ["First this.", "Then that."],
+    button: kind === "clean" ? null : first === last ? `Practise bar ${first}` : `Practise bars ${first}–${last}`,
+    also: null,
+  });
+  const INTO_9 = card("intoBar", 8, 9, "Going into bar 9");
   // Started at bar 8, trouble going into bar 9, stopped in bar 10.
   const summary = (
-    suggestion: AttemptSummary["review"]["suggestion"],
+    cards: readonly ReviewCard[],
     bars: readonly ReviewBar[] = [
       point(8, "played", 80),
       point(9, "played", 31, 2),
@@ -464,10 +480,12 @@ describe("the results after a run", () => {
       bars,
       passes: [],
       marks: [{ position: 36, correct: true, wrong: 2 }],
-      suggestion,
+      suggestion: null,
+      cards,
+      wentWell: bars.length > 0 ? ["Bars 1–4 with no mistakes and no stops"] : [],
+      note: null,
     },
   });
-  const LOOP = { label: "Loop bars 8–9", first: 8, last: 9 };
   const stopWith = async (ended: AttemptSummary) => {
     await renderScreen();
     await startPracticing();
@@ -481,25 +499,26 @@ describe("the results after a run", () => {
     });
   };
 
-  it("replaces the score with the results: big numbers, the chart, the line", async () => {
-    await stopWith(summary(LOOP));
+  it("replaces the score with what to work on: each card says what, why, how, with its bars", async () => {
+    await stopWith(summary([INTO_9, card("wrongNotes", 10, 10, "Wrong notes in bar 10")]));
 
     const results = within(screen.getByRole("region", { name: "Results" }));
-    expect(results.getByText("86%")).toBeInTheDocument();
-    expect(results.getByText("72")).toBeInTheDocument();
-    expect(results.getByText("tempo · ♩ / min")).toBeInTheDocument();
-    expect(results.getByText("12/2/80")).toBeInTheDocument();
-    expect(results.getByText("81%")).toBeInTheDocument();
     expect(results.getByText(/most trouble going into bar 9/)).toBeInTheDocument();
-    const chart = within(results.getByRole("list"));
-    expect(chart.getAllByRole("listitem")).toHaveLength(5);
-    expect(chart.getByRole("listitem", { name: "Bar 11 · not reached" })).toHaveAttribute("data-reached", "false");
+    expect(results.getByText(/accuracy 86%/)).toBeInTheDocument();
+    expect(results.getByText("Work on these")).toBeInTheDocument();
+    const first = within(results.getByRole("article", { name: "Going into bar 9" }));
+    expect(first.getByText("What happened in Going into bar 9.")).toBeInTheDocument();
+    expect(first.getByText("Why it happens.")).toBeInTheDocument();
+    expect(first.getAllByRole("listitem")).toHaveLength(2);
+    expect(first.getByRole("button", { name: "Bars 8–9 · show on the score" })).toBeInTheDocument();
+    expect(results.getByRole("article", { name: "Wrong notes in bar 10" })).toBeInTheDocument();
+    expect(results.getByText("Bars 1–4 with no mistakes and no stops")).toBeInTheDocument();
   });
 
-  it("the suggestion loops its bars and starts playing them, by click or Enter", async () => {
-    await stopWith(summary(LOOP));
+  it("a card's button loops its bars and starts playing them, by click or Enter", async () => {
+    await stopWith(summary([INTO_9]));
     await act(async () => {
-      fireEvent.click(screen.getByRole("button", { name: "⟲ Loop bars 8–9" }));
+      fireEvent.click(screen.getByRole("button", { name: "⟲ Practise bars 8–9" }));
     });
     expect(bridge.loopBars).toHaveBeenCalledWith("minuet", 8, 9, 3);
     expect(bridge.startAttempt).toHaveBeenCalledTimes(2);
@@ -511,14 +530,32 @@ describe("the results after a run", () => {
     bridge.loopBars.mockResolvedValue({ position: 32, first: 8, last: 9 });
     bridge.startAttempt.mockResolvedValue(undefined);
     bridge.instruments.mockResolvedValue([{ name: "Digital Piano" }]);
-    await stopWith(summary(LOOP));
+    await stopWith(summary([INTO_9]));
     await press("Enter");
     expect(bridge.loopBars).toHaveBeenCalledWith("minuet", 8, 9, 3);
   });
 
-  it("R plays again; with nothing to loop, Practice again is the main button", async () => {
-    await stopWith(summary({ label: "Again", first: null, last: null }));
-    expect(screen.queryByRole("button", { name: /Again$/ })).not.toBeInTheDocument();
+  it("stopping in the same bar starts there; a reading card can turn note names on", async () => {
+    await stopWith(
+      summary([card("keepsStopping", 9, 9, "Stopping at bar 9"), card("wrongNotes", 10, 10, "Wrong notes in bar 10")]),
+    );
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: "Turn on note names" }));
+    });
+    expect(drawn.last?.showNoteNames).toBe(true);
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: "⟲ Practise bar 9" }));
+    });
+    expect(bridge.startAtBar).toHaveBeenCalledWith("minuet", 9);
+    expect(bridge.loopBars).not.toHaveBeenCalled();
+    expect(bridge.startAttempt).toHaveBeenCalledTimes(2);
+  });
+
+  it("a clean run has no list to work on; R plays again", async () => {
+    await stopWith(summary([card("clean", 8, 10, "A clean run")]));
+    expect(screen.queryByText("Work on these")).not.toBeInTheDocument();
+    expect(screen.getByRole("article", { name: "A clean run" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "↻ Practice again" })).toBeInTheDocument();
 
     await press("r");
@@ -526,8 +563,18 @@ describe("the results after a run", () => {
     expect(bridge.loopBars).not.toHaveBeenCalled();
   });
 
+  it("the numbers and the chart wait under Details", async () => {
+    await stopWith(summary([INTO_9]));
+
+    const results = within(screen.getByRole("region", { name: "Results" }));
+    expect(results.getByText("Details")).toBeInTheDocument();
+    expect(results.getByText("12/2/80")).toBeInTheDocument();
+    const chart = within(results.getByRole("figure"));
+    expect(chart.getAllByRole("listitem")).toHaveLength(5);
+  });
+
   it("Show on the score leaves the marks there; Esc goes back and forth", async () => {
-    await stopWith(summary(LOOP));
+    await stopWith(summary([INTO_9]));
     expect(drawn.last?.review?.notReached).toEqual([11, 12]);
 
     await act(async () => {
@@ -543,7 +590,7 @@ describe("the results after a run", () => {
   });
 
   it("nothing played: no results, a quiet note, and Start again", async () => {
-    await stopWith(summary(null, []));
+    await stopWith(summary([], []));
 
     expect(screen.queryByRole("region", { name: "Results" })).not.toBeInTheDocument();
     expect(screen.getByRole("status")).toHaveTextContent("Nothing played.");

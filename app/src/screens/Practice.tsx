@@ -21,6 +21,7 @@ import type {
   Mark,
   OpenedPiece,
   PracticeEvent,
+  ReviewCard,
   StartPoint,
   Suggested,
 } from "../bridge";
@@ -491,6 +492,37 @@ export function PracticeScreen({
     [begin, loopTo],
   );
 
+  // A card's button: start at its bar, or loop the bars it is about, and
+  // play.
+  const practiseCard = useCallback(
+    (card: ReviewCard, instrument: string) => {
+      const { drillFirst: first, drillLast: last } = card;
+      if (first === null || last === null) {
+        begin(instrument);
+      } else if (card.kind === "keepsStopping") {
+        void (async () => {
+          try {
+            const point = await startAtBar(pieceId, first);
+            setStart(point);
+            setLoop(null);
+            begin(instrument, point.position);
+          } catch (error) {
+            setMoveRefusal(String(error));
+          }
+        })();
+      } else {
+        practise({ label: card.button ?? "", first, last }, instrument);
+      }
+    },
+    [begin, practise, pieceId],
+  );
+
+  // Position in the piece → the notes drawn for it, for the cut-outs.
+  const notesAt = useMemo(
+    () => new Map(engraving.marks.map((mark) => [mark.position, mark.notes] as const)),
+    [engraving.marks],
+  );
+
   // A column of the review's strip: that bar, brought into view.
   const showBar = useCallback((measure: number) => {
     scoreRef.current
@@ -510,7 +542,7 @@ export function PracticeScreen({
 
   const resultsShown = phase.kind === "ended" && !showingScore;
 
-  // On the results: Enter takes the suggestion (or plays again), R plays
+  // On the results: Enter takes the first card's drill (or plays again), R plays
   // again, Esc shows the score. On the score after a run, Esc goes back.
   useEffect(() => {
     if (phase.kind !== "ended" || settingsOpen) return;
@@ -525,8 +557,8 @@ export function PracticeScreen({
         // A focused button answers Enter itself.
         if (event.target instanceof HTMLButtonElement) return;
         event.preventDefault();
-        const suggestion = summary.review.suggestion;
-        if (suggestion?.first != null) practise(suggestion, instrument);
+        const card = summary.review.cards[0];
+        if (card && card.drillFirst !== null) practiseCard(card, instrument);
         else again(instrument);
       } else if (event.key.toLowerCase() === "r") {
         event.preventDefault();
@@ -536,7 +568,7 @@ export function PracticeScreen({
 
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, [phase, showingScore, settingsOpen, practise, again]);
+  }, [phase, showingScore, settingsOpen, practiseCard, again]);
 
   // What stays drawn on the score while the review is showing.
   const review = phase.kind === "ended" ? phase.summary.review : null;
@@ -754,7 +786,10 @@ export function PracticeScreen({
                 <Results
                   review={phase.summary.review}
                   reason={phase.summary.autoEnded ? phase.summary.reason : null}
-                  onPractise={(suggested) => practise(suggested, phase.instrument)}
+                  scoreRoot={scoreRef.current}
+                  notesAt={notesAt}
+                  onCard={(card) => practiseCard(card, phase.instrument)}
+                  onNoteNames={() => setShowNoteNames(true)}
                   onAgain={() => again(phase.instrument)}
                   onShowScore={showScore}
                   onLibrary={leave}

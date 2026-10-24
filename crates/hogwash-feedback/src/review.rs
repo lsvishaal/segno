@@ -41,6 +41,17 @@ pub fn headline(
     }
 }
 
+/// What a run covered and how long it took, for the top of the results:
+/// the cards below say what to work on.
+#[must_use]
+pub fn played(first: MeasureNumber, last: MeasureNumber, duration_us: Option<u64>) -> String {
+    [Some(span(first, last)), duration_us.map(duration)]
+        .into_iter()
+        .flatten()
+        .collect::<Vec<_>>()
+        .join(" · ")
+}
+
 /// The line for a loop run that ended: which bars, how many passes, how
 /// many of them clean.
 #[must_use]
@@ -140,7 +151,7 @@ mod tests {
     use hogwash_analysis::{Bar, Bars, Suggestion};
     use hogwash_domain::MeasureNumber;
 
-    use crate::review::{bar_line, headline, label, loop_headline, pass_line};
+    use crate::review::{bar_line, headline, label, loop_headline, pass_line, played};
 
     fn bar(number: u32) -> MeasureNumber {
         MeasureNumber::new(number).expect("a bar number")
@@ -219,6 +230,12 @@ mod tests {
         );
         assert_eq!(pass_line(3, &timed, false), "Pass 3 · ♩ = 100 · 2 wrong");
         assert_eq!(pass_line(4, &Bar::default(), true), "Pass 4 · clean");
+    }
+
+    #[test]
+    fn what_a_run_covered_is_its_bars_and_its_time() {
+        assert_eq!(played(bar(1), bar(8), Some(6_400_000)), "Bars 1–8 · 6 s");
+        assert_eq!(played(bar(9), bar(9), None), "Bar 9");
     }
 
     #[test]

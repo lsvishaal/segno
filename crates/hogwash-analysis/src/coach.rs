@@ -45,7 +45,8 @@ pub enum Kind {
     Jump,
     /// Fast notes; `broken_chord` when they spell out a chord.
     FastNotes { broken_chord: bool },
-    /// Wrong keys far from the written ones: reading.
+    /// Wrong keys: misread when far from the written one, mis-hit when
+    /// right next to it (the offset in the facts says which).
     WrongNotes,
     /// Long notes or rests cut short.
     RushedLongNotes,
@@ -129,6 +130,7 @@ struct Tally {
     jump_wrong: u32,
     fast_slips: u32,
     fast_us: u64,
+    /// Wrong keys outside fast notes, and misreads anywhere.
     far: u32,
     offsets: Vec<i8>,
     rushed: u32,
@@ -266,7 +268,7 @@ fn spots_in(
             1000 * u64::from(tally.far) / n64,
             Facts {
                 wrong: tally.far,
-                offset: most_common(&tally.offsets, |offset| offset.unsigned_abs() > SLIP),
+                offset: most_common(&tally.offsets, |_| true),
                 ..facts
             },
         ));
@@ -383,9 +385,12 @@ fn tally(reference: &ReferencePerformance, traces: &[Trace]) -> BTreeMap<Measure
             .count();
         let slips = u32::try_from(slips.min(3)).unwrap_or(3);
 
+        let fast = written.is_some_and(|ticks| ticks <= FAST_TICKS);
         tally.pause_us += pause;
         tally.offsets.extend(&step.wrong);
-        tally.far += wrong - slips;
+        // A slip in fast notes belongs to the fast notes; anywhere else,
+        // every wrong key is a wrong note.
+        tally.far += if fast { wrong - slips } else { wrong };
         if step.opens_bar {
             tally.into_us += pause;
         }
@@ -393,7 +398,7 @@ fn tally(reference: &ReferencePerformance, traces: &[Trace]) -> BTreeMap<Measure
             tally.jump_us += pause;
             tally.jump_wrong += wrong;
         }
-        if written.is_some_and(|ticks| ticks <= FAST_TICKS) {
+        if fast {
             tally.fast_slips += slips;
             tally.fast_us += pause;
         }

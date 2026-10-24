@@ -33,6 +33,11 @@
   /* The band behind looped bars (ROADMAP §16.2), always used faint. */
   --color-loop-band: #2563eb;
 
+  /* A pause, marked on the results' bar cut-outs: the amber of the heatmap
+     scale (ROADMAP §16.2), never red, so a pause reads as "slow here", not
+     "wrong". */
+  --color-pause: #d97706;
+
   --font-serif: "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, serif;
   /* Named rather than left to Tailwind's implicit default, so the choice is
      documented instead of incidental. */

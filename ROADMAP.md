@@ -498,6 +498,20 @@ touching nothing but the score, the keyboard and at most two buttons.
 
 ### M1.4 · M · A summary you can read in five seconds — done 24 Oct
 
+- **As built (24 Oct, third pass — the coach):** after your test ("graphs, but
+  no real feedback") and research (Duke et al. 2009; r/piano, r/pianolearning;
+  Chang; Morsi et al. SMC 2024; feedback-after-practice findings), the results
+  lead with **at most three cards**: the bars cut out of your score (wrong
+  notes ringed, pauses marked), what happened, why, 2–3 steps to fix it, and a
+  button that starts the drill. Diagnoses (`hogwash-analysis/src/coach.rs`):
+  going into a bar, a jump, fast notes (as a chord shape or a run), wrong
+  notes (misread vs landed a key off), long notes cut short, bars that slow
+  you down, stopping in the same bar, a piece that is a big step. One fumble
+  is not a card; the same mistake every time through is. "Went well" chips;
+  numbers and chart under Details. The run finishes by itself 1.5 s after the
+  last note. Next: the long-term view of a piece (step 3), then key
+  signatures and hands in the score data (step 4) for the reading and
+  hand-coordination diagnoses.
 - **As built (24 Oct, second pass after your test):** stopping swaps the score
   for a **results view** in the middle of the screen (Monkeytype-style; Esc
   shows the score with the run's marks, Enter takes the suggestion, R plays

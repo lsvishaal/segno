@@ -177,6 +177,40 @@ export interface Review {
   /** What happened at each step played. */
   readonly marks: readonly ReviewMark[];
   readonly suggestion: Suggested | null;
+  /** What to work on, most important first: at most three, or one saying the run was clean. */
+  readonly cards: readonly ReviewCard[];
+  /** What went well, a line each. */
+  readonly wentWell: readonly string[];
+  /** Said instead of cards when too little was played. */
+  readonly note: string | null;
+}
+
+/** One thing to work on, in words, with the bars to show and to practise. */
+export interface ReviewCard {
+  readonly kind:
+    | "intoBar"
+    | "jump"
+    | "fastNotes"
+    | "wrongNotes"
+    | "rushedLongNotes"
+    | "slowBars"
+    | "keepsStopping"
+    | "bigStep"
+    | "clean";
+  /** The bars to show from the score. */
+  readonly first: number;
+  readonly last: number;
+  /** The bars its button practises; null for a clean run. */
+  readonly drillFirst: number | null;
+  readonly drillLast: number | null;
+  /** The bar a pause going into it came before, to mark. */
+  readonly pauseInto: number | null;
+  readonly title: string;
+  readonly what: string;
+  readonly why: string;
+  readonly steps: readonly string[];
+  readonly button: string | null;
+  readonly also: string | null;
 }
 
 /** The numbers at a glance. */

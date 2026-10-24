@@ -97,22 +97,7 @@ fn words(spot: &Spot) -> Words {
         Kind::IntoBar => into_bar(spot, &each),
         Kind::Jump => jump(spot, &each),
         Kind::FastNotes { broken_chord } => fast_notes(spot, broken_chord, &bars, &each),
-        Kind::WrongNotes => (
-            format!("Wrong notes in bar {n}"),
-            format!(
-                "{} in bar {n}{}{each}.",
-                capital(&plural(facts.wrong, "wrong key", "wrong keys")),
-                facts.offset.map_or_else(String::new, |offset| {
-                    format!(", mostly {}", direction(offset))
-                })
-            ),
-            "These look like reading slips: the note was misread, not mis-hit.".to_owned(),
-            vec![
-                format!("Read bar {n} away from the keys, saying each note's name."),
-                "Turn on note names if it helps, then play it slowly.".to_owned(),
-                "Play it 3 times without a mistake before going on.".to_owned(),
-            ],
-        ),
+        Kind::WrongNotes => wrong_notes(spot, &each),
         Kind::RushedLongNotes => (
             format!("Long notes in bar {n}"),
             format!(
@@ -253,6 +238,43 @@ fn fast_notes(spot: &Spot, broken_chord: bool, bars: &str, each: &str) -> Words 
                 "Then evenly, still slowly.",
                 "Then a little faster each time it comes out clean.",
             ]),
+        )
+    }
+}
+
+fn wrong_notes(spot: &Spot, each: &str) -> Words {
+    let (facts, n) = (spot.facts, spot.first.get());
+    let what = format!(
+        "{} in bar {n}{}{each}.",
+        capital(&plural(facts.wrong, "wrong key", "wrong keys")),
+        facts.offset.map_or_else(String::new, |offset| {
+            format!(", mostly {}", direction(offset))
+        })
+    );
+    if facts
+        .offset
+        .is_some_and(|offset| offset.unsigned_abs() <= 2)
+    {
+        (
+            format!("Wrong notes in bar {n}"),
+            what,
+            "Your finger landed next to the right key: your hand isn't sure of its place there yet.".to_owned(),
+            vec![
+                format!("Before playing bar {n}, put your hand over its first notes and look."),
+                "Play it slowly, watching which finger plays which key.".to_owned(),
+                "Play it 3 times without a mistake before going on.".to_owned(),
+            ],
+        )
+    } else {
+        (
+            format!("Wrong notes in bar {n}"),
+            what,
+            "These look like reading slips: the note was misread, not mis-hit.".to_owned(),
+            vec![
+                format!("Read bar {n} away from the keys, saying each note's name."),
+                "Turn on note names if it helps, then play it slowly.".to_owned(),
+                "Play it 3 times without a mistake before going on.".to_owned(),
+            ],
         )
     }
 }

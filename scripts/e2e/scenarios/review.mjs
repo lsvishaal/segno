@@ -60,17 +60,24 @@ export default async function review() {
   const text = (await results()) ?? "";
   log("    results:", JSON.stringify(text));
   check("the results replace the score", text.length > 0 && (await w.run("return getComputedStyle(document.querySelector('.hw-score')).visibility")) === "hidden");
-  check("the line names the trouble: going into bar 6", text.includes("most trouble going into bar 6"));
-  check("big numbers: accuracy and tempo", /\d+%/.test(text) && /TEMPO · ♩ \/ MIN\s+\d+/i.test(text), text);
-  check("notes right/wrong/not reached, with one wrong", /\d+\/1\/\d+/.test(text));
-  check("longest pause is bar 6's", /longest pause\s+\d+\.\d s\s*bar 6/i.test(text), text);
+  check("the top line says what was played and how long", /^Bars 1–8 · \d+ s/.test(text), text.split("\n")[0]);
+  check("the numbers in one quiet line: accuracy and tempo", /accuracy \d+%/.test(text) && /♩ \d+/.test(text), text);
+  const cards = await w.run(
+    "return [...document.querySelectorAll('section[aria-label=Results] article')].map(a => ({ kind: a.dataset.card, title: a.getAttribute('aria-label'), text: a.innerText, cut: !!a.querySelector('[data-bar-cutout] svg'), pause: !!a.querySelector('[data-pause-mark]'), rings: a.querySelectorAll('[data-wrong-ring]').length }))",
+  );
+  log("    cards:", JSON.stringify(cards.map(({ kind, title, cut, pause, rings }) => ({ kind, title, cut, pause, rings }))));
+  check("card 1 is the trouble going into bar 6", cards[0]?.title === "Going into bar 6", cards[0]?.title);
+  check("it says what happened, why, and how to fix it", /You paused \d+\.\d s before bar 6\./.test(cards[0]?.text ?? "") && (cards[0]?.text ?? "").includes("isn't automatic yet") && (cards[0]?.text ?? "").includes("Play the last beat of bar 5"), cards[0]?.text);
+  check("it shows bars 5–6 cut out of the score, the pause marked and the wrong note ringed", cards[0]?.cut && cards[0]?.pause && cards[0]?.rings >= 1, JSON.stringify(cards[0] && { cut: cards[0].cut, pause: cards[0].pause, rings: cards[0].rings }));
+  check("the wrong key in bar 5 is its own card, said as where it landed", cards[1]?.title === "Wrong notes in bar 5" && (cards[1]?.text ?? "").includes("one key too high"), cards[1]?.text);
+  check("at most three cards", cards.length >= 1 && cards.length <= 3, String(cards.length));
   const chart = await points();
   check("a point per bar, bars 1 to 32", chart.length === 32, String(chart.length));
   check("bars 9 on not reached", chart.slice(8).every((p) => p.reached === "false") && chart.slice(0, 8).every((p) => p.reached === "true"));
   check("bar 6's point says its pause", /Bar 6 · ♩ = \d+ · \d+\.\d s pause/.test(chart[5]?.line ?? ""), chart[5]?.line);
   check("bar 5's point counts the wrong note", (chart[4]?.line ?? "").includes("1 wrong"), chart[4]?.line);
   check("the chart crosses the wrong note", (await count("[data-chart-wrong]")) === 1);
-  check("the suggestion: Loop bars 5–6", await w.run("return [...document.querySelectorAll('button')].some(b => b.textContent.trim() === '⟲ Loop bars 5–6')"));
+  check("its button: Practise bars 5–6", await w.run("return [...document.querySelectorAll('button')].some(b => b.textContent.trim() === '⟲ Practise bars 5–6')"));
 
   await w.press("Escape");
   await w.sleep(500);
@@ -113,7 +120,7 @@ export default async function review() {
   await untilResults();
   await w.sleep(400);
   await shot("results-too-short");
-  check("too short: says so, and no chart", ((await results()) ?? "").includes("Too short to say much yet.") && (await points()).length === 0);
+  check("too short: says so, and no cards", ((await results()) ?? "").includes("Play a few bars more to get feedback.") && (await count("section[aria-label=Results] article")) === 0);
 
   await clickButton("↻ Practice again");
   await waitForButton("Stop");

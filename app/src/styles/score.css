@@ -150,3 +150,22 @@
   fill: #16a34a;
   font-family: ui-monospace, monospace;
 }
+
+/*
+  The results' bar cut-outs (`BarCutout.tsx`) copy bars out of a page, which
+  leaves behind the page's own stylesheet: Verovio scopes "every line is drawn
+  in the current colour" to the page's id. The same rule, for the copies.
+*/
+.hw-cutout path,
+.hw-cutout ellipse,
+.hw-cutout polygon,
+.hw-cutout polyline,
+.hw-cutout rect:not([data-pause-mark]) {
+  stroke: currentColor;
+}
+
+/* As on the page: a notehead glyph takes its note's colour, so a right
+   note's head turns green with its stem. */
+.hw-cutout g.notehead use {
+  fill: currentColor;
+}
