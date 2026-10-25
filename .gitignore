@@ -1,40 +1,40 @@
-/target
+# Rust
+target/
 
-# A locally built libverovio.so, where `just verovio-build` puts it by
-# default. Verovio is never vendored into this repository and never
-# committed — it is a separate, replaceable file, which is what ADR-0007's
-# licence reasoning rests on. See THIRD_PARTY.md.
+# Node / Vite. package-lock.json IS committed: it records exactly which
+# JavaScript went into a build, as Cargo.lock does for Rust.
+node_modules/
+dist/
+*.local
+.vite/
+
+# Tauri: schemas regenerated on every build. capabilities/ beside them is
+# authored and committed (it states the app's permissions).
+app/src-tauri/target/
+app/src-tauri/gen/schemas/
+
+# Build outputs. Verovio is never committed: it is a separate, replaceable
+# library (see THIRD_PARTY.md). `just release` stages a copy in bundle/.
 /.verovio-build
-
-# What `just release` copies in so Tauri can bundle it: a copy of Verovio
-# (never committed, see above) staged for packaging.
 /app/src-tauri/bundle
+*.AppImage
+*.deb
 
-# The frontend's dependencies and build output. `package-lock.json` IS
-# committed — it is the only record of exactly which JavaScript went into a
-# build, and the Rust half has `Cargo.lock` for the same reason.
-/app/node_modules
-/app/dist
+# Environment and secrets
+.env
+.env.*
 
-# Tauri regenerates these JSON schemas from the plugin set on every build.
-# They are derived, not authored; `capabilities/` beside them is authored and
-# IS committed, because it is where the application's permissions are stated.
-/app/src-tauri/gen/schemas
-/app/src-tauri/target
-
-# OS
+# OS and editors
 .DS_Store
 Thumbs.db
-
-# Editor
 *.swp
 *~
 .idea/
 .vscode/
 
-# Local design reference screenshots, not part of the project.
+# Scores without a redistribution licence, kept locally for tests
+test-scores/
+
+# Local design reference screenshots
 /ideal-pics
 /picofcurrentapp
-
-# A briefing to paste into Claude chat: personal, not project documentation.
-/CLAUDE-CHAT-BRIEF.md
