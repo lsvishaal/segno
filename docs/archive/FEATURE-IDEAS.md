@@ -1,4 +1,9 @@
 > Archived 2026-10-25: historical, not maintained. See ROADMAP.md (Later, Parking lot).
+>
+> Triaged 2026-10-25. Built: 1 (dark score surface removed), 2 (M1.8), 4 (green
+> notes; persistent marks are M2.11), 5 (M1.1, M1.4), 9 (Results + coach, M1.4).
+> Scheduled: 3 (bars: M1.5 done; notes: Parking lot), 6 (M3.3), 7 (M3.17),
+> 8 (M3.12), 10 (Next 2). Parking lot: 11, 12, 13.
 
 # Feature ideas, sorted
 
