@@ -1,3 +1,5 @@
+> Archived 2026-10-25: historical, not maintained. See ROADMAP.md (Later, Parking lot).
+
 # Feature ideas, sorted
 
 Written 2026-10-18 from a list of requests, so none of them is forgotten.

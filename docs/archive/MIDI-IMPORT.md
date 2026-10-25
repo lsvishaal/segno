@@ -1,3 +1,5 @@
+> Archived 2026-10-25: historical research, not maintained. See ROADMAP.md (Next) and DECISIONS.md (D2).
+
 # MIDI import: research notes and the deferred decision
 
 Written 2026-10-06 so none of this has to be researched again.
