@@ -1,0 +1,10 @@
+#!/usr/bin/env sh
+# Rejects a commit whose message has no "Docs:" trailer line (CLAUDE.md, docs
+# protocol). It only checks that the line exists, not what it says.
+# Installed by `just install-hooks`.
+if grep -qE '^Docs: .+' "$1"; then
+    exit 0
+fi
+echo 'commit rejected: add a trailer line "Docs: <files updated>" or "Docs: none — <reason>".' >&2
+echo 'See the docs protocol in CLAUDE.md.' >&2
+exit 1

@@ -126,6 +126,12 @@ ui-test:
 clean:
     cargo clean
 
+# points git at scripts/hooks (the commit-msg hook that asks for a "Docs:" trailer)
+[group('check')]
+install-hooks:
+    git config core.hooksPath scripts/hooks
+    @echo "Hooks installed from scripts/hooks."
+
 # the real score component on the bundled Minuet and Prelude pages, outside Tauri:
 # open http://localhost:1421/harness.html?piece=minuet-in-g&step=0 (add &debug=1, &names=1)
 harness:

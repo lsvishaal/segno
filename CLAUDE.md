@@ -1,53 +1,108 @@
-# Hogwash — project rules for Claude Code
+# Hogwash — rules for Claude Code
 
 ## What this is
-Hogwash is a free, open-source, local-first desktop app for practising piano from
-standard sheet music with a MIDI keyboard. The cursor waits for the correct notes.
+A free, open-source, local-first desktop app for practising piano from standard
+sheet music with a MIDI keyboard. The cursor waits for the correct notes. Goal:
+"the practice tool that remembers which bars you struggle with and helps you fix
+them." Dates and the active milestone: `ROADMAP.md`.
 
-Goal: "The practice tool that remembers which bars you struggle with and helps
-you fix them." v0.1 preview on 8 November, v1.0 on 13 December (see ROADMAP.md).
+## Where things live
+| What | Where |
+|---|---|
+| The plan: v0.1 checklist, milestones, task IDs, Parking lot | `ROADMAP.md` |
+| Why things are as they are; open decisions (D-numbers) | `DECISIONS.md` |
+| User-facing changes | `CHANGELOG.md` (Unreleased on top) |
+| Who it's for, product rules, Never list, competitors | `docs/PRODUCT.md` |
+| Visual system, screens as built, words, shortcuts, budgets | `docs/DESIGN.md` |
+| Test levels, the e2e kit, the manual checklist | `docs/TESTING.md` |
+| Release checklist, launch material | `docs/RELEASE.md` |
+| The summary pasted into Claude chat | `docs/BRIEFING.md` |
+| Historical, not maintained | `docs/archive/` |
+| Domain definitions (pause, break, passes, levels, coach thresholds) | doc comments in `crates/hogwash-analysis/src/bars.rs`, `coach.rs`, `crates/hogwash-practice` — the source of truth |
+| The owner's practice log | `annoyances.md` |
 
-## Stack
-- Rust workspace in `crates/` (domain, notation, capture, practice, analysis,
+Stack:
+- **Rust workspace** in `crates/` (domain, notation, capture, practice, analysis,
   feedback, engraving, engraving-verovio, library, acquisition, midi, records, cli).
-- Tauri v2 app in `app/` (React 19, TypeScript, Vite, Tailwind v4). Rust commands
-  in `app/src-tauri/src/commands.rs`.
-- Verovio is loaded at run time from a sibling checkout (`../verovio-build`,
-  `../verovio/data`); see `justfile`.
-- `just run` launches the app. `just ci` is the full gate.
+- **Tauri v2 app** in `app/` (React 19, TypeScript, Vite, Tailwind v4, motion).
+  Rust commands live in `app/src-tauri/src/commands.rs`.
+- **Verovio** is a separate shared library loaded at run time from a sibling
+  checkout (`../verovio-build`, `../verovio/data`). Bundling it is the main
+  release risk.
+- **Only `Score.tsx`** (and helpers it alone imports) touches the score's SVG;
+  everything else asks through `ScoreHandle`.
+
+Commands:
+- `just run`: the app.
+- `just ci`: the gate. Its cargo-deny step writes to `~/.cargo`, so run it outside
+  a sandbox.
+- `just engraving-test` and `just provided-test`: real-engine tests.
+- `just e2e`: the real app driven end to end.
+- `just install-hooks`: once per clone.
 
 ## Hard rules
-1. Work ONLY on the phase I give you. When the phase is done, stop and report.
-   Do not start the next phase.
-2. Before writing code, read the relevant code and give me a short plan
-   (files to touch, approach, risks). Wait for my approval.
-3. `just ci` must pass at the end of every task. Commit after each completed task
-   with a clear message.
-4. New domain logic gets unit tests. Keep engine crates pure (no I/O, no clock
-   reads) — the architecture check in `scripts/check-arch.sh` must keep passing.
-   Timestamps enter only as data from the MIDI adapter.
-5. Do NOT add: new crates (unless you justify it and I approve), ADRs, spec
-   documents, or features not in the current phase. If you notice something
-   worth doing later, add one line under "Later" in `ROADMAP.md`.
-6. The `docs/` folder has been deleted. Code comments still reference it
-   (e.g. `003 §7.4`, `ADR-0006`, `FR-501`). Do not recreate docs or chase those
-   references. When you edit a file for other reasons, remove dead doc references
-   in the lines you touch, and leave a plain-English comment only if it adds value.
-7. Visual work follows §16–§17 of ROADMAP.md. One screen per task. Show a plan
-   with the layout described in words before changing styles.
-8. You cannot see the running app or play a MIDI keyboard. At the end of each
-   task that changes behaviour, give me a short manual test checklist
-   ("open X, play Y, expect Z").
-9. If a decision changes user-visible behaviour and isn't specified, ask me.
-   Don't guess.
+1. Work ONLY on the phase given. When it's done, stop and report; don't start the
+   next one.
+2. Before writing code, read the relevant code and give a short plan (files,
+   approach, risks). Wait for approval.
+3. `just ci` passes before every commit. Commit after each completed task, cite
+   task IDs, and push after each completed part (`git push`; `origin` tracks
+   GitHub over HTTPS).
+4. New domain logic gets unit tests. Engine crates stay pure (no I/O, no clock
+   reads); `scripts/check-arch.sh` must keep passing. Timestamps enter only as
+   data from the MIDI adapter.
+5. **Tests use real pieces only:**
+   - the Minuet in G or the Prelude in C (`app/src-tauri/library/`)
+   - the fixtures in `app/src/components/__fixtures__`
+   - pieces the owner supplied
+   - Never invented notes.
+6. **Never write to the real data folder** (`~/.local/share/com.hogwash.practice`)
+   unless the owner explicitly asks. Use `target/e2e/data` or copies (e.g.
+   `target/m21-data`).
+7. No new crates without approval. No features outside the current phase; ideas
+   become one dated line in the ROADMAP Parking lot.
+8. Docs describe what **is** and what is **decided**. No specs, and no speculative
+   designs.
+9. Visual work follows `docs/DESIGN.md`: one screen per task; describe the layout
+   in words before changing styles.
+10. You can't see the app or play a keyboard. End every behaviour change with a
+    manual checklist ("open X, play Y, expect Z").
+11. A decision that changes user-visible behaviour and isn't specified: ask. Don't
+    guess.
 
-## Task IDs
-Task IDs come from ROADMAP.md (e.g. M1.5). Reference them in commit messages.
+## Docs protocol
+1. **Docs change in the same commit** as the behaviour they describe. Never "docs
+   later".
+2. Per commit, update whichever applies:
+   - **`ROADMAP.md`:** tick the task or change its status; done tasks are one line.
+   - **`CHANGELOG.md`** Unreleased: one line for any change a user could notice.
+   - **`DECISIONS.md`:** a dated log line for any decision made or changed (in chat
+     or in an approved plan), with what it replaces; update the status table if it
+     has a D-number.
+   - **`README.md`:** if install, usage, status or the feature list changed.
+   - **`docs/DESIGN.md`:** if a visual rule, screen, shortcut, copy or budget
+     changed.
+   - **Code doc comments:** if a domain definition changed. They are the source of
+     truth; docs link to them rather than restating numbers.
+3. **Every commit message ends with a trailer:** `Docs: <files updated>`, or
+   `Docs: none — <reason>` (e.g. "refactor, no behaviour change").
+   `scripts/hooks/commit-msg` rejects a commit without one (`just install-hooks`).
+4. **Decisions from Claude chat** arrive as a pasted `DECISIONS — …` block. The first
+   step is to record them in `DECISIONS.md` (and apply ROADMAP status changes),
+   commit that alone, then plan the work.
+5. **Plans in `~/.claude/plans` are scratch.** Anything decided in a plan that
+   matters later lands in `DECISIONS.md` or `ROADMAP.md` before the phase ends.
+6. **At the end of every milestone or phase**, and before a release, regenerate
+   `docs/BRIEFING.md` from the other docs (≤ 250 lines, no claim they don't make),
+   and say it's ready to paste.
+7. **Weekly, or on "docs check":** look for contradictions between the docs and the
+   code, and report them.
+8. **An idea mid-task:** one dated line in the ROADMAP Parking lot. Nothing else.
 
-## Product principles (these still hold)
+## Product principles (detail in `docs/PRODUCT.md`)
 - Local-first: no accounts, no network calls, no telemetry.
-- No gamification: no scores, combos, streaks, or difficulty badges.
-- Helping the user decide what to practise IS allowed and wanted
-  (the old "never advisory" rule is removed).
-- Feedback should be factual and specific ("bar 9: 14s stalled, 3 wrong notes"),
-  never judgmental.
+- No gamification: no XP, streaks or badges. Accuracy % and tempo may appear, never
+  as the headline; show facts, never the combined difficulty number.
+- Helping the user decide what to practise is the product.
+- Feedback is factual and specific ("bar 9: paused 4 s, 2 wrong notes"), never
+  judgmental.
