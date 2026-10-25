@@ -119,7 +119,7 @@ export function SettingsPanel({
         </div>
       </section>
 
-      <div className="staff-rule mt-5" />
+      <div className="mt-5 border-t border-rule" />
 
       <section className="pt-5">
         <h3 className="text-label font-medium text-ink-muted uppercase">Sound</h3>
@@ -128,7 +128,7 @@ export function SettingsPanel({
         </div>
       </section>
 
-      <div className="staff-rule mt-5" />
+      <div className="mt-5 border-t border-rule" />
 
       <section className="pt-5">
         <h3 className="text-label font-medium text-ink-muted uppercase">
@@ -165,7 +165,7 @@ export function SettingsPanel({
         {exportError && <p className="mt-1 text-xs text-wrong">{exportError}</p>}
       </section>
 
-      <div className="staff-rule mt-5" />
+      <div className="mt-5 border-t border-rule" />
 
       <About />
     </div>

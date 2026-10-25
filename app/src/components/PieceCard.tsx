@@ -3,6 +3,7 @@ import { useState } from "react";
 import { motion } from "motion/react";
 
 import type { PieceSummary } from "../bridge";
+import { practisedWhen, weakestLine } from "../screens/Library";
 
 /** Entrance only — the parent `motion.ul` staggers when each of these plays. */
 const VARIANTS = {
@@ -11,18 +12,14 @@ const VARIANTS = {
 };
 
 /**
- * One piece, on the library shelf.
- *
- * What it shows is deliberately limited to what the Score actually contains:
- * a title, a composer where the file gave one, and how much music there is.
- * No difficulty, no rating, no progress score — `001 §11` rules grading out,
- * and a "difficulty" badge would be exactly that, invented by the interface.
- * Plain by design: one theme colour means the shelf carries none of it —
- * every card looks like every other, and only its content tells them apart.
+ * One piece, on the library shelf: composer, title, how much music there is,
+ * and when you last practised it with its weakest bars. No difficulty, rating
+ * or progress score: nothing that grades the player or the piece.
  */
 export function PieceCard({
   piece,
   note,
+  now,
   onOpen,
   onRename,
   onCountHistory,
@@ -31,6 +28,8 @@ export function PieceCard({
   readonly piece: PieceSummary;
   /** What tells it apart from a piece that looks the same, if one does. */
   readonly note?: string | undefined;
+  /** The time "2 days ago" counts from. */
+  readonly now: number;
   readonly onOpen: (id: string) => void;
   /** Saves a new title; resolves to why it could not be, or `null`. */
   readonly onRename: (id: string, title: string) => Promise<string | null>;
@@ -155,33 +154,39 @@ export function PieceCard({
     );
   }
 
+  const practised =
+    piece.lastPractisedMs === null
+      ? "Not practised yet"
+      : [`Last practised ${practisedWhen(piece.lastPractisedMs, now)}`, weakestLine(piece.weakest)]
+          .filter(Boolean)
+          .join(" · ");
+
   return (
-    <motion.li variants={VARIANTS} className="relative" style={{ listStyle: "none" }}>
+    <motion.li variants={VARIANTS} className="group/card relative h-full" style={{ listStyle: "none" }}>
       <button
         type="button"
         onClick={() => onOpen(piece.id)}
-        className={`group w-full cursor-pointer ${CARD} text-left transition duration-200 ease-out hover:-translate-y-0.5 hover:border-ink/20 hover:shadow-[0_8px_24px_-12px_rgb(28_26_23/0.18)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent motion-reduce:transition-none motion-reduce:hover:translate-y-0`}
+        className={`flex h-full w-full cursor-pointer flex-col ${CARD} text-left transition duration-[120ms] ease-out hover:-translate-y-0.5 hover:border-ink/20 hover:shadow-[0_8px_24px_-12px_rgb(28_26_23/0.18)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent motion-reduce:transition-none motion-reduce:hover:translate-y-0`}
       >
-        <h3 className="font-serif text-title text-pretty">
-          {piece.title}
-        </h3>
-
-        {piece.composer && (
-          <p className="mt-0.5 text-sm text-ink-muted">{piece.composer}</p>
-        )}
-
+        <p className="min-h-4 pr-24 text-label text-ink-muted uppercase">{piece.composer}</p>
+        <h3 className="mt-1 font-serif text-title italic text-pretty">{piece.title}</h3>
         {note && <p className="mt-0.5 truncate font-mono text-xs text-ink-muted">{note}</p>}
 
-        <p className="mt-3 font-mono text-xs tracking-wide text-ink-muted tabular-nums">
+        <p className="mt-3 mb-4 font-mono text-xs text-ink-muted tabular-nums">
           {piece.bars} {piece.bars === 1 ? "bar" : "bars"}
           <span className="mx-1.5 opacity-40">·</span>
           {piece.notes} {piece.notes === 1 ? "note" : "notes"}
         </p>
+
+        <p className="mt-auto border-t border-rule pt-3 text-xs text-ink-muted">
+          {practised}
+        </p>
       </button>
 
-      {/* Beside the card's button, not inside it: a button cannot hold another. */}
+      {/* Beside the card's button, not inside it: a button cannot hold another.
+          Quiet until the card is hovered or one of them has focus. */}
       {piece.imported && (
-        <div className="absolute right-4 bottom-4 flex gap-1">
+        <div className="absolute top-4 right-4 flex gap-1 opacity-0 transition-opacity duration-[120ms] group-hover/card:opacity-100 focus-within:opacity-100">
           <button
             type="button"
             aria-label={`Rename ${piece.title}`}
@@ -206,6 +211,6 @@ export function PieceCard({
   );
 }
 
-const CARD = "block rounded-lg border border-rule bg-paper-raised px-7 py-6";
+const CARD = "block rounded-xl border border-rule bg-paper-raised px-6 py-5";
 const ACTION =
   "cursor-pointer rounded-full px-3 py-1 text-xs font-medium transition focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-accent";

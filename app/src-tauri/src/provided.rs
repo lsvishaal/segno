@@ -21,6 +21,27 @@ pub struct Provided {
     pub name: &'static str,
     /// The `MusicXML` itself.
     pub source: &'static [u8],
+    /// Which shelf of the library it goes on.
+    pub level: Level,
+}
+
+/// How far along a player a provided piece suits: a description, not a grade.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize)]
+#[serde(rename_all = "camelCase")]
+pub enum Level {
+    /// Single lines and first two-hand pieces.
+    Beginner,
+    /// Around Grades 1–4.
+    Intermediate,
+}
+
+/// The level of the provided piece called `id`; `None` for anything imported.
+#[must_use]
+pub fn level_of(id: &PieceId) -> Option<Level> {
+    PROVIDED
+        .iter()
+        .find(|provided| &identify(provided.source) == id)
+        .map(|provided| provided.level)
 }
 
 /// Everything in `library/`, in the order a first-time performer meets it.
@@ -33,26 +54,32 @@ pub const PROVIDED: [Provided; 6] = [
     Provided {
         name: "lightly-row.musicxml",
         source: include_bytes!("../library/lightly-row.musicxml"),
+        level: Level::Beginner,
     },
     Provided {
         name: "ode-to-joy.musicxml",
         source: include_bytes!("../library/ode-to-joy.musicxml"),
+        level: Level::Beginner,
     },
     Provided {
         name: "a-little-chord-study.musicxml",
         source: include_bytes!("../library/a-little-chord-study.musicxml"),
+        level: Level::Beginner,
     },
     Provided {
         name: "fur-elise.musicxml",
         source: include_bytes!("../library/fur-elise.musicxml"),
+        level: Level::Beginner,
     },
     Provided {
         name: "minuet-in-g.musicxml",
         source: include_bytes!("../library/minuet-in-g.musicxml"),
+        level: Level::Intermediate,
     },
     Provided {
         name: "prelude-in-c.musicxml",
         source: include_bytes!("../library/prelude-in-c.musicxml"),
+        level: Level::Intermediate,
     },
 ];
 
@@ -95,7 +122,24 @@ pub fn identify(source: &[u8]) -> PieceId {
 
 #[cfg(test)]
 mod tests {
-    use crate::provided::{PROVIDED, identify};
+    use crate::provided::{Level, PROVIDED, identify, level_of};
+
+    #[test]
+    fn each_provided_piece_is_on_a_shelf_and_imports_are_not() {
+        for piece in PROVIDED {
+            assert_eq!(
+                level_of(&identify(piece.source)),
+                Some(piece.level),
+                "{}",
+                piece.name
+            );
+        }
+        assert_eq!(level_of(&identify(b"<score-partwise/>")), None);
+        let minuet = PROVIDED
+            .iter()
+            .find(|piece| piece.name == "minuet-in-g.musicxml");
+        assert_eq!(minuet.map(|piece| piece.level), Some(Level::Intermediate));
+    }
 
     // FR-206 / MVP §6.1 — a first session requires no externally obtained
     // file. Compiled in, so this cannot become false by someone moving a

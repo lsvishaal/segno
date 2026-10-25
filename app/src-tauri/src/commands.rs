@@ -91,7 +91,7 @@ pub fn retitle(hogwash: &mut Hogwash, id: &str, title: &str) -> Result<PieceSumm
         .pieces()
         .into_iter()
         .find(|piece| *piece.id() == piece_id)
-        .map(|piece| summarise(piece, hogwash))
+        .map(|piece| summarise(piece, hogwash, &crate::history::sessions(hogwash.records())))
         .ok_or_else(|| format!("There is no piece called `{id}` in the library."))
 }
 
@@ -196,6 +196,12 @@ pub struct PieceSummary {
     /// Whether the performer imported it, rather than it shipping with
     /// Hogwash: only imported pieces can be renamed or deleted.
     pub imported: bool,
+    /// Which starter shelf it goes on; `None` for imported pieces.
+    pub level: Option<crate::provided::Level>,
+    /// When it was last practised, in Unix milliseconds.
+    pub last_practised_ms: Option<u64>,
+    /// Up to two of its hardest bars over time, hardest first.
+    pub weakest: Vec<u32>,
 }
 
 /// A Piece, engraved and ready to practise from.
@@ -286,11 +292,13 @@ pub type Refused = String;
 pub fn library(state: State<'_, Shared>) -> Result<Vec<PieceSummary>, Refused> {
     let hogwash = state.inner().0.lock().map_err(|_| POISONED.to_owned())?;
 
+    // Read once for every card, not once per card.
+    let sessions = crate::history::sessions(hogwash.records());
     Ok(hogwash
         .library()
         .pieces()
         .into_iter()
-        .map(|piece| summarise(piece, &hogwash))
+        .map(|piece| summarise(piece, &hogwash, &sessions))
         .collect())
 }
 
@@ -591,7 +599,11 @@ pub fn accept_offered(
         .find(|piece| *piece.id() == id)
     {
         return Ok(ImportedPiece {
-            piece: summarise(already, hogwash),
+            piece: summarise(
+                already,
+                hogwash,
+                &crate::history::sessions(hogwash.records()),
+            ),
             lines: vec!["This piece is already in your library.".to_owned()],
             already: true,
         });
@@ -609,7 +621,7 @@ pub fn accept_offered(
                 .keep_piece(&id, piece.title(), piece.composer(), file_name, material)
                 .map_err(|failure| format!("Could not keep that piece: {failure:?}"))?;
 
-            let summary = summarise(&piece, hogwash);
+            let summary = summarise(&piece, hogwash, &[]);
             hogwash.accept_piece(*piece);
 
             Ok(ImportedPiece {
@@ -623,7 +635,11 @@ pub fn accept_offered(
 
 /// A Piece, as the library screen needs it — the same shape [`library`]
 /// produces, so an import and a startup listing agree on what a summary is.
-fn summarise(piece: &hogwash_library::Piece, hogwash: &Hogwash) -> PieceSummary {
+fn summarise(
+    piece: &hogwash_library::Piece,
+    hogwash: &Hogwash,
+    sessions: &[hogwash_records::SessionRecord],
+) -> PieceSummary {
     let record = hogwash.records().piece_record(piece.id());
 
     PieceSummary {
@@ -634,6 +650,9 @@ fn summarise(piece: &hogwash_library::Piece, hogwash: &Hogwash) -> PieceSummary 
         notes: piece.reference().len(),
         imported: record.is_some(),
         file_name: record.and_then(|record| record.file_name),
+        level: crate::provided::level_of(piece.id()),
+        last_practised_ms: crate::history::last_practised(sessions, piece.id()),
+        weakest: crate::history::weak_bars_in(sessions, piece.id(), piece.reference()).weakest(),
     }
 }
 

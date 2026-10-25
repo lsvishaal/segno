@@ -713,7 +713,7 @@ Built in M2.1 (`hogwash-analysis/src/bars.rs`, `Bars::of`):
 - [ ] **M2.7 · S · Per-bar trend (cut second).**
       In the bar detail card: *"Avg pause 14.1 s → 3.2 s over 6 sessions."*
       A tiny sparkline at most; no charts page.
-- [ ] **M2.8 · S · Library card shows weakest bar and last practised.**
+- [x] **M2.8 · S · Library card shows weakest bar and last practised.**
       *"Last practised 2 days ago · weakest: bar 9."*
 
 **Done when:** after a week of real use, opening the Minuet shows a heatmap

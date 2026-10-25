@@ -27,6 +27,12 @@ export interface PieceSummary {
   /** What the performer's file was called, for an imported piece. */
   readonly fileName: string | null;  /** Imported by the performer (only those can be renamed or deleted). */
   readonly imported: boolean;
+  /** Which starter shelf a bundled piece goes on; `null` for imports. */
+  readonly level: "beginner" | "intermediate" | null;
+  /** When it was last practised, in Unix milliseconds. */
+  readonly lastPractisedMs: number | null;
+  /** Up to two of its hardest bars over time, hardest first. */
+  readonly weakest: readonly number[];
 }
 
 /** The written letter name of a note — `"C"` through `"B"`. */

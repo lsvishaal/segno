@@ -15,9 +15,7 @@
   --color-ink: #191a1e;
   --color-ink-muted: #6b6d76;
   --color-rule: #dde1e7;
-  /* A firmer hairline than --color-rule. Panel borders and the staff-rule
-     divider carry their own definition now — there is no blur behind them
-     to do it for free the way `.glass` used to. */
+  /* A firmer hairline than --color-rule, for panel borders. */
   --color-rule-strong: #c7ccd6;
 
   /* The one theme colour. Everything that needs to draw attention — a
@@ -95,19 +93,3 @@ body {
   box-shadow: 0 12px 32px -14px color-mix(in srgb, var(--color-accent) 18%, transparent);
 }
 
-/*
-  Five tight parallel hairlines — a staff with no notes on it. Replaces a
-  plain border wherever a section break wants the app's own visual language
-  instead of a generic rule.
-*/
-.staff-rule {
-  height: 15px;
-  background-image: repeating-linear-gradient(
-    to bottom,
-    var(--color-rule-strong) 0,
-    var(--color-rule-strong) 1px,
-    transparent 1px,
-    transparent 4px
-  );
-  background-repeat: no-repeat;
-}

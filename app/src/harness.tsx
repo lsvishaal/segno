@@ -22,12 +22,12 @@ const wrong = query.get("wrong");
 
 /** The shelf as the performer's real pieces summarise (titles as Hogwash reads them). */
 const SHELF: PieceSummary[] = [
-  { id: "minuet", title: "Minuet in G Major", composer: "Christian Petzold", bars: 32, notes: 209, fileName: null, imported: false },
-  { id: "prelude", title: "Prelude in C Major", composer: "Johann Sebastian Bach", bars: 35, notes: 533, fileName: null, imported: false },
-  { id: "canon", title: "Canon in D", composer: "Johann Pachelbel", bars: 57, notes: 1604, fileName: "Canon_in_D.mxl", imported: true },
-  { id: "full", title: "Für Elise", composer: "arr. Verona", bars: 105, notes: 1118, fileName: "Fur_Elise.mxl", imported: true },
-  { id: "easy", title: "Fur Elise", composer: null, bars: 33, notes: 141, fileName: "Fur_Elise_Easy.mxl", imported: true },
-  { id: "moon", title: "Sonate No. 14", composer: "Ludwig van Beethoven", bars: 69, notes: 900, fileName: "Moonlight.mxl", imported: true },
+  { id: "minuet", title: "Minuet in G Major", composer: "Christian Petzold", bars: 32, notes: 209, fileName: null, imported: false, level: "intermediate", lastPractisedMs: null, weakest: [] },
+  { id: "prelude", title: "Prelude in C Major", composer: "Johann Sebastian Bach", bars: 35, notes: 533, fileName: null, imported: false, level: "intermediate", lastPractisedMs: null, weakest: [] },
+  { id: "canon", title: "Canon in D", composer: "Johann Pachelbel", bars: 57, notes: 1604, fileName: "Canon_in_D.mxl", imported: true, level: null, lastPractisedMs: null, weakest: [] },
+  { id: "full", title: "Für Elise", composer: "arr. Verona", bars: 105, notes: 1118, fileName: "Fur_Elise.mxl", imported: true, level: null, lastPractisedMs: null, weakest: [] },
+  { id: "easy", title: "Fur Elise", composer: null, bars: 33, notes: 141, fileName: "Fur_Elise_Easy.mxl", imported: true, level: null, lastPractisedMs: null, weakest: [] },
+  { id: "moon", title: "Sonate No. 14", composer: "Ludwig van Beethoven", bars: 69, notes: 900, fileName: "Moonlight.mxl", imported: true, level: null, lastPractisedMs: null, weakest: [] },
 ];
 
 const root = ReactDOM.createRoot(document.getElementById("root")!);

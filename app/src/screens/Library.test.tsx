@@ -2,10 +2,10 @@ import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 
 import type { PieceSummary } from "../bridge";
-import { LibraryScreen, distinguishing } from "./Library";
+import { LibraryScreen, distinguishing, practisedWhen, weakestLine } from "./Library";
 
 const PIECES: PieceSummary[] = [
-  { id: "a1", title: "Ode to Joy", composer: "Beethoven", bars: 8, notes: 24, fileName: null, imported: false },
+  { id: "a1", title: "Ode to Joy", composer: "Beethoven", bars: 8, notes: 24, fileName: null, imported: false, level: "beginner", lastPractisedMs: null, weakest: [] },
 ];
 
 function renderScreen(overrides: Partial<Parameters<typeof LibraryScreen>[0]> = {}) {
@@ -38,7 +38,7 @@ describe("LibraryScreen import", () => {
   it("calls onImport when the import button is clicked", () => {
     const { onImport } = renderScreen();
 
-    fireEvent.click(screen.getByRole("button", { name: "Import MusicXML" }));
+    fireEvent.click(screen.getByRole("button", { name: "+ Add a piece" }));
 
     expect(onImport).toHaveBeenCalledOnce();
   });
@@ -76,7 +76,7 @@ describe("LibraryScreen import", () => {
 });
 
 function summary(id: string, title: string, composer: string | null, fileName: string | null): PieceSummary {
-  return { id, title, composer, bars: 1, notes: 1, fileName, imported: fileName !== null };
+  return { id, title, composer, bars: 1, notes: 1, fileName, imported: fileName !== null, level: fileName === null ? "beginner" : null, lastPractisedMs: null, weakest: [] };
 }
 
 describe("telling alike pieces apart", () => {
@@ -190,5 +190,74 @@ describe("deleting a piece", () => {
 
     expect(screen.queryByRole("alertdialog")).toBeNull();
     expect(onDelete).not.toHaveBeenCalled();
+  });
+});
+
+describe("the shelves", () => {
+  // Sun 25 Oct 2026, 15:00 local time.
+  const NOW = new Date(2026, 9, 25, 15, 0).getTime();
+  const at = (day: number, hour = 10) => new Date(2026, 9, day, hour).getTime();
+  const shelfPieces: PieceSummary[] = [
+    { ...summary("lr", "Lightly Row", "Traditional", null), level: "beginner" },
+    { ...summary("mn", "Minuet in G Major", "Christian Petzold", null), level: "intermediate", lastPractisedMs: at(23), weakest: [6, 14] },
+    { ...summary("cn", "Canon in D", "Pachelbel", "Canon_in_D.mxl"), lastPractisedMs: at(20) },
+    { ...summary("sn", "Sonate No. 14", "Beethoven", "Moonlight.mxl") },
+  ];
+  const sections = () => screen.getAllByRole("region").map((section) => section.getAttribute("aria-label"));
+  const titlesIn = (label: string) =>
+    [...screen.getByRole("region", { name: label }).querySelectorAll("h3")].map((title) => title.textContent);
+
+  it("puts where you left off first, then your pieces, then the starters by level", () => {
+    renderScreen({ pieces: shelfPieces, now: NOW });
+
+    expect(sections()).toEqual(["Continue", "Your pieces", "Starter · Beginner", "Starter · Intermediate"]);
+    expect(titlesIn("Your pieces")).toEqual(["Canon in D", "Sonate No. 14"]);
+    expect(titlesIn("Starter · Intermediate")).toEqual(["Minuet in G Major"]);
+  });
+
+  it("continues the piece practised last, saying when and its weakest bars", () => {
+    const { onOpen } = renderScreen({ pieces: shelfPieces, now: NOW });
+
+    const button = screen.getByRole("button", { name: "Continue Minuet in G Major" });
+    expect(button.textContent).toContain("2 days ago · weakest bars 6, 14");
+    fireEvent.click(button);
+    expect(onOpen).toHaveBeenCalledWith("mn");
+  });
+
+  it("says on each card when it was last practised, or that it hasn't been", () => {
+    renderScreen({ pieces: shelfPieces, now: NOW });
+
+    expect(screen.getByText("Last practised 5 days ago")).toBeTruthy();
+    expect(screen.getAllByText("Not practised yet")).toHaveLength(2);
+  });
+
+  it("has no Continue before anything is practised, and says where added pieces go", () => {
+    renderScreen({ pieces: [shelfPieces[0] as PieceSummary], now: NOW });
+
+    expect(sections()).toEqual(["Your pieces", "Starter · Beginner"]);
+    expect(screen.getByText(/Pieces you add appear here/)).toBeTruthy();
+  });
+});
+
+describe("practisedWhen", () => {
+  const now = new Date(2026, 9, 25, 0, 30).getTime();
+
+  it("counts calendar days, not 24-hour spans", () => {
+    expect(practisedWhen(new Date(2026, 9, 25, 0, 5).getTime(), now)).toBe("today");
+    expect(practisedWhen(new Date(2026, 9, 24, 23, 50).getTime(), now)).toBe("yesterday");
+    expect(practisedWhen(new Date(2026, 9, 19, 12).getTime(), now)).toBe("6 days ago");
+  });
+
+  it("gives a date after a week, with the year once it isn't this one", () => {
+    expect(practisedWhen(new Date(2026, 9, 12).getTime(), now)).toBe("12 Oct");
+    expect(practisedWhen(new Date(2025, 11, 30).getTime(), now)).toBe("30 Dec 2025");
+  });
+});
+
+describe("weakestLine", () => {
+  it("names one bar or two, or says nothing", () => {
+    expect(weakestLine([9])).toBe("weakest bar 9");
+    expect(weakestLine([6, 14])).toBe("weakest bars 6, 14");
+    expect(weakestLine([])).toBeNull();
   });
 });

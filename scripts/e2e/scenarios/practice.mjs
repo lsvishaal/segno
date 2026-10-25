@@ -54,5 +54,5 @@ export default async function practice() {
   await clickButton("← Library");
   await w.sleep(1200);
   check("leaving mid-attempt keeps what was played", newSessions(before)[0].attempts.length === 3, JSON.stringify(newSessions(before)));
-  check("we are back on the library", /your music/i.test(await w.bodyText()));
+  check("we are back on the library", /your pieces/i.test(await w.bodyText()));
 }

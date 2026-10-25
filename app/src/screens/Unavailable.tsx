@@ -23,7 +23,7 @@ export function UnavailableScreen({ failure }: { readonly failure: Unavailable }
 
       {failure.lookedIn.length > 0 && (
         <section className="mt-8">
-          <div className="staff-rule" />
+          <div className="border-t border-rule" />
           <h2 className="pt-4 text-label font-medium text-ink-muted uppercase">
             Looked in
           </h2>

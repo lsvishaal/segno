@@ -26,6 +26,9 @@ const sessionsOf = (id) => (fs.existsSync(HISTORY) ? fs.readdirSync(HISTORY).fil
 export default async function library() {
   await w.until("return document.querySelectorAll('li h3').length >= 6", "the library", 30000);
   await w.sleep(1500);
+  await shot("library");
+  const shelves = await w.run("return [...document.querySelectorAll('section[aria-label]')].map(s => s.getAttribute('aria-label'))");
+  check("the library is in shelves: your pieces, then the starters by level", ["Your pieces", "Starter · Beginner", "Starter · Intermediate"].every((label) => shelves.includes(label)), JSON.stringify(shelves));
 
   // Your imported pieces whose stored title is the one on their card.
   const shown = await titles();

@@ -4,7 +4,7 @@
 use hogwash_analysis::Bars;
 use hogwash_domain::PieceId;
 use hogwash_notation::ReferencePerformance;
-use hogwash_records::{Ended, Records};
+use hogwash_records::{Ended, Records, SessionRecord};
 use serde::Serialize;
 
 /// Which bars of a piece have been hard, over every attempt kept.
@@ -16,6 +16,26 @@ pub struct WeakBars {
     /// Each bar played at least twice, and how hard it is next to the
     /// others: 0 went fine, 1–4 lighter to deeper.
     pub bars: Vec<WeakBar>,
+}
+
+impl WeakBars {
+    /// Up to two of the hardest bars (level 3 or 4), hardest first.
+    #[must_use]
+    pub fn weakest(&self) -> Vec<u32> {
+        let mut hard: Vec<&WeakBar> = self.bars.iter().filter(|bar| bar.level >= 3).collect();
+        hard.sort_by_key(|bar| (std::cmp::Reverse(bar.level), bar.measure));
+        hard.iter().take(2).map(|bar| bar.measure).collect()
+    }
+}
+
+/// When `piece` was last practised, in Unix milliseconds.
+#[must_use]
+pub fn last_practised(sessions: &[SessionRecord], piece: &PieceId) -> Option<u64> {
+    sessions
+        .iter()
+        .filter(|session| &session.piece == piece)
+        .filter_map(|session| session.started.parse().ok())
+        .max()
 }
 
 /// One bar's place on the scale.
@@ -30,9 +50,25 @@ pub struct WeakBar {
 /// that cannot be read are skipped, as the library does.
 #[must_use]
 pub fn weak_bars(records: &Records, piece: &PieceId, reference: &ReferencePerformance) -> WeakBars {
-    let Ok((sessions, _unreadable)) = records.sessions() else {
-        return WeakBars::default();
-    };
+    weak_bars_in(&sessions(records), piece, reference)
+}
+
+/// Every session that can be read; none if the history folder can't be.
+#[must_use]
+pub fn sessions(records: &Records) -> Vec<SessionRecord> {
+    records
+        .sessions()
+        .map(|(sessions, _unreadable)| sessions)
+        .unwrap_or_default()
+}
+
+/// [`weak_bars`] over sessions already read, so a whole library reads them once.
+#[must_use]
+pub fn weak_bars_in(
+    sessions: &[SessionRecord],
+    piece: &PieceId,
+    reference: &ReferencePerformance,
+) -> WeakBars {
     let mut total = Bars::default();
     let mut runs = 0;
     for attempt in sessions
@@ -181,6 +217,33 @@ mod tests {
                 .iter()
                 .all(|bar| bar.measure == weak || bar.level == 0)
         );
+    }
+
+    #[test]
+    #[ignore = "needs a real libverovio; run `just provided-test`"]
+    fn the_library_card_knows_when_and_where() {
+        let (records, piece, minuet) = minuet("card");
+        let stall = minuet.len() / 2;
+        let session = |id: &str, started: &str| SessionRecord {
+            id: id.to_owned(),
+            piece: piece.clone(),
+            started: started.to_owned(),
+            closed: true,
+            attempts: vec![run(&minuet, stall, 3_000_000)],
+        };
+        let sessions = [
+            session("one", "1761300000000"),
+            session("two", "1761390000000"),
+        ];
+        let weak = minuet.at(stall).expect("a step").measure().get();
+
+        assert_eq!(last_practised(&sessions, &piece), Some(1_761_390_000_000));
+        assert_eq!(
+            weak_bars_in(&sessions, &piece, &minuet).weakest(),
+            vec![weak]
+        );
+        assert_eq!(last_practised(&[], &piece), None);
+        drop(records);
     }
 
     #[test]
