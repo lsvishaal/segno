@@ -60,6 +60,9 @@ export interface ScoreReview {
   readonly notReached: readonly number[];
 }
 
+/** The heatmap's single amber hue, light to deep, by level 1–4. */
+const WEAK_TINT = ["", "bg-pause/8", "bg-pause/16", "bg-pause/26", "bg-pause/38"];
+
 /** No bars known: one array, so a default does not change on every render. */
 const NO_BARS: readonly Bar[] = [];
 
@@ -71,6 +74,7 @@ export function Score({
   startPosition = 0,
   loop = null,
   review = null,
+  weak = null,
   cursor,
   dot,
   followCursor = true,
@@ -89,6 +93,8 @@ export function Score({
   readonly loop?: { readonly first: number; readonly last: number } | null;
   /** After an attempt: right notes left green, wrong ones crossed, bars not reached faded. */
   readonly review?: ScoreReview | null;
+  /** Bar number → how hard it has been over time, 1–4, tinted behind it. */
+  readonly weak?: ReadonlyMap<number, number> | null;
   /** Where attempts start; marked on the score unless it is the very beginning. */
   readonly startPosition?: number;
   readonly cursor: CursorState;
@@ -115,6 +121,7 @@ export function Score({
   const [startBox, setStartBox] = useState<Box | null>(null);
   const [loopBoxes, setLoopBoxes] = useState<readonly Box[]>([]);
   const [fadedBoxes, setFadedBoxes] = useState<readonly Box[]>([]);
+  const [weakBoxes, setWeakBoxes] = useState<readonly { readonly box: Box; readonly level: number }[]>([]);
   const [crosses, setCrosses] = useState<readonly { readonly box: Box; readonly wrong: number }[]>([]);
 
   /** Bar element id → its number. */
@@ -374,6 +381,22 @@ export function Score({
     );
   }, [loopFirst, loopLast, barOf, pages, layoutTick]);
 
+  // Weak bars over time: each tinted amber, deeper the harder it has been.
+  useEffect(() => {
+    const root = wrapper.current;
+    if (!weak || !root) {
+      setWeakBoxes([]);
+      return;
+    }
+    setWeakBoxes(
+      [...root.querySelectorAll("g.measure")].flatMap((element) => {
+        const level = weak.get(barOf.get(element.id) ?? 0) ?? 0;
+        const box = level > 0 ? boxOf(root, element.id) : null;
+        return box ? [{ box, level }] : [];
+      }),
+    );
+  }, [weak, barOf, pages, layoutTick]);
+
   // The review: right notes stay green, a red ✕ above each note waited on
   // through wrong ones (a repeated bar's two passes add up), and the bars
   // not reached faded behind a wash of paper.
@@ -453,6 +476,15 @@ export function Score({
       <div ref={container} className="py-6" />
 
       <div className="pointer-events-none absolute inset-0">
+        {weakBoxes.map(({ box, level }) => (
+          <div
+            key={`weak-${box.left},${box.top}`}
+            data-weak-bar={level}
+            className={`absolute rounded-sm mix-blend-multiply ${WEAK_TINT[level] ?? ""}`}
+            style={box}
+          />
+        ))}
+
         {loopBoxes.map((box) => (
           <div
             key={`${box.left},${box.top}`}

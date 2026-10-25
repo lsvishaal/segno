@@ -13,6 +13,7 @@ interface ScoreProps {
   readonly startPosition?: number;
   readonly loop?: { readonly first: number; readonly last: number } | null;
   readonly review?: ScoreReview | null;
+  readonly weak?: ReadonlyMap<number, number> | null;
   readonly showNoteNames?: boolean;
   readonly cursor: CursorState;
 }
@@ -35,6 +36,7 @@ const bridge = vi.hoisted(() => ({
   loopTarget: vi.fn(),
   startAtBar: vi.fn(),
   startAttempt: vi.fn(),
+  weakBars: vi.fn(),
 }));
 
 /** What the practice thread says, delivered as it would be. */
@@ -73,6 +75,7 @@ beforeEach(() => {
   bridge.loopTarget.mockResolvedValue(undefined);
   bridge.endAttempt.mockResolvedValue({});
   bridge.engravePiece.mockResolvedValue(PIECE);
+  bridge.weakBars.mockResolvedValue({ runs: 0, bars: [] });
 });
 
 afterEach(() => {
@@ -616,5 +619,63 @@ describe("the results after a run", () => {
       fireEvent.click(screen.getByRole("button", { name: "Join it back up · Loop bars 8–10" }));
     });
     expect(bridge.loopBars).toHaveBeenCalledWith("minuet", 8, 10, 3);
+  });
+});
+
+describe("weak bars over time", () => {
+  const history = { runs: 3, bars: [{ measure: 6, level: 4 }, { measure: 2, level: 0 }] };
+  const press = async (key: string) => {
+    await act(async () => {
+      fireEvent.keyDown(window, { key });
+    });
+  };
+
+  it("tints the bars that have been hard, with a legend saying what it means", async () => {
+    bridge.weakBars.mockResolvedValue(history);
+    await renderScreen();
+
+    expect(bridge.weakBars).toHaveBeenCalledWith("minuet");
+    expect([...(drawn.last?.weak ?? [])]).toEqual([[6, 4]]);
+    expect(screen.getByText(/Weak bars from 3 runs/)).toBeTruthy();
+  });
+
+  it("W hides them and shows them again", async () => {
+    bridge.weakBars.mockResolvedValue(history);
+    await renderScreen();
+
+    await press("w");
+    expect(drawn.last?.weak).toBeNull();
+    expect(screen.queryByText(/Weak bars/)).toBeNull();
+
+    await press("W");
+    expect(drawn.last?.weak?.get(6)).toBe(4);
+  });
+
+  it("are off while playing, and come back up to date once the run ends", async () => {
+    bridge.weakBars.mockResolvedValue(history);
+    await renderScreen();
+    await startPracticing();
+    await act(async () => {
+      hear({ kind: "played", position: 0, pitch: 67, correct: true });
+    });
+    expect(drawn.last?.weak).toBeNull();
+
+    // Nothing worth reviewing: back to the start, with the history re-read.
+    await act(async () => {
+      hear({ kind: "ended", summary: { review: { bars: [] }, reason: null } as unknown as AttemptSummary });
+    });
+    expect(bridge.weakBars).toHaveBeenCalledTimes(2);
+    expect(drawn.last?.weak?.get(6)).toBe(4);
+  });
+
+  it("says so when every bar has gone fine, and shows nothing for a piece never played", async () => {
+    bridge.weakBars.mockResolvedValue({ runs: 2, bars: [{ measure: 1, level: 0 }] });
+    const { unmount } = await renderScreen();
+    expect(screen.getByText("No weak bars yet (from 2 runs)")).toBeTruthy();
+    unmount();
+
+    bridge.weakBars.mockResolvedValue({ runs: 0, bars: [] });
+    await renderScreen();
+    expect(screen.queryByText(/weak bars/i)).toBeNull();
   });
 });

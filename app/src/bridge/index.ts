@@ -38,6 +38,7 @@ import type {
   Step,
   Suggested,
   Unavailable,
+  WeakBars,
 } from "./types";
 
 export type {
@@ -63,6 +64,7 @@ export type {
   Step,
   Suggested,
   Unavailable,
+  WeakBars,
 };
 
 /** The Pieces available to practise. Never empty (FR-207). */
@@ -88,6 +90,11 @@ export function engravePiece(id: string, zoom: number, width: number): Promise<O
 /** Gives an imported Piece a new title, kept across restarts. */
 export function renamePiece(id: string, title: string): Promise<PieceSummary> {
   return invoke<PieceSummary>("rename_piece", { id, title });
+}
+
+/** Which bars of a Piece have been hard, over every attempt kept for it. */
+export function weakBars(id: string): Promise<WeakBars> {
+  return invoke<WeakBars>("weak_bars", { id });
 }
 
 /** How many practice sessions are kept for a Piece. */

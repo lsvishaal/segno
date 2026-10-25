@@ -13,6 +13,7 @@ import {
   loopTarget,
   startAtBar,
   startAttempt,
+  weakBars,
 } from "../bridge";
 import type {
   AttemptSummary,
@@ -24,6 +25,7 @@ import type {
   ReviewCard,
   StartPoint,
   Suggested,
+  WeakBars,
 } from "../bridge";
 import { DeviceSelect } from "../components/DeviceSelect";
 import { Results } from "../components/Results";
@@ -89,6 +91,10 @@ export function PracticeScreen({
   // A developer view: what the geometry layer reads from the page.
   const [showGeometry, setShowGeometry] = useState(false);
   const [phase, setPhase] = useState<Phase>({ kind: "choosing", refusal: null });
+  // The bars that have been hard over time, tinted while not playing; W hides them.
+  const [weak, setWeak] = useState<WeakBars | null>(null);
+  const [showWeak, setShowWeak] = useState(true);
+  const [playing, setPlaying] = useState(false);
   const [available, setAvailable] = useState<readonly InstrumentSummary[]>([]);
   const [cursor, setCursor] = useState<CursorState>(BEFORE_STARTING);
   // Where attempts start. Held by the practice thread; this is its echo.
@@ -257,6 +263,11 @@ export function PracticeScreen({
     // was plugged in since the last time it was asked.
   }, [phase.kind === "choosing"]);
 
+  const refreshWeak = useCallback(() => {
+    weakBars(piece.id).then(setWeak, () => setWeak(null));
+  }, [piece.id]);
+  useEffect(refreshWeak, [refreshWeak]);
+
   useEffect(() => {
     let unlisten: (() => void) | undefined;
 
@@ -268,6 +279,7 @@ export function PracticeScreen({
 
       switch (event.kind) {
         case "played":
+          setPlaying(true);
           // No in-app sound any more — a real instrument or a MIDI Thru
           // route (`setThru`) is what makes noise now, not this listener.
           break;
@@ -299,6 +311,8 @@ export function PracticeScreen({
           // The review colours the notes now; a flash still fading would undo one.
           setDot(null);
           setShowingScore(false);
+          setPlaying(false);
+          refreshWeak();
           if (event.summary.review.bars.length === 0) {
             setMoveRefusal(event.summary.reason ?? "Nothing played.");
             setPhase((current) =>
@@ -318,7 +332,7 @@ export function PracticeScreen({
     });
 
     return () => unlisten?.();
-  }, []);
+  }, [refreshWeak]);
 
   const begin = useCallback(
     (instrument: string, from: number = start.position) => {
@@ -422,6 +436,8 @@ export function PracticeScreen({
       if (event.key.toLowerCase() === "l" && !keyboardLost) {
         event.preventDefault();
         toggleLoop();
+      } else if (event.key.toLowerCase() === "w") {
+        setShowWeak((shown) => !shown);
       } else if (event.key === "Escape" && loop && !settingsOpen && phase.kind !== "ended") {
         stopLooping();
       }
@@ -579,6 +595,14 @@ export function PracticeScreen({
         notReached: review.bars.filter((bar) => bar.state === "notReached").map((bar) => bar.measure),
       },
     [review],
+  );
+
+  // Off while playing and while this run's marks are on the score: the
+  // amber is "hard over time", the marks "this run", never both at once.
+  const weakShown = showWeak && !playing && !review && weak !== null && weak.runs > 0;
+  const weakLevels = useMemo(
+    () => new Map(weak?.bars.filter((bar) => bar.level > 0).map((bar) => [bar.measure, bar.level])),
+    [weak],
   );
 
   const chooseAnother = useCallback(() => {
@@ -764,12 +788,15 @@ export function PracticeScreen({
             startPosition={start.position}
             loop={loop}
             review={scoreReview}
+            weak={weakShown ? weakLevels : null}
             cursor={cursor}
             dot={dot}
             showNoteNames={showNoteNames}
             showGeometry={showGeometry}
           />
         </div>
+
+        {weakShown && <WeakLegend weak={weak} hasWeak={weakLevels.size > 0} />}
 
         <AnimatePresence>
           {resultsShown && (
@@ -923,6 +950,32 @@ function InstrumentPicker({
         Start
       </motion.button>
       {refusal && <p className="text-sm text-ink-muted">{refusal}</p>}
+    </div>
+  );
+}
+
+/** What the amber on the score means, in the corner while it shows. */
+function WeakLegend({ weak, hasWeak }: { readonly weak: WeakBars; readonly hasWeak: boolean }) {
+  const runs = `from ${weak.runs} ${weak.runs === 1 ? "run" : "runs"}`;
+  return (
+    <div
+      data-weak-legend
+      className="pointer-events-none absolute right-4 bottom-3 flex items-center gap-2 rounded-md border border-rule bg-paper-raised/90 px-3 py-1.5 text-xs text-ink-muted"
+    >
+      {hasWeak ? (
+        <>
+          <span className="flex gap-0.5" aria-hidden="true">
+            {["bg-pause/8", "bg-pause/16", "bg-pause/26", "bg-pause/38"].map((tint) => (
+              <span key={tint} className={`h-3 w-3 rounded-sm ${tint}`} />
+            ))}
+          </span>
+          <span>
+            Weak bars {runs} · lighter = easier for you, deeper = harder · <kbd>W</kbd> to hide
+          </span>
+        </>
+      ) : (
+        <span>No weak bars yet ({runs})</span>
+      )}
     </div>
   );
 }

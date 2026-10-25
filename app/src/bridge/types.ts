@@ -166,6 +166,14 @@ export interface AttemptSummary {
   readonly review: Review;
 }
 
+/** Which bars of a piece have been hard over every attempt kept for it. */
+export interface WeakBars {
+  /** How many attempts (runs and loop passes) this is from. */
+  readonly runs: number;
+  /** Bars played at least twice: 0 went fine, 1–4 lighter to deeper. */
+  readonly bars: readonly { readonly measure: number; readonly level: number }[];
+}
+
 /** The results after a run (Start to stopping): every number and sentence comes from Rust. */
 export interface Review {
   readonly headline: string;

@@ -682,11 +682,11 @@ Built in M2.1 (`hogwash-analysis/src/bars.rs`, `Bars::of`):
       attempts and sessions. The written rhythm now comes from Verovio's
       timemap (each position's beat, each bar's length). Check real data
       with `hogwash-cli bars <score> <data folder> <piece id>`.
-- [ ] **M2.2 · M · Per-piece history across sessions.**
+- [x] **M2.2 · M · Per-piece history across sessions.**
       Load all sessions of a piece, compute per-bar stats per session, then
       the baseline. Fast enough to run on open (budget: < 100 ms for 50
       sessions of the Prelude).
-- [ ] **M2.3 · L · Heatmap on the score (never cut).**
+- [x] **M2.3 · L · Heatmap on the score (never cut).**
       - Each bar's background tinted by its difficulty relative to the
         piece's other bars (quantiles: 5 steps).
       - **Single-hue scale** (warm amber, light → deep), not red/green, so
