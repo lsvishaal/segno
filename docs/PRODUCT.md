@@ -260,7 +260,7 @@ Ordered by how likely you are to make each one.
 10. **Starting MIDI import early because it's exciting.** It's post-v1.0
     and needs a licence decision. The weak-bars feature is the product.
 11. **Moving dates instead of cutting features.** Cut from the bottom.
-12. **Judging success by stars or downloads.** See §30.
+12. **Judging success by stars or downloads.** See section 30.
 13. **Building for imaginary users.** Every feature should trace back to
     `annoyances.md`, a real user's hesitation, or the one sentence.
 14. **Big-bang changes.** Each task should leave the app working. If a task

@@ -37,7 +37,7 @@ impl MidiSource for MidiInstruments {
             .collect();
 
         if instruments.is_empty() {
-            // Not an empty list. `004 §8.5` wants the absence *said*, and an
+            // Not an empty list. The design wants the absence *said*, and an
             // empty list invites a caller to carry on and discover it later.
             return Err(NoInstrument::NoneConnected);
         }
@@ -87,7 +87,7 @@ impl MidiSource for MidiInstruments {
         let (notes, heard) = channel();
 
         // `midir` calls this on its own thread, whenever a key moves. It does
-        // as little as possible and never blocks: `ADR-0009` keeps every
+        // as little as possible and never blocks: the design keeps every
         // decision on the one thread that drains the other end, so this side
         // only decodes and forwards.
         //
@@ -207,7 +207,7 @@ impl Keyboard for Connected {
                 Err(TryRecvError::Disconnected) => {
                     // The sending side is gone — the instrument went away.
                     // Whatever was already in the channel has been taken, so
-                    // nothing captured is lost (`004 §8.5`).
+                    // nothing captured is lost.
                     self.connection = None;
                     break;
                 }

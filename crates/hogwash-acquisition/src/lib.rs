@@ -1,5 +1,5 @@
 //! Resolving material a performer offers into a Piece, or into an explained
-//! refusal (`004 §8.2`).
+//! refusal.
 //!
 //! Pure: it reads no file and links to no engine. What it is given is bytes
 //! and an [`Engraver`](hogwash_engraving::Engraver); whoever opened the file
@@ -7,7 +7,7 @@
 //!
 //! # The commitment this component exists to keep
 //!
-//! `Product_Discovery.md §5` — never let the performer fail alone. Rejecting
+//! never let the performer fail alone. Rejecting
 //! a file is easy; rejecting it in a way the performer can act on requires
 //! knowing **what they offered**, which is why format recognition happens
 //! before any attempt to read the material as music. An engine's parse

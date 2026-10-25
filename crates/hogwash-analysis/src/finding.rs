@@ -1,11 +1,11 @@
-//! One thing Analysis found (`003 §7.6`).
+//! One thing Analysis found.
 
 use hogwash_domain::{Location, MeasureNumber, Pitch};
 use hogwash_notation::Note;
 
 /// A single observation about an Attempt.
 ///
-/// `003 §7.6` names exactly four outcomes — *"which notes were correct, which
+/// The design names exactly four outcomes — *"which notes were correct, which
 /// were wrong, which expected notes never arrived, and which unexpected ones
 /// did"* — so there are four variants, no more and no fewer.
 ///
@@ -13,13 +13,13 @@ use hogwash_notation::Note;
 ///
 /// Under wait-for-me the Cursor never moves past an unplayed note, so every
 /// non-matching note is in some sense surplus, and the distinction between
-/// FR-401 and FR-403 is not obvious. The requirement wording draws it:
+/// The requirement is not obvious. The requirement wording draws it:
 ///
-/// - FR-401 concerns a note whose pitch differs from **the corresponding
+/// - the requirement concerns a note whose pitch differs from **the corresponding
 ///   note** in the reference performance. A corresponding note exists exactly
 ///   while the Cursor is still waiting on a position. → [`IncorrectPitch`],
 ///   which therefore has a location and can say what was wanted there.
-/// - FR-403 concerns a note **absent from the reference performance**.
+/// - the requirement concerns a note **absent from the reference performance**.
 ///   Nothing corresponds to it exactly when nothing is expected — the
 ///   performer played on after the piece ended. → [`Unexpected`], which has
 ///   no location, because there is no position it belongs to.
@@ -30,8 +30,8 @@ use hogwash_notation::Note;
 /// # Locations, not aggregation
 ///
 /// Findings carry a [`Location`] because Feedback locates its findings by
-/// Measure and Note (`003 §7.7`). That is *location*. FR-407, which asks for
-/// results **aggregated** per measure, is deferred (`MVP §8`) and no rollup
+/// Measure and Note. That is *location*. The requirement, which asks for
+/// results **aggregated** per measure, is deferred and no rollup
 /// exists.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum Finding {
@@ -43,10 +43,9 @@ pub enum Finding {
         pitch: Pitch,
     },
 
-    /// A played note that differs from what the Score asked for here
-    /// (FR-401).
+    /// A played note that differs from what the Score asked for here.
     ///
-    /// It does **not** consume the position. The Cursor holds (`MVP §5`), so
+    /// It does **not** consume the position. The Cursor holds, so
     /// the performer usually goes on to play the right note, which is then
     /// [`Correct`](Finding::Correct). One position can yield several
     /// findings, and that is a faithful account of what happened.
@@ -56,23 +55,22 @@ pub enum Finding {
         /// What the performer played.
         ///
         /// A bare `Pitch`, because that is genuinely all an instrument
-        /// reports. ADR-0001 forbids reconstructing a spelling from it.
+        /// reports. The design forbids reconstructing a spelling from it.
         played: Pitch,
         /// What the Score asked for here, in written order.
         ///
         /// Carried as written `Note`s rather than sounding pitches, because
-        /// `004 §8.7` gives Feedback an Analysis and nothing else, and
-        /// Feedback must speak in musical terms (`003 §7.7`) — "F was
+        /// The design gives Feedback an Analysis and nothing else, and
+        /// Feedback must speak in musical terms — "F was
         /// written" cannot be said from the number 65.
         expected: Vec<Note>,
     },
 
-    /// An expected note that never arrived (FR-402).
+    /// An expected note that never arrived.
     ///
     /// Under wait-for-me these can only be the tail the performer never
     /// reached, plus any unplayed members of a final part-played chord — a
-    /// note cannot be skipped mid-piece, because the Cursor will not pass it
-    /// (`MVP §5`).
+    /// note cannot be skipped mid-piece, because the Cursor will not pass it.
     Omitted {
         /// Where in the music.
         at: Location,
@@ -80,7 +78,7 @@ pub enum Finding {
         written: Note,
     },
 
-    /// A played note when the Score asked for nothing further (FR-403).
+    /// A played note when the Score asked for nothing further.
     ///
     /// Carries no location: there is no position it belongs to, which is
     /// precisely what distinguishes it from
@@ -95,7 +93,7 @@ impl Finding {
     /// Whether this finding reports something other than a correct note.
     ///
     /// A convenience for counting, not a judgement of the Attempt —
-    /// `003 §7.6` is explicit that Analysis does not judge.
+    /// The design is explicit that Analysis does not judge.
     #[must_use]
     pub const fn is_correct(&self) -> bool {
         matches!(self, Self::Correct { .. })

@@ -10,7 +10,7 @@
     bar 2 — Gb4, then a C4+E4+G4 chord
 
   F#4 and Gb4 are the same key on a keyboard and different notes on a page.
-  They are here so that a test can assert both halves of ADR-0001 at once:
+  They are here so that a test can assert both halves of one rule at once:
   that both sound 66, and that each keeps the spelling the file gave it.
 
   The chord is here because a chord is one Position with three Notes, and

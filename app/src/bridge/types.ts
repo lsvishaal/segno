@@ -3,7 +3,7 @@
  *
  * Hand-written to mirror the `#[derive(Serialize)]` types in
  * `app/src-tauri/src/commands.rs`. They are deliberately *not* the domain's
- * types: the same translation `ADR-0010` made for storage, for the same
+ * types: the same translation the design made for storage, for the same
  * reason — an interface bound directly to `hogwash_notation::Score` would
  * break silently the moment that type was refactored.
  *
@@ -57,10 +57,10 @@ export interface DrawnNote extends StaffPosition {
  * One place in the music, and the elements drawn for it.
  *
  * This is the whole mechanism behind showing correctness on the score
- * (`MVP §6.6`): Verovio writes the same identifier into its own document and
+ *: Verovio writes the same identifier into its own document and
  * into the SVG, so a position in the piece names elements in the DOM. The
  * spelling on each `DrawnNote` is what lets a wrong note — which has no
- * position of its own, `ADR-0001` — be placed relative to notes that really
+ * position of its own, the design — be placed relative to notes that really
  * were written.
  */
 export interface Mark {
@@ -110,7 +110,7 @@ export interface StartPoint {
  * Why the application cannot do its job.
  *
  * Rendered as a whole screen rather than a toast: this is not a transient
- * error, it is Hogwash being unable to start, and `004 §8.2` asks for an
+ * error, it is Hogwash being unable to start, and the design asks for an
  * explanation rather than a shrug.
  */
 export interface Unavailable {
@@ -137,7 +137,7 @@ export interface ImportedPiece {
   readonly already: boolean;
 }
 
-/** A MIDI instrument the performer could play (FR-307). */
+/** A MIDI instrument the performer could play. */
 export interface InstrumentSummary {
   /** What to show, and what `startAttempt` names it by. */
   readonly name: string;
@@ -152,8 +152,8 @@ export interface OutputPortSummary {
 /**
  * What an ended attempt is reported as.
  *
- * `MVP §10` leaves an attempt summary's exact content an open design
- * question beyond "one overall result" (FR-408); this is Stage D's minimum
+ * The design leaves an attempt summary's exact content an open design
+ * question beyond "one overall result"; this is Stage D's minimum
  * to make the loop demonstrable end-to-end. `lines` is `Feedback::lines()`,
  * verbatim — every sentence about the performance arrives from Rust already
  * written, and nothing here composes one.

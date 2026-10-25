@@ -1,8 +1,8 @@
 //! Writing a file so that being interrupted cannot damage an older one.
 //!
-//! `004 §8.9` sets the boundary: *"an interruption mid-write must not corrupt
+//! The design sets the boundary: *"an interruption mid-write must not corrupt
 //! previously recorded Sessions or Attempts; at minimum, prior records remain
-//! intact even if the most recent one does not."* NFR-100 and FR-704 say the
+//! intact even if the most recent one does not."* the requirements say the
 //! same from the requirements side.
 //!
 //! The obvious way to write a file is the one that cannot satisfy that.
@@ -111,7 +111,7 @@ mod tests {
         assert!(path.exists());
     }
 
-    // 004 §8.9 — prior records remain intact even if the most recent one does
+    // prior records remain intact even if the most recent one does
     // not. The interruption cannot be staged directly here, so what is
     // asserted is the property that makes it true: nothing is ever written
     // through the record's own name, so there is no moment at which that name

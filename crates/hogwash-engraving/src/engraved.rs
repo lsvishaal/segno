@@ -63,7 +63,7 @@ impl PageIndex {
 /// Where the notes of one Position ended up on the page.
 ///
 /// Several elements, not one, because a Position is *the notes required
-/// together* (`003 §7.4`) and a chord is three or four glyphs. `MVP §6.6`
+/// together* and a chord is three or four glyphs. The design
 /// shows correctness on the score, and a chord the performer got half right
 /// has to be shown half right.
 ///
@@ -105,13 +105,13 @@ impl Placement {
 
 /// What a source file says about the work itself.
 ///
-/// FR-201 requires a Piece to carry *"at minimum a title and, where
+/// The requirement requires a Piece to carry *"at minimum a title and, where
 /// available, a composer"*. Both are optional here and neither is optional
 /// there: a source file may simply not say, and the Piece supplies what is
 /// missing rather than the engraver inventing it.
 ///
 /// It rides along with the engraving because it came from the same reading of
-/// the same file (`004 §6.5`). Asking for it separately would mean a second
+/// the same file. Asking for it separately would mean a second
 /// parse to answer a question the first one already passed.
 #[derive(Debug, Clone, Default, PartialEq, Eq, Hash)]
 pub struct Details {
@@ -124,17 +124,17 @@ pub struct Details {
 /// A Score, and how it was drawn.
 ///
 /// The two arrive together because they came from one reading of one file
-/// (`004 §6.5`). Separating them would mean correlating two parses, and the
+///. Separating them would mean correlating two parses, and the
 /// symptom of them disagreeing is the cursor highlighting the wrong note.
 ///
-/// Immutable once built, like the notation it holds (`003 §7.10`, FR-202).
+/// Immutable once built, like the notation it holds.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct EngravedScore {
     score: Score,
     details: Details,
     pages: Vec<String>,
     // A BTreeMap, not a HashMap: the iteration order is the Score's order on
-    // every run, which FR-406 and NFR-301 require and which the architecture
+    // every run, which the requirement requires and which the architecture
     // guard enforces for every pure crate.
     placements: BTreeMap<Location, Placement>,
     /// Each bar's drawn element, so a click on the page can say which bar.
@@ -201,7 +201,7 @@ impl EngravedScore {
         &self.score
     }
 
-    /// What the source said about the work (FR-201).
+    /// What the source said about the work.
     #[must_use]
     pub const fn details(&self) -> &Details {
         &self.details
@@ -217,7 +217,7 @@ impl EngravedScore {
     ///
     /// `None` is not an error. A Reference Performance position always has a
     /// written note, but an engraver may legitimately fail to attribute a
-    /// glyph to it — and `MVP §6.6` degrades to no highlight rather than to a
+    /// glyph to it — and the design degrades to no highlight rather than to a
     /// highlight in the wrong place.
     #[must_use]
     pub fn placement_of(&self, at: Location) -> Option<&Placement> {
@@ -252,9 +252,9 @@ pub enum MalformedEngraving {
 /// Turns written music into a Score and something drawable.
 ///
 /// One method, because reading and drawing must come from one parse
-/// (`004 §6.5` — see the crate documentation).
+/// (the design — see the crate documentation).
 ///
-/// Takes bytes rather than a path: `004 §6.3` points dependencies inward, and
+/// Takes bytes rather than a path: the design points dependencies inward, and
 /// a trait that named a file would put the filesystem in a pure crate.
 /// Whoever reads the file is the adapter's caller.
 pub trait Engraver {
@@ -262,7 +262,7 @@ pub trait Engraver {
     ///
     /// Takes `&mut self` because an engraving engine holds the document it is
     /// working on. Saying so in the signature is more honest than hiding a
-    /// cell inside an implementation, and it costs nothing: `ADR-0008` keeps
+    /// cell inside an implementation, and it costs nothing: the design keeps
     /// everything on one thread with one owner.
     ///
     /// # Errors
@@ -274,7 +274,7 @@ pub trait Engraver {
 
 /// Why an engraving could not be produced.
 ///
-/// Deliberately few and coarse. `004 §8.2` requires a failure to resolve into
+/// Deliberately few and coarse. The design requires a failure to resolve into
 /// something explainable to the performer, and a taxonomy finer than this
 /// would be describing one engine's error messages — which is exactly the
 /// detail a port exists to keep out.
@@ -282,7 +282,7 @@ pub trait Engraver {
 pub enum EngravingFailure {
     /// The engine could not be used at all — not installed, not loadable.
     ///
-    /// Nothing to do with the source. `ADR-0007` ships the engraving library
+    /// Nothing to do with the source. The design ships the engraving library
     /// as a separate replaceable file precisely so a performer can be told
     /// this rather than shown a crash.
     EngineUnavailable {
@@ -293,7 +293,7 @@ pub enum EngravingFailure {
     /// The engine read the source and did not find music it could engrave.
     Unreadable {
         /// What the engine said, to be turned into a Validation Issue by
-        /// Acquisition & Validation (`004 §8.2`).
+        /// Acquisition & Validation.
         detail: String,
     },
 
@@ -343,7 +343,7 @@ mod tests {
     }
 
     // The point of the whole port: given a place in the music, which drawn
-    // thing is it? MVP §6.6 shows correctness "on the score", which is
+    // thing is it? The design shows correctness "on the score", which is
     // impossible without this lookup.
     #[test]
     fn a_place_in_the_music_resolves_to_a_drawn_element() {
@@ -409,7 +409,7 @@ mod tests {
         );
     }
 
-    // FR-406 / NFR-301. Placements are iterated in reading order on every
+    // Placements are iterated in reading order on every
     // run, because a BTreeMap orders by its key and Location orders by
     // measure then position. A hash-ordered map would give a different order
     // per process, and the arch guard bans one in a pure crate for exactly
@@ -436,7 +436,7 @@ mod tests {
         assert_eq!(order, ["first", "second"]);
     }
 
-    // 003 §7.10 -- notation does not change once it exists. The Score an
+    // - notation does not change once it exists. The Score an
     // engraving carries is the one that was read, and there is no way to
     // swap it for another.
     #[test]

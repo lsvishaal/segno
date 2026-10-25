@@ -92,12 +92,12 @@ deny:
 arch:
     ./scripts/check-arch.sh
 
-# FR-406: runs the harness twice in separate processes and diffs the bytes (catches non-determinism a single run can't)
+# runs the harness twice in separate processes and diffs the bytes (catches non-determinism a single run can't)
 [group('check')]
 determinism:
     ./scripts/check-determinism.sh
 
-# licence obligations cargo-deny can't see, since Verovio is a shared library opened by name (ADR-0005)
+# licence obligations cargo-deny can't see, since Verovio is a shared library opened by name
 [group('check')]
 native-licences:
     ./scripts/check-native-licences.sh
@@ -133,7 +133,7 @@ harness:
 
 # --- Verovio -------------------------------------------------------------
 #
-# ADR-0005 loads Verovio at run time, so building and testing the rest of
+# The design loads Verovio at run time, so building and testing the rest of
 # Hogwash needs no C++ toolchain and no shared library — that's why these
 # stay separate from `just ci` rather than folded into it. All of them
 # default to the sibling `../verovio` / `../verovio-build` checkout; an
@@ -180,7 +180,7 @@ provided-test: _require-verovio
     HOGWASH_VEROVIO_LIB="{{verovio_lib}}" HOGWASH_VEROVIO_DATA="{{verovio_data}}" \
         cargo test --package hogwash-app -- --ignored
 
-# FR-406 for engraving: the same score must place its notes identically across processes
+# The requirement for engraving: the same score must place its notes identically across processes
 [group('verovio')]
 engraving-determinism: _require-verovio
     HOGWASH_VEROVIO_LIB="{{verovio_lib}}" HOGWASH_VEROVIO_DATA="{{verovio_data}}" \

@@ -1,8 +1,8 @@
 //! Recognising what a performer offered.
 //!
 //! This comes **before** anything tries to read the material as music, and
-//! that ordering is the point. FR-104 requires unsupported content to be
-//! rejected without producing a partial piece, and `MVP §6.9` requires the
+//! that ordering is the point. The requirement requires unsupported content to be
+//! rejected without producing a partial piece, and the design requires the
 //! rejection to name the format supplied. An engine's "could not parse this"
 //! cannot do that: it says the reading failed, not what the thing was.
 //!
@@ -11,7 +11,7 @@
 //! A file called `sonata.musicxml` that is really a PDF is a mistake a
 //! performer makes constantly — a browser saved it, or an export went wrong —
 //! and telling them "your `MusicXML` is invalid" sends them to check the wrong
-//! thing. So nothing here looks at a filename. FR-106's second acceptance
+//! thing. So nothing here looks at a filename. The requirement's second acceptance
 //! criterion says as much.
 
 /// What a piece of offered material appears to be.
@@ -23,10 +23,10 @@
 /// rather than a failure to try harder.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum OfferedFormat {
-    /// `MusicXML`, uncompressed. The format the system exists to read (FR-100).
+    /// `MusicXML`, uncompressed. The format the system exists to read.
     MusicXml,
 
-    /// `MusicXML` in its compressed `.mxl` container (FR-100).
+    /// `MusicXML` in its compressed `.mxl` container.
     CompressedMusicXml,
 
     /// MEI. Not a stated input format, but the engraver reads it and a score
@@ -34,7 +34,7 @@ pub enum OfferedFormat {
     Mei,
 
     /// A MIDI file. **Permanently excluded as a notation source**
-    /// (`001 §11`, FR-101 `Deprecated`) — it records a performance, not
+    /// (the design's `Deprecated`) — it records a performance, not
     /// written music.
     Midi,
 
@@ -55,7 +55,7 @@ impl OfferedFormat {
         matches!(self, Self::MusicXml | Self::CompressedMusicXml | Self::Mei)
     }
 
-    /// What to call it when telling the performer (`MVP §6.9`, NFR-800).
+    /// What to call it when telling the performer.
     #[must_use]
     pub const fn name(self) -> &'static str {
         match self {
@@ -172,7 +172,7 @@ mod tests {
     }
 
     // Both are zip archives, so the magic number cannot tell them apart. The
-    // entry names can, and MVP §6.9 needs them told apart: "this is a
+    // entry names can, and the design needs them told apart: "this is a
     // MuseScore file" is the sentence that helps.
     #[test]
     fn a_zip_containing_a_musescore_document_is_musescore() {
@@ -204,7 +204,7 @@ mod tests {
         assert_eq!(recognise(b""), OfferedFormat::Unrecognised);
     }
 
-    // FR-106's second criterion. The extension is not consulted anywhere, so
+    // The requirement's second criterion. The extension is not consulted anywhere, so
     // this is really a test that content wins by construction; it is here
     // because the day someone adds a path parameter, it should fail.
     #[test]
@@ -212,7 +212,7 @@ mod tests {
         assert_eq!(recognise(b"%PDF-1.4 sonata.musicxml"), OfferedFormat::Pdf);
     }
 
-    // MVP §6.9 requires the performer to be told what they supplied. A format
+    // The design requires the performer to be told what they supplied. A format
     // that cannot be named cannot be explained.
     #[test]
     fn every_format_can_be_named() {
@@ -229,7 +229,7 @@ mod tests {
         }
     }
 
-    // 001 §11 and FR-101 exclude MIDI as a notation source permanently. If
+    // The design excludes MIDI as a notation source permanently. If
     // this ever passes, a rejected product decision has come back.
     #[test]
     fn midi_and_pdf_are_not_supported() {

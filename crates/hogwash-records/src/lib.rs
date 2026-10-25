@@ -1,6 +1,6 @@
-//! What happened, kept (`004 §8.9`).
+//! What happened, kept.
 //!
-//! `MVP §6.7` includes session and attempt recording in Version 1 for a
+//! The design includes session and attempt recording in Version 1 for a
 //! reason it states plainly, and which is worth repeating because it is the
 //! only argument for building this now: *analytics can always be built later
 //! over history that exists, but history not recorded in v1 can never be

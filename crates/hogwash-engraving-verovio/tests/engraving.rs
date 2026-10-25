@@ -1,7 +1,7 @@
 //! The adapter against a real Verovio.
 //!
 //! **Every test here is `#[ignore]`d**, and that is deliberate rather than
-//! neglectful. `ADR-0005` loads Verovio at run time precisely so that
+//! neglectful. The design loads Verovio at run time precisely so that
 //! `cargo build` and `just ci` need no C++ toolchain and no shared library;
 //! a test that silently passed when the library was absent would quietly
 //! stop testing anything the day CI lost it.
@@ -100,7 +100,7 @@ fn a_musicxml_file_becomes_the_music_it_contains() {
     );
 }
 
-// ADR-0001 against the engine itself: two spellings, one sound.
+// The design against the engine itself: two spellings, one sound.
 #[test]
 #[ignore = "needs a real libverovio; run `just engraving-test`"]
 fn an_enharmonic_pair_survives_the_round_trip() {
@@ -116,7 +116,7 @@ fn an_enharmonic_pair_survives_the_round_trip() {
     assert_eq!(f_sharp.sounding(), g_flat.sounding());
 }
 
-// The mechanism MVP §6.6 rests on: every place in the music points at
+// The mechanism the design rests on: every place in the music points at
 // something drawn.
 #[test]
 #[ignore = "needs a real libverovio; run `just engraving-test`"]
@@ -154,7 +154,7 @@ fn the_same_file_engraves_identically_twice_over() {
     );
 }
 
-// Zoom (`BFR-4`) re-engraves the same score at a different `Layout.scale`
+// Zoom re-engraves the same score at a different `Layout.scale`
 // while an Attempt may be in progress. That is only safe if an element's
 // identifier depends on the music's content, not on the size it was drawn
 // at — otherwise the frontend's `Mark.notes[].elementId`s would go stale the
@@ -216,7 +216,7 @@ fn a_place_in_the_music_resolves_to_the_notes_drawn_there() {
     assert_eq!(chord.elements().len(), 3);
 }
 
-// 004 §8.2 — a failure resolves into an explanation, never a crash. A
+// a failure resolves into an explanation, never a crash. A
 // performer who has moved or deleted the library must be told which file is
 // missing, not shown a stack trace.
 #[test]
@@ -238,10 +238,10 @@ fn a_missing_engine_is_reported_rather_than_fatal() {
     }
 }
 
-// FR-104 — content that is not music is rejected without producing a partial
+// content that is not music is rejected without producing a partial
 // piece. Here the rejection comes from the engine; naming *which* format was
 // offered and what to do about it is Acquisition & Validation's job
-// (`MVP §6.9`), and arrives at M6.
+//, and arrives at M6.
 #[test]
 #[ignore = "needs a real libverovio; run `just engraving-test`"]
 fn a_file_that_is_not_music_is_refused() {
@@ -278,7 +278,7 @@ fn height_of(svg: &str) -> u32 {
         .expect("a viewBox has four numbers: min-x, min-y, width, height")
 }
 
-// ADR-0011 / MVP §6.4 — a practice score is scrolled, not turned, so a short
+// a practice score is scrolled, not turned, so a short
 // exercise should come back as a short strip rather than a mostly-empty sheet
 // of A4, which at this scale is a little over 3200px.
 //

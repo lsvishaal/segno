@@ -7,14 +7,14 @@
 //!
 //! # Why the library is opened at run time
 //!
-//! `ADR-0005`. `libloading` rather than build-time linking means:
+//! `libloading` rather than build-time linking means:
 //!
 //! - `cargo build` and the whole test suite work with no C++ toolchain and no
 //!   Verovio present, so contributors and CI pay nothing for it.
-//! - LGPL-3.0 §4's replaceable-library obligation is discharged by
-//!   construction rather than argued in a paragraph (`ADR-0007`).
+//! - section 4 of LGPL-3.0's replaceable-library obligation is discharged by
+//!   construction rather than argued in a paragraph.
 //! - A missing library is a message rather than a link error, which is what
-//!   `004 §8.2` requires of every failure.
+//!   The design requires of every failure.
 //!
 //! # What makes the `unsafe` here sound
 //!
@@ -33,7 +33,7 @@
 //!
 //! [`Toolkit`] is deliberately **not** `Send` or `Sync` — it holds a raw
 //! pointer, and nothing here establishes that Verovio's toolkit is safe to
-//! use from more than one thread. `ADR-0008` keeps everything on one thread
+//! use from more than one thread. The design keeps everything on one thread
 //! anyway.
 
 use std::ffi::{CStr, CString, c_char, c_int, c_void};
@@ -192,8 +192,8 @@ impl Toolkit {
     /// Seeds the identifier generator **first**, and that ordering is not
     /// stylistic. `S0` Q3 measured that unseeded identifiers differ between
     /// two loads in one process, and that `resetXmlIdSeed` after `loadData`
-    /// is too late because identifiers are assigned during parsing. FR-406
-    /// and NFR-301 require identical results across restarts, and `MVP §9.2`
+    /// is too late because identifiers are assigned during parsing. The requirement
+    /// and the requirement requires identical results across restarts, and the design
     /// makes that release-blocking, so an unseeded load would fail the
     /// release criteria on the first restart.
     pub(crate) fn load(&mut self, source: &str) -> Result<(), ToolkitError> {
@@ -214,7 +214,7 @@ impl Toolkit {
 
     /// Loads compressed `MusicXML` — a `.mxl` container.
     ///
-    /// FR-100 requires `MusicXML` *"in both its uncompressed and compressed
+    /// The requirement requires `MusicXML` *"in both its uncompressed and compressed
     /// forms"*. Verovio unpacks the container itself, so this exists rather
     /// than a zip dependency and a guess at which entry inside is the score.
     pub(crate) fn load_compressed(&mut self, source: &[u8]) -> Result<(), ToolkitError> {
@@ -340,7 +340,7 @@ impl Toolkit {
     ///
     /// Verovio reports most trouble by logging rather than by returning
     /// false, so this is the raw material for the Validation Report that
-    /// `004 §8.2` requires.
+    /// The design requires.
     pub(crate) fn log(&self) -> String {
         // SAFETY (facts 1, 2 and 3).
         #[expect(

@@ -1,4 +1,4 @@
-//! A Practice Session — one sitting on one Piece (`003 §7.2`).
+//! A Practice Session — one sitting on one Piece.
 
 use std::sync::Arc;
 
@@ -7,19 +7,19 @@ use hogwash_notation::ReferencePerformance;
 use crate::attempt::{Attempt, EndedAttempt};
 
 /// A continuous period during which a performer practises one Piece
-/// (`003 §7.2`), still open.
+///, still open.
 ///
-/// **One Piece, fixed for life.** `003 §7.2` states it as an invariant, and
+/// **One Piece, fixed for life.** The design states it as an invariant, and
 /// it is carried by the type: the Reference Performance is supplied once at
 /// [`open`](Self::open) and there is no way to replace it, so
 /// [`begin_attempt`](Self::begin_attempt) needs no Piece argument — there is
 /// nothing else an Attempt could be at.
 ///
-/// A Session evaluates nothing and judges nothing (`003 §7.2`
+/// A Session evaluates nothing and judges nothing (the design
 /// Non-Responsibilities). It groups Attempts; that is all.
 ///
-/// **No timestamps.** `003 §7.2` calls a Session "bounded in time", but
-/// `004 §6.7` forbids a clock here. When Practice Records arrive the caller
+/// **No timestamps.** The design calls a Session "bounded in time", but
+/// The design forbids a clock here. When Practice Records arrive the caller
 /// supplies the time; the domain never reads one.
 #[derive(Debug, Clone)]
 pub struct PracticeSession {
@@ -30,7 +30,7 @@ pub struct PracticeSession {
 impl PracticeSession {
     /// Opens a Session on the Piece `reference` describes.
     ///
-    /// It begins with no Attempts, which `003 §7.2` notes is legitimate — a
+    /// It begins with no Attempts, which the design notes is legitimate — a
     /// performer may open one and be interrupted before playing.
     #[must_use]
     pub fn open(reference: Arc<ReferencePerformance>) -> Self {
@@ -81,7 +81,7 @@ impl PracticeSession {
 
     /// Closes the Session.
     ///
-    /// `003 §7.2` — *"A closed Session accepts no further Attempts."* Carried
+    /// *"A closed Session accepts no further Attempts."* Carried
     /// by the type: this consumes the Session, and [`ClosedSession`] has
     /// neither [`begin_attempt`](Self::begin_attempt) nor
     /// [`record`](Self::record). A closed Session gaining an Attempt is not a
@@ -94,9 +94,9 @@ impl PracticeSession {
     }
 }
 
-/// A Practice Session that has been closed (`003 §7.2`).
+/// A Practice Session that has been closed.
 ///
-/// It keeps its history and accepts nothing further. `003 §9.1` — *"Ended
+/// It keeps its history and accepts nothing further. The design — *"Ended
 /// things do not change."*
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct ClosedSession {
@@ -118,7 +118,7 @@ mod tests {
     use crate::fixtures::{one_bar, pitch};
     use crate::session::PracticeSession;
 
-    // 003 §7.2 Notes -- "A Session containing no Attempts is legitimate -- a
+    // The design Notes -- "A Session containing no Attempts is legitimate -- a
     // performer may open one and be interrupted before playing. Nothing in
     // the domain requires an Attempt to have occurred."
     #[test]
@@ -129,7 +129,7 @@ mod tests {
         assert!(session.close().attempts().is_empty());
     }
 
-    // 003 §7.2 -- "It holds the Attempts made within it, in the order they
+    // - "It holds the Attempts made within it, in the order they
     // were made."
     #[test]
     fn a_session_holds_its_attempts_in_the_order_they_were_made() {
@@ -155,7 +155,7 @@ mod tests {
         assert_eq!(reached, vec![1, 2]);
     }
 
-    // 003 §7.2 -- "A Practice Session concerns exactly one Piece, fixed for
+    // - "A Practice Session concerns exactly one Piece, fixed for
     // the Session's lifetime." Every Attempt is at that Piece, because
     // `begin_attempt` takes no piece argument -- there is nothing else it
     // could be at.
@@ -168,11 +168,11 @@ mod tests {
         assert_eq!(attempt.cursor().expecting(), session.reference().at(0));
     }
 
-    // 003 §7.2 Lifecycle -- "A closed Session accepts no further Attempts."
+    // The design Lifecycle -- "A closed Session accepts no further Attempts."
     // Carried by the type: `close` consumes the Session, and ClosedSession
     // has no `begin_attempt` or `record`. This is a compile-time fact; the
     // test records that closing preserves the history rather than discarding
-    // it (003 §9.1, "Ended things do not change").
+    // it (the design, "Ended things do not change").
     #[test]
     fn a_closed_session_keeps_the_attempts_it_already_held() {
         let mut session = PracticeSession::open(one_bar(&[Step::C]));

@@ -332,8 +332,8 @@ and never opens by itself.
 | Notes held from the previous position | Not re-judged (ties logic already covers written ties) |
 | Piece with > 2 staves or several parts | Refuse clearly on import for v1.0: "Hogwash handles one piano part (two staves)." |
 | Piece with a pickup (anacrusis) bar | Bar numbering must match the printed score (test with a PD Für Elise) |
-| Very long piece (300+ bars) | Engraving and history stay within budgets (§21) |
-| Mid-bar clef change | Known limit (`docs/PRODUCT.md` §27) |
+| Very long piece (300+ bars) | Engraving and history stay within budgets (section 21) |
+| Mid-bar clef change | Known limit (`docs/PRODUCT.md`, Known limits) |
 | Played an octave off everywhere | Octave-shift hint (M3.14) |
 | Piece needs keys the keyboard lacks | Warn on open (M3.13) |
 | Session file corrupted on disk | Skip it, keep the rest, note it in Details |
@@ -361,7 +361,7 @@ Not a polish item — a correctness item. Minimum bar for v1.0:
   the hands selector is a radio group (the instrument picker already is).
 - Live region (`role="status"`) for: attempt started, loop pass counter,
   loop done, device lost/restored. Throttled so it doesn't chatter.
-- Colour never the only signal (§16.2).
+- Colour never the only signal (section 16.2).
 - Text scales with the OS setting; layout survives 150% UI zoom.
 - Reduced motion honoured everywhere.
 - Hit targets ≥ 32 px for toolbar controls.

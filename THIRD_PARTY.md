@@ -18,7 +18,7 @@ worse than no gate, because it is trusted.
 
 | | |
 |---|---|
-| What it does | Engraves the notation the performer reads (`ADR-0005`) |
+| What it does | Engraves the notation the performer reads |
 | Upstream | https://github.com/rism-digital/verovio |
 | Licence | **LGPL-3.0-or-later**, dual-licensed GPL-3.0 |
 | How it is used | A separate shared library (`libverovio.so` / `.dll` / `.dylib`) plus its `data/` directory, **opened at run time** with `dlopen` (`libloading`) |
@@ -26,12 +26,12 @@ worse than no gate, because it is trusted.
 
 ### What that arrangement is for
 
-LGPL-3.0 §4 permits combining the library with a work under other terms,
+Section 4 of LGPL-3.0 permits combining the library with a work under other terms,
 provided the user can replace the library with their own version. Hogwash
 does not merely satisfy that clause, it is built on it: the library is never
 linked, only located and opened by name at run time, so replacing it is
-copying a file over another file. `ADR-0007` records the reasoning; `ADR-0005`
-records why the same choice is also the right engineering one.
+copying a file over another file. The same choice is also the right
+engineering one: `cargo build` needs no C++ toolchain.
 
 ### Obligations, and where each is met
 
@@ -44,7 +44,7 @@ records why the same choice is also the right engineering one.
 
 **Not yet done, and not yet due:** the notice files and the about screen are
 distribution artefacts, and Hogwash is not distributed. They are release
-gates, tracked alongside C-200's provided-library verification in `MVP §9.2`.
+gates, tracked alongside the check of the provided library before each release.
 
 ### The version used
 

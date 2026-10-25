@@ -13,7 +13,7 @@ const VARIANTS = {
 
 /**
  * On a shelf: enters with the others, fades out when deleted, and slides to
- * close a gap a deleted neighbour leaves (ROADMAP §16.5: 160 ms, ease-out).
+ * close a gap a deleted neighbour leaves (docs/DESIGN.md: 160 ms, ease-out).
  */
 const SHELVED = {
   variants: VARIANTS,

@@ -1,4 +1,4 @@
-//! Positions and Measures — how a Score is divided (`003 §7.8`, `§7.9`).
+//! Positions and Measures — how a Score is divided.
 
 use hogwash_domain::{MeasureNumber, Pitch};
 
@@ -10,7 +10,7 @@ pub const TICKS_PER_QUARTER: u32 = 480;
 
 /// One point in the music, and everything the Score requires there.
 ///
-/// `003 §7.9` — *"Notes may be required together — a chord is several Notes
+/// *"Notes may be required together — a chord is several Notes
 /// at one position."* A Position is that point. A single melody note is a
 /// Position holding one Note; a chord is a Position holding several.
 ///
@@ -34,7 +34,7 @@ impl Position {
     /// A position requiring nothing is silence, and silence is the absence of
     /// a position rather than an empty one. Admitting it would put a step in
     /// the Reference Performance that the Cursor could never advance past,
-    /// because there would be no note to play (`003 §9.2`).
+    /// because there would be no note to play.
     #[must_use]
     pub fn new(notes: Vec<Note>) -> Option<Self> {
         if notes.is_empty() {
@@ -87,12 +87,12 @@ impl Position {
     }
 }
 
-/// A structural division of a Piece, as written in its Score (`003 §7.8`).
+/// A structural division of a Piece, as written in its Score.
 ///
 /// Measures exist so that performer and system share a way of saying *where*.
-/// `003 §7.8` is explicit that Version 1 does not aggregate Analysis by
-/// Measure (`MVP §8` defers FR-407) — they are modelled anyway because
-/// Feedback must say where something happened (`003 §7.7`).
+/// The design is explicit that Version 1 does not aggregate Analysis by
+/// Measure (the design defers the requirement) — they are modelled anyway because
+/// Feedback must say where something happened.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct Measure {
     number: MeasureNumber,
@@ -110,9 +110,9 @@ impl Measure {
     ///
     /// Unlike [`Position::new`] this is infallible: a Measure with no
     /// positions is a bar of rests, which is legitimate written music.
-    /// Rests are not modelled — `003 §7` names no such concept — so such a
+    /// Rests are not modelled — the design names no such concept — so such a
     /// bar is simply empty, and it must be constructible or the Score cannot
-    /// hold the notation faithfully (`001 §11`).
+    /// hold the notation faithfully.
     #[must_use]
     pub fn new(number: MeasureNumber, positions: Vec<Position>) -> Self {
         Self {
@@ -173,7 +173,7 @@ mod tests {
         Note::new(PitchSpelling::new(step, 0, octave)).unwrap()
     }
 
-    // 003 §7.9 — "Notes may be required together — a chord is several Notes
+    // "Notes may be required together — a chord is several Notes
     // at one position." A Position is that: one point in the music, and
     // everything the Score asks for there.
     #[test]
@@ -195,13 +195,13 @@ mod tests {
     // music -- it is silence, and silence is the absence of a position rather
     // than an empty one. Allowing it would put a step in the Reference
     // Performance that the Cursor could never advance past, since there is no
-    // note to play (003 §9.2).
+    // note to play.
     #[test]
     fn a_position_requiring_no_notes_is_not_a_position() {
         assert!(Position::new(vec![]).is_none());
     }
 
-    // 003 §7.8 — "A Measure contains Notes", and they are ordered.
+    // "A Measure contains Notes", and they are ordered.
     #[test]
     fn a_measure_holds_its_positions_in_order() {
         let first = Position::new(vec![note(Step::C, 4)]).unwrap();
@@ -213,9 +213,9 @@ mod tests {
     }
 
     // A bar of rests is legitimate written music. Rests are not modelled --
-    // 003 §7 names no such concept -- so such a bar is a Measure with no
+    // The design names no such concept -- so such a bar is a Measure with no
     // positions, and it must be constructible or the Score cannot represent
-    // the notation faithfully (001 §11).
+    // the notation faithfully.
     #[test]
     fn a_measure_of_rests_contains_no_positions() {
         let measure = Measure::new(MeasureNumber::FIRST, vec![]);

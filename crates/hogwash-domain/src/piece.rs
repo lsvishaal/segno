@@ -2,14 +2,14 @@
 
 /// A durable name for a Piece.
 ///
-/// `003 §7.2` fixes a Practice Session to exactly one Piece, and a Practice
+/// The design fixes a Practice Session to exactly one Piece, and a Practice
 /// Record that outlives the program has to say which one. That is the whole
 /// job of this type.
 ///
 /// # Why it is opaque
 ///
 /// What the name is *made of* is a persistence question, answered by
-/// `ADR-0010`, and nothing outside storage should depend on the answer. A
+/// The design, and nothing outside storage should depend on the answer. A
 /// title would collide and would change if a score were retitled; a file path
 /// would break the moment a performer tidied their folders; a number assigned
 /// in sequence would mean two machines disagreed about the same score. All

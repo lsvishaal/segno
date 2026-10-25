@@ -6,8 +6,8 @@
 //!
 //! That separation is the whole point. `S0` Q3 measured that Verovio's
 //! element identifiers are random per render, and that seeding the generator
-//! before loading makes them reproducible — including across restarts. FR-406
-//! and NFR-300/301 require exactly that, and `MVP §9.2` makes it
+//! before loading makes them reproducible — including across restarts. The requirement
+//! and the requirement requires exactly that, and the design makes it
 //! release-blocking. A comparison made inside one process cannot show it.
 
 use hogwash_engraving::Engraver;

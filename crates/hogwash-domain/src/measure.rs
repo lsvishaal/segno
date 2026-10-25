@@ -4,10 +4,10 @@ use core::num::NonZeroU32;
 
 /// The number of a Measure as the Score writes it.
 ///
-/// `003 §7.8` — *"Measures are numbered from one, following the convention
+/// *"Measures are numbered from one, following the convention
 /// performers use."* That convention is carried by the type rather than left
 /// to call sites, because the failure it prevents is user-visible: Feedback
-/// exists to tell a performer **where** something happened (`003 §7.7`), and
+/// exists to tell a performer **where** something happened, and
 /// "bar 0" is not a place they can look.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct MeasureNumber(NonZeroU32);
@@ -34,9 +34,9 @@ impl MeasureNumber {
 
 /// A place in the written music: a Measure, and which position within it.
 ///
-/// `003 §7.7` requires Feedback to locate a finding *"by Measure and Note"*,
+/// The design requires Feedback to locate a finding *"by Measure and Note"*,
 /// and this is that pair given a name. It introduces no concept — a Measure
-/// (`003 §7.8`) and the ordered positions within it (`003 §7.4`) both already
+/// and the ordered positions within it both already
 /// exist; what was missing was a single value carrying them together.
 ///
 /// It is also the project's **only durable anchor into a score**. The Verovio
@@ -47,7 +47,7 @@ impl MeasureNumber {
 /// `position` is the index of the Position within the Piece's **Reference
 /// Performance** — it counts from zero and runs across the whole piece rather
 /// than restarting each bar, because that is the sequence the Cursor walks
-/// (`003 §7.4`). Carrying the Measure alongside it means a finding can say
+///. Carrying the Measure alongside it means a finding can say
 /// which bar to look at without consulting the Reference Performance again.
 ///
 /// It is an index into a sequence, not something a performer says aloud, so
@@ -85,7 +85,7 @@ impl Location {
 mod tests {
     use super::*;
 
-    // 003 §7.8 — "Measures are numbered from one, following the convention
+    // "Measures are numbered from one, following the convention
     // performers use." Carrying that in the type means an off-by-one cannot
     // reach the performer as "bar 0", which is not a thing they can look at.
     #[test]
@@ -110,7 +110,7 @@ mod tests {
         MeasureNumber::new(number).unwrap()
     }
 
-    // 003 §7.7 — Feedback locates a finding "by Measure and Note". A place in
+    // Feedback locates a finding "by Measure and Note". A place in
     // the music is that pair, and naming it once means the bar number and the
     // index cannot drift apart on their way through the system.
     #[test]

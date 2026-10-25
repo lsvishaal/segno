@@ -35,12 +35,12 @@ pub(crate) struct ReadMei {
     measures: Vec<MeasureNumber>,
     measure_ids: BTreeMap<String, MeasureNumber>,
     // A BTreeMap so the reading is reproducible whatever order the document
-    // is walked in (FR-406, NFR-301).
+    // is walked in.
     notes: BTreeMap<String, WrittenNote>,
 }
 
 impl ReadMei {
-    /// What the document says about the work (FR-201).
+    /// What the document says about the work.
     pub(crate) const fn details(&self) -> &Details {
         &self.details
     }
@@ -48,7 +48,7 @@ impl ReadMei {
     /// Every bar in the document, in document order.
     ///
     /// Bars with no notes are included. A Score must account for its music
-    /// completely (`003 §7.10`), and dropping a bar of rests would renumber
+    /// completely, and dropping a bar of rests would renumber
     /// everything after it.
     pub(crate) fn measures(&self) -> &[MeasureNumber] {
         &self.measures
@@ -279,7 +279,7 @@ fn measure_number(measure: Node<'_, '_>) -> Result<MeasureNumber, TranslationFai
 /// The `xml:id` an element carries, which is also its identifier in the SVG.
 ///
 /// Verovio writes the same identifier in both, which is the whole mechanism
-/// behind `MVP §6.6`.
+/// behind the design.
 fn identifier<'document>(node: Node<'document, '_>) -> Option<&'document str> {
     node.attribute(("http://www.w3.org/XML/1998/namespace", "id"))
         .or_else(|| node.attribute("id"))
@@ -329,13 +329,13 @@ fn step_of(name: &str) -> Result<Step, TranslationFailure> {
 ///   signature, or from an earlier accidental in the same bar — whether or
 ///   not anything is drawn.
 ///
-/// What matters here is the second. `ADR-0001` compares sounding pitch, and
+/// What matters here is the second. The design compares sounding pitch, and
 /// the sounding pitch of a note in D major written as a plain F is F sharp,
 /// with no accidental drawn anywhere near it. Reading only the drawn one
 /// would make the system call correctly-played notes wrong throughout every
 /// piece that has a key signature.
 ///
-/// This does not undermine ADR-0004's wording either: the note is then named
+/// This does not undermine the design's wording either: the note is then named
 /// "F sharp", which is what a musician calls it, drawn accidental or not.
 ///
 /// Either may sit on the note itself or on a child `<accid>` element;
@@ -437,7 +437,7 @@ mod tests {
         assert_eq!(f_sharp.spelling.alter(), 1);
     }
 
-    // ADR-0001, confirmed against real engine output rather than reasoned
+    // The design, confirmed against real engine output rather than reasoned
     // about: F sharp and G flat are two spellings of one key.
     #[test]
     fn an_enharmonic_pair_keeps_two_spellings_and_one_sound() {
@@ -476,7 +476,7 @@ mod tests {
 
     // When a note carries both — a courtesy accidental is drawn while
     // something else is what actually applies — the one that applies wins,
-    // because ADR-0001 compares what sounds. The fixture above cannot pin
+    // because the design compares what sounds. The fixture above cannot pin
     // this: its flat-by-context G carries no drawn accidental at all, so
     // either precedence would give the same answer there.
     #[test]
@@ -493,7 +493,7 @@ mod tests {
         assert_eq!(read.note("q").expect("the note").spelling.alter(), 1);
     }
 
-    // FR-201 — a Piece carries "at minimum a title and, where available, a
+    // a Piece carries "at minimum a title and, where available, a
     // composer". Both come from the header of the same document the notes do.
     #[test]
     fn the_title_and_composer_are_read_from_the_header() {
@@ -629,7 +629,7 @@ mod tests {
         assert!(read.note("no-such-note").is_none());
     }
 
-    // 003 §7.8 — measures are numbered from one. A document numbering from
+    // measures are numbered from one. A document numbering from
     // zero is not something to quietly renumber.
     #[test]
     fn a_measure_numbered_zero_is_refused() {

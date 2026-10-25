@@ -1,4 +1,4 @@
-//! The set of Pieces available to practise (`003 §7.11`, `004 §8.1`).
+//! The set of Pieces available to practise.
 
 use hogwash_domain::PieceId;
 
@@ -8,17 +8,17 @@ use crate::piece::Piece;
 ///
 /// # Never empty, and why that is a type rather than a check
 ///
-/// `003 §9.1` states it as an invariant and `004 §8.1` as a failure boundary:
+/// The design states it as an invariant and the design as a failure boundary:
 /// *"a failure elsewhere in the system must never leave the Library in a
 /// state where no Piece is available."* An empty Library is a dead end — there
 /// is nothing to select, so there is nothing to do, and the first-run
-/// experience `MVP §6.1` exists to protect is exactly the case where it would
+/// experience the design exists to protect is exactly the case where it would
 /// happen.
 ///
 /// A runtime check would report the problem after it occurred. Instead the
 /// only way to build a Library takes a first Piece **by value**
 /// ([`opened_with`](Self::opened_with)), and nothing removes that one, so
-/// emptiness is not a state this type has. FR-207 is then a fact about the
+/// emptiness is not a state this type has. The requirement is then a fact about the
 /// program rather than a rule someone has to remember.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Library {
@@ -32,9 +32,9 @@ pub struct Library {
 impl Library {
     /// A Library holding the provided practice material.
     ///
-    /// `first` is required, which is FR-206 expressed as a signature: the
+    /// `first` is required, which is the requirement expressed as a signature: the
     /// application ships with practice material, so a Library can always be
-    /// built without any import having happened (`MVP §6.1`).
+    /// built without any import having happened.
     #[must_use]
     pub fn opened_with(first: Piece, rest: Vec<Piece>) -> Self {
         Self { first, rest }
@@ -43,9 +43,9 @@ impl Library {
     /// Adds an imported Piece.
     ///
     /// Takes and returns `self`, so a Library is replaced rather than
-    /// mutated. Nothing in `003 §7.11` needs a Library to change under
+    /// mutated. Nothing in the design needs a Library to change under
     /// anyone's feet, and a consumed receiver means an addition that fails
-    /// part-way cannot leave one half-updated (`004 §8.1`).
+    /// part-way cannot leave one half-updated.
     #[must_use]
     pub fn with(mut self, piece: Piece) -> Self {
         self.rest.push(piece);
@@ -98,7 +98,7 @@ impl Library {
     /// Called `count` rather than `len` deliberately. `len` invites an
     /// `is_empty` beside it, and an `is_empty` that can only ever answer
     /// `false` is a question worth not asking — it would suggest emptiness is
-    /// a state this type has, which is exactly what FR-207 says it does not.
+    /// a state this type has, which is exactly what the requirement says it does not.
     #[must_use]
     pub fn count(&self) -> usize {
         1 + self.rest.len()
@@ -135,7 +135,7 @@ mod tests {
         Piece::new(id, title, None, score)
     }
 
-    // FR-206 / MVP §6.1 — a first session requires no externally obtained
+    // a first session requires no externally obtained
     // file. A Library exists before any import has happened.
     #[test]
     fn a_library_exists_before_anything_has_been_imported() {
@@ -145,7 +145,7 @@ mod tests {
         assert_eq!(library.pieces()[0].title(), "Provided");
     }
 
-    // FR-207 / 003 §9.1 — never empty. This test cannot be written as
+    // never empty. This test cannot be written as
     // "assert the library is not empty after some sequence of failures",
     // because there is no way to construct an empty one; `len` returning at
     // least one is what the type guarantees.
@@ -180,7 +180,7 @@ mod tests {
         assert_eq!(still.count(), 1, "never empty");
     }
 
-    // FR-203 — "given two or more imported pieces, when the piece library is
+    // "given two or more imported pieces, when the piece library is
     // accessed, then all imported pieces are individually retrievable".
     #[test]
     fn imported_pieces_join_the_provided_ones() {

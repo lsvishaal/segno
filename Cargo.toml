@@ -11,9 +11,9 @@ edition = "2024"
 rust-version = "1.97"
 authors = ["Hogwash contributors"]
 
-# ADR-0007. Verovio is LGPL-3.0, which would have constrained this had it
+# Verovio is LGPL-3.0, which would have constrained this had it
 # been linked in. It is not: it is a separate, replaceable shared library
-# opened at run time (ADR-0005), which is what LGPL-3.0 §4 asks for and what
+# opened at run time, which is what section 4 of LGPL-3.0 asks for and what
 # leaves Hogwash's own code free. Apache-2.0 over MIT for the explicit patent
 # grant.
 #

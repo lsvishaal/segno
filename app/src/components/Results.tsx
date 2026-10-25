@@ -13,7 +13,7 @@ import type { CutOutRequest } from "./scoreCutout";
  * the chart wait under Details. Every word and number comes from Rust; this
  * only lays them out.
  */
-/** The results come in top to bottom, 50 ms apart (ROADMAP §16.5). */
+/** The results come in top to bottom, 50 ms apart. */
 const STAGGER = { hidden: {}, shown: { transition: { staggerChildren: 0.05 } } };
 const ITEM = {
   hidden: { opacity: 0, y: 6 },

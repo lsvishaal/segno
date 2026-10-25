@@ -1,5 +1,4 @@
-//! Resolving offered material into a Piece or an explained refusal
-//! (`004 §8.2`).
+//! Resolving offered material into a Piece or an explained refusal.
 
 use hogwash_domain::PieceId;
 use hogwash_engraving::{Engraver, EngravingFailure};
@@ -10,7 +9,7 @@ use crate::report::{UnsupportedInput, ValidationIssue, ValidationReport};
 
 /// What became of material a performer offered.
 ///
-/// Two outcomes and no third. `004 §8.2` requires an assessment failure to
+/// Two outcomes and no third. The design requires an assessment failure to
 /// resolve into [`NotAccepted`](Outcome::NotAccepted) *with an explanation* —
 /// it never crashes, and it never discards the material without a result.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -19,14 +18,14 @@ pub enum Outcome {
     Accepted {
         /// The Piece, ready to join the Library.
         piece: Box<Piece>,
-        /// What was noticed while reading it (FR-105, FR-108).
+        /// What was noticed while reading it.
         ///
         /// Present even when nothing was wrong: an empty report is the
-        /// statement that nothing was lost, which `MVP §6.10` needs said.
+        /// statement that nothing was lost, which the design needs said.
         report: ValidationReport,
     },
 
-    /// The material could not become a Piece, and here is why (`003 §7.15`).
+    /// The material could not become a Piece, and here is why.
     NotAccepted(UnsupportedInput),
 }
 
@@ -35,8 +34,8 @@ pub enum Outcome {
 /// # The order of operations is the requirement
 ///
 /// The format is recognised **first**, before anything tries to read the
-/// material as music. FR-104 requires unsupported content to be rejected
-/// without producing a partial piece, and `MVP §6.9` requires the rejection
+/// material as music. The requirement requires unsupported content to be rejected
+/// without producing a partial piece, and the design requires the rejection
 /// to name what was supplied — which an engine's parse failure cannot do,
 /// because it reports that reading failed rather than what the thing was.
 ///
@@ -48,7 +47,7 @@ pub enum Outcome {
 ///
 /// `id` is supplied by the caller. It could have been derived here — from the
 /// title, or from the material — but what a Piece's durable name is made of
-/// is a persistence question (`ADR-0010`), and deriving one here would answer
+/// is a persistence question, and deriving one here would answer
 /// it in a pure crate that has no business knowing. The caller is storage, or
 /// something holding storage's answer.
 ///
@@ -57,7 +56,7 @@ pub enum Outcome {
 ///
 /// # This never repairs anything
 ///
-/// `003 §7.15` and `Product_Discovery.md §13.4`: material is never converted
+/// material is never converted
 /// or repaired. `material` is taken by shared reference, so that is carried
 /// by the signature rather than by a promise.
 pub fn assess(
@@ -112,10 +111,10 @@ pub fn assess(
 
 /// Positions the engraver could not attribute to anything drawn.
 ///
-/// FR-105 and `MVP §6.10` require partial fidelity loss to be **visible
+/// The requirement requires partial fidelity loss to be **visible
 /// rather than silent**. A position with no placement is exactly that: the
 /// music is there and will be practised, but nothing can be highlighted on
-/// the page for it, so `MVP §6.6` degrades quietly at that note. Saying so is
+/// the page for it, so the design degrades quietly at that note. Saying so is
 /// the difference between a known limitation and a mystery.
 fn unplaced(engraved: &hogwash_engraving::EngravedScore) -> Vec<ValidationIssue> {
     let mut issues = Vec::new();
@@ -208,7 +207,7 @@ mod tests {
         Fake(Ok(engraving(details, true)))
     }
 
-    // FR-100 — "given a well-formed, supported MusicXML file, when it is
+    // "given a well-formed, supported MusicXML file, when it is
     // imported, then the system produces a corresponding piece".
     #[test]
     fn a_supported_file_becomes_a_piece() {
@@ -227,7 +226,7 @@ mod tests {
         }
     }
 
-    // FR-201 — a title is always available, even when the file gave none.
+    // a title is always available, even when the file gave none.
     #[test]
     fn a_file_with_no_title_still_becomes_a_named_piece() {
         match assess(MUSICXML, named(), None, &mut accepting(Details::default())) {
@@ -236,7 +235,7 @@ mod tests {
         }
     }
 
-    // FR-104 and MVP §6.9. The engraver is never asked: a PDF is refused on
+    // The engraver is never asked: a PDF is refused on
     // what it is, so the performer is told they offered a PDF rather than
     // that their MusicXML is malformed.
     #[test]
@@ -254,7 +253,7 @@ mod tests {
         }
     }
 
-    // FR-101 Deprecated and 001 §11 — MIDI is excluded permanently because it
+    // The requirement and the design — MIDI is excluded permanently because it
     // records a performance rather than written music, and that reason is the
     // one thing a performer offering a MIDI file most needs told.
     #[test]
@@ -275,10 +274,10 @@ mod tests {
         }
     }
 
-    // MVP §6.9 — "names the format supplied, explains why it will not work,
+    // "names the format supplied, explains why it will not work,
     // and states the route to a supported format". All three, for every
     // format that can be refused. An empty route is a rejection without a way
-    // forward, which is the thing Product_Discovery.md §5 forbids.
+    // forward, which is the thing the design forbids.
     #[test]
     fn every_refusal_names_a_route_to_a_supported_format() {
         for material in [
@@ -306,7 +305,7 @@ mod tests {
         }
     }
 
-    // FR-102 — a supported format whose contents are not valid produces no
+    // a supported format whose contents are not valid produces no
     // piece and reports that the content is invalid.
     #[test]
     fn a_supported_format_that_is_not_readable_produces_no_piece() {
@@ -341,7 +340,7 @@ mod tests {
         }
     }
 
-    // FR-105 / MVP §6.10 — partial fidelity loss is visible rather than
+    // partial fidelity loss is visible rather than
     // silent. A note that could not be attributed to anything drawn will not
     // highlight, and saying so turns a mystery into a known limitation.
     #[test]
@@ -362,7 +361,7 @@ mod tests {
         }
     }
 
-    // 003 §7.15 and Product_Discovery.md §13.4 — never converted, never
+    // never converted, never
     // repaired. Carried by the signature, and asserted so that a future
     // `&mut [u8]` has to break a test to arrive.
     #[test]

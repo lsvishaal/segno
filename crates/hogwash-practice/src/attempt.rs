@@ -1,4 +1,4 @@
-//! An Attempt — one run at a Piece (`003 §7.3`).
+//! An Attempt — one run at a Piece.
 
 use std::sync::Arc;
 
@@ -8,14 +8,14 @@ use hogwash_notation::ReferencePerformance;
 
 use crate::cursor::{Cursor, CursorMovement};
 
-/// One run at a Piece, in progress (`003 §7.3`).
+/// One run at a Piece, in progress.
 ///
 /// The unit of practice: it is what gets evaluated, what produces Feedback,
 /// and what accumulates into Practice History.
 ///
-/// An Attempt does not evaluate itself — `003 §7.3` assigns that to Analysis,
+/// An Attempt does not evaluate itself — the design assigns that to Analysis,
 /// which runs after the Attempt has ended, over the whole performance. What
-/// happens here is only the two things `004 §8.4` and `§8.5` describe: the
+/// happens here is only the two things the design describes: the
 /// note is recorded, and the Cursor is told about it.
 #[derive(Debug, Clone)]
 pub struct Attempt {
@@ -27,7 +27,7 @@ pub struct Attempt {
 impl Attempt {
     /// Begins an Attempt at the Piece `reference` describes.
     ///
-    /// `003 §7.3` Lifecycle — the Observed Performance begins empty and the
+    /// The design Lifecycle — the Observed Performance begins empty and the
     /// Cursor rests on the first expected position.
     #[must_use]
     pub fn begin(reference: Arc<ReferencePerformance>) -> Self {
@@ -55,9 +55,9 @@ impl Attempt {
     ///
     /// Two independent things happen, in this order, and the order matters:
     /// the note is **recorded unconditionally**, and only then is the Cursor
-    /// given a chance to move. `003 §7.5` requires a note the Score never
+    /// given a chance to move. The design requires a note the Score never
     /// asked for to be recorded "exactly as readily as one it did", so a note
-    /// the Cursor ignores (ADR-0002) is still in the Observed Performance and
+    /// the Cursor ignores is still in the Observed Performance and
     /// still reaches the attempt summary.
     pub fn play(&mut self, pitch: Pitch) -> CursorMovement {
         self.observed.record(pitch);
@@ -96,7 +96,7 @@ impl Attempt {
 
     /// Ends the Attempt, whether or not the end of the Piece was reached.
     ///
-    /// `003 §7.3` — *"Once ended, an Attempt does not change."* Carried by
+    /// *"Once ended, an Attempt does not change."* Carried by
     /// the type rather than by discipline: this consumes the Attempt, and
     /// [`EndedAttempt`] exposes no way to alter anything.
     #[must_use]
@@ -110,13 +110,13 @@ impl Attempt {
     }
 }
 
-/// An Attempt that has ended (`003 §7.3`).
+/// An Attempt that has ended.
 ///
-/// Fixed. `003 §9.1` — *"Ended things do not change."*
+/// Fixed. The design — *"Ended things do not change."*
 ///
-/// It deliberately does **not** hold the Reference Performance. `003 §7.3`
+/// It deliberately does **not** hold the Reference Performance. The design
 /// says an Attempt has an Observed Performance; the expected notes belong to
-/// the Piece, and Analysis is given both separately (`004 §8.6`). Keeping the
+/// the Piece, and Analysis is given both separately. Keeping the
 /// borrow out of this type is also what lets a Session record an ended
 /// Attempt while still lending its Reference Performance to the next one.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -148,7 +148,7 @@ impl EndedAttempt {
 
     /// Whether the Attempt reached the end of the Piece.
     ///
-    /// Not a judgement of quality — `003 §7.3` is explicit that a very short
+    /// Not a judgement of quality — the design is explicit that a very short
     /// or abandoned Attempt is still an Attempt, and the domain does not
     /// distinguish a "real" one from a false start.
     #[must_use]
@@ -166,8 +166,8 @@ mod tests {
     use crate::cursor::CursorMovement;
     use crate::fixtures::{one_bar, pitch, unexpected};
 
-    // 003 §7.3 Lifecycle -- an Attempt begins, and its Observed Performance
-    // begins empty with it (003 §7.5).
+    // The design Lifecycle -- an Attempt begins, and its Observed Performance
+    // begins empty with it.
     #[test]
     fn an_attempt_begins_with_nothing_played_and_the_cursor_at_the_start() {
         let reference = one_bar(&[Step::C, Step::D]);
@@ -177,10 +177,10 @@ mod tests {
         assert_eq!(attempt.cursor().position(), 0);
     }
 
-    // 003 §7.5 -- the Observed Performance "records notes as played,
+    // - the Observed Performance "records notes as played,
     // including notes the Score never asked for". The Cursor ignoring a note
-    // (ADR-0002) must not stop it being recorded; those are two different
-    // components doing two different jobs (004 §8.4, §8.5).
+    // must not stop it being recorded; those are two different
+    // components doing two different jobs.
     #[test]
     fn every_played_note_is_recorded_including_unexpected_ones() {
         let reference = one_bar(&[Step::C]);
@@ -202,7 +202,7 @@ mod tests {
         assert_eq!(attempt.cursor().position(), 1);
     }
 
-    // 003 §7.3 -- "It may reach the end of the Piece or stop before it." A
+    // - "It may reach the end of the Piece or stop before it." A
     // very short or abandoned Attempt is still an Attempt; the domain does
     // not distinguish a "real" attempt from a false start.
     #[test]
@@ -227,7 +227,7 @@ mod tests {
         assert!(attempt.end().was_completed());
     }
 
-    // 003 §7.2 Notes -- a performer may begin and be interrupted before
+    // The design Notes -- a performer may begin and be interrupted before
     // playing anything. That is a legitimate Attempt, not an error.
     #[test]
     fn an_attempt_in_which_nothing_was_played_is_still_an_attempt() {
@@ -240,8 +240,8 @@ mod tests {
     }
 
     // The exact computation a live interface performs for on-screen
-    // correctness (`app/src-tauri/src/practice.rs`'s `drain`, `MVP §6.6`):
-    // since `CursorMovement` gives no verdict (`003 §7.16`), "was that note
+    // correctness (`app/src-tauri/src/practice.rs`'s `drain`, the design):
+    // since `CursorMovement` gives no verdict, "was that note
     // right" is answered by checking membership in `cursor().expecting()`
     // *before* calling `play`, which may advance the Cursor or clear its
     // progress. Pinned here because nothing exercised this boolean before —
@@ -270,7 +270,7 @@ mod tests {
         assert!(expects(&attempt, pitch(Step::C)));
     }
 
-    // 003 §7.3 -- "Once ended, an Attempt does not change." Carried by the
+    // - "Once ended, an Attempt does not change." Carried by the
     // type: `end` consumes the Attempt and returns a value with no mutating
     // method at all, so this is a compile-time fact. The test records what
     // survives the transition.

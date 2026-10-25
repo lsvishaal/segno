@@ -95,17 +95,17 @@ pub(crate) struct StoredSession {
     pub(crate) schema: u32,
     /// What this session is called on disk, and in itself.
     pub(crate) id: String,
-    /// Which Piece was practised (`003 §7.2` — exactly one).
+    /// Which Piece was practised (the design — exactly one).
     pub(crate) piece: String,
     /// When it began, as the caller reported it.
     ///
-    /// A string in whatever form the caller chose, because `004 §6.7` keeps
+    /// A string in whatever form the caller chose, because the design keeps
     /// the clock out of the domain and this crate is not where that changes.
     /// Storage records what it is told the time was; it does not ask.
     pub(crate) started: String,
-    /// Whether the performer closed it, or simply stopped (FR-702).
+    /// Whether the performer closed it, or simply stopped.
     pub(crate) closed: bool,
-    /// Every attempt, in the order they were made (`003 §7.2`).
+    /// Every attempt, in the order they were made.
     pub(crate) attempts: Vec<StoredAttempt>,
 }
 
@@ -171,16 +171,16 @@ pub(crate) struct StoredPedal {
 
 /// A piece in the library, as stored.
 ///
-/// FR-703 keeps imported content separate from user-generated data, so this
+/// The requirement keeps imported content separate from user-generated data, so this
 /// records *about* a piece; the score itself is a file beside it, kept
-/// read-only (FR-701).
+/// read-only.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub(crate) struct StoredPiece {
     /// Which shape this is.
     pub(crate) schema: u32,
     /// Its durable name.
     pub(crate) id: String,
-    /// What to call it (FR-201).
+    /// What to call it.
     pub(crate) title: String,
     /// Who wrote it, where the source said.
     pub(crate) composer: Option<String>,

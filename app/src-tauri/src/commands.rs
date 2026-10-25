@@ -4,14 +4,14 @@
 //!
 //! Each command takes the shared state, does one thing, and returns a plain
 //! serialisable value. The types crossing this boundary are **not** the
-//! domain's types — they are the same deliberate translation `ADR-0010` made
+//! domain's types — they are the same deliberate translation the design made
 //! for storage, for the same reason: an interface that received
 //! `hogwash_notation::Score` directly would break the moment that type was
 //! refactored, and nothing in TypeScript would notice until it ran.
 //!
 //! # What is not here
 //!
-//! Any judgement about a performance. `004 §8.8` says Presentation
+//! Any judgement about a performance. The design says Presentation
 //! "never originates a finding of its own", and the way that is kept true is
 //! that every sentence about playing arrives already written, from
 //! `hogwash-feedback`. There is no command that returns a fragment for the
@@ -181,12 +181,12 @@ pub fn forget(hogwash: &mut Hogwash, id: &str) -> Result<usize, Refused> {
 pub struct PieceSummary {
     /// Its durable name, used to ask for it again.
     pub id: String,
-    /// What to call it (FR-201). Never empty.
+    /// What to call it. Never empty.
     pub title: String,
     /// Who wrote it, where the source said.
     pub composer: Option<String>,
     /// How many bars, so the interface can say something about its size
-    /// without inventing a difficulty rating (`001 §11` rules those out).
+    /// without inventing a difficulty rating (the design rules those out).
     pub bars: usize,
     /// How many notes are expected in total.
     pub notes: usize,
@@ -217,7 +217,7 @@ pub struct OpenedPiece {
     /// The engraved pages, as SVG.
     ///
     /// Sent as markup rather than as an image. That is the whole of
-    /// `ADR-0012`: in a webview the score is real elements, so marking a note
+    /// in a webview the score is real elements, so marking a note
     /// is a class on one of them rather than a rectangle computed from a
     /// bounding box.
     pub pages: Vec<String>,
@@ -280,7 +280,7 @@ pub struct DrawnNote {
 /// wrong. Re-wrapping it would only add a layer with less information.
 pub type Refused = String;
 
-/// The Pieces available to practise (FR-203, FR-206).
+/// The Pieces available to practise.
 ///
 /// # Errors
 ///
@@ -302,7 +302,7 @@ pub fn library(state: State<'_, Shared>) -> Result<Vec<PieceSummary>, Refused> {
         .collect())
 }
 
-/// Engraves a Piece and hands over everything needed to draw it (FR-800).
+/// Engraves a Piece and hands over everything needed to draw it.
 ///
 /// `async`, like every command that engraves: Tauri then runs it off the
 /// main thread, so the window stays responsive while Verovio works.
@@ -375,7 +375,7 @@ fn opened_piece(
 
     // Derived again here rather than reused from `Piece::reference()`: the
     // one just engraved is what these element ids actually correspond to,
-    // and `003 §7.4` makes the derivation deterministic, so the two are the
+    // and the design makes the derivation deterministic, so the two are the
     // same performance either way.
     let reference = ReferencePerformance::derived_from(engraved.score());
 
@@ -425,7 +425,7 @@ fn opened_piece(
 }
 
 /// Saves a Piece's original source to a location the performer chooses
-/// (`BFR-1`, the tractable slice of it — `MusicXML` only, this round).
+/// (the requirement, the tractable slice of it — `MusicXML` only, this round).
 ///
 /// `async` so Tauri runs it off the main thread, where the blocking save
 /// dialog would freeze the window (see [`import_musicxml`]). The state lock
@@ -517,7 +517,7 @@ pub struct ImportedPiece {
 /// `&self` and a `Layout` because it just posts to a channel and the engine
 /// on the other end holds the layout state; `Engraver::engrave` takes
 /// `&mut self` and no layout because a port assumes an engine that holds the
-/// document it is working on (`ADR-0008`). Import has no layout of its own —
+/// document it is working on. Import has no layout of its own —
 /// the Library does not keep one — so [`Layout::default`] is the same choice
 /// every other command already makes when opening a piece for the first
 /// time, not a placeholder invented for this.
@@ -531,7 +531,7 @@ impl Engraver for ImportEngraver<'_> {
 }
 
 /// Imports a `MusicXML` file the performer chooses, joining it to the
-/// library (FR-100, FR-102, FR-104).
+/// library.
 ///
 /// `async` so Tauri runs it off the main thread: the file dialog blocks
 /// until answered, and its answer arrives through the main thread, so
@@ -542,7 +542,7 @@ impl Engraver for ImportEngraver<'_> {
 ///
 /// If the chosen file could not be read, or [`hogwash_acquisition::assess`]
 /// refused it — in which case the error is the refusal's reason and route,
-/// verbatim (`004 §8.2`): this command adds no wording of its own to an
+/// verbatim: this command adds no wording of its own to an
 /// explanation that is already complete.
 #[tauri::command]
 pub async fn import_musicxml(
@@ -677,7 +677,7 @@ pub struct InstrumentSummary {
     pub name: String,
 }
 
-/// The MIDI instruments currently connected (FR-307).
+/// The MIDI instruments currently connected.
 ///
 /// # Errors
 ///
@@ -701,7 +701,7 @@ pub fn instruments(state: State<'_, Shared>) -> Result<Vec<InstrumentSummary>, R
         .map_err(|absent| absent.describe())
 }
 
-/// Begins an attempt at `piece_id`, on `instrument` (FR-801).
+/// Begins an attempt at `piece_id`, on `instrument`.
 ///
 /// # Errors
 ///
@@ -734,8 +734,7 @@ pub fn start_attempt(
         .map_err(|absent| absent.describe())
 }
 
-/// Ends whatever attempt is running, analyses it, and keeps the record
-/// (FR-408, ADR-0010).
+/// Ends whatever attempt is running, analyses it, and keeps the record.
 ///
 /// # Errors
 ///

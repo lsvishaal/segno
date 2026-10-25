@@ -285,7 +285,7 @@ fn elements_by_page(pages: &[String]) -> Result<BTreeMap<String, PageIndex>, Tra
             if let Some(id) = element.attribute("id") {
                 // First page wins. An identifier drawn on two pages would be
                 // an engine defect; picking the earlier one at least keeps
-                // the choice reproducible (FR-406).
+                // the choice reproducible.
                 located
                     .entry(id.to_owned())
                     .or_insert(PageIndex::new(number));
@@ -343,7 +343,7 @@ mod tests {
         );
     }
 
-    // 003 §7.4 — a Position is the notes required together. The closing chord
+    // a Position is the notes required together. The closing chord
     // is one Position of three notes, not three Positions.
     #[test]
     fn a_chord_is_one_position_holding_all_its_notes() {
@@ -354,7 +354,7 @@ mod tests {
     }
 
     // The whole point of the adapter: a place in the music resolves to the
-    // drawn glyphs, which is what MVP §6.6 highlights.
+    // drawn glyphs, which is what the design highlights.
     #[test]
     fn every_position_is_placed_on_the_page_it_was_drawn_on() {
         let (score, _, placements) = engraved();
@@ -578,7 +578,7 @@ mod tests {
         );
     }
 
-    // ADR-0001 end to end, against the engine rather than against a fixture
+    // The design end to end, against the engine rather than against a fixture
     // written to agree with us: the F sharp closing bar 1 and the G flat
     // opening bar 2 are written differently and sound the same.
     #[test]

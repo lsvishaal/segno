@@ -18,7 +18,7 @@
 //! `!Send` property is not worked around, it is enforced by construction —
 //! the engraver is unreachable from anywhere else.
 //!
-//! It is the same shape as `ADR-0009`: one owner, and a channel to reach it.
+//! It is the same shape as the design: one owner, and a channel to reach it.
 //! That decision was about MIDI arriving on someone else's thread; this is
 //! about a toolkit that must stay on its own. The answer being the same twice
 //! is a point in its favour.

@@ -97,8 +97,8 @@ impl VerovioEngraver {
     ///
     /// `library` is `libverovio.so` (or `.dll`, or `.dylib`) and `resources`
     /// is Verovio's `data/` directory. Both are shipped **beside** the
-    /// application rather than inside it, which is `ADR-0007`: it is what
-    /// makes the library replaceable, and replaceability is how LGPL-3.0 §4
+    /// application rather than inside it, which is the design: it is what
+    /// makes the library replaceable, and replaceability is how section 4 of LGPL-3.0
     /// is satisfied.
     ///
     /// # Errors
@@ -106,7 +106,7 @@ impl VerovioEngraver {
     /// [`EngravingFailure::EngineUnavailable`] if the library is missing, is
     /// not Verovio, or will not start with those resources. This is reported
     /// rather than fatal because a performer who has moved a file deserves to
-    /// be told which one (`004 §8.2`).
+    /// be told which one.
     pub fn open(library: &Path, resources: &Path) -> Result<Self, EngravingFailure> {
         Toolkit::open(library, resources)
             .map(|toolkit| Self {
@@ -150,12 +150,12 @@ impl Engraver for VerovioEngraver {
     fn engrave(&mut self, source: &[u8]) -> Result<EngravedScore, EngravingFailure> {
         // A `.mxl` is a zip container. Its first two bytes are the one thing
         // every zip file agrees on, and Verovio unpacks the rest — which is
-        // why FR-100's "compressed and uncompressed" costs two lines here
+        // why the requirement's "compressed and uncompressed" costs two lines here
         // rather than a zip dependency and a guess at which entry is the
         // score.
         //
         // This is a *format*, not a *validation*: deciding whether a file is
-        // acceptable at all belongs to Acquisition & Validation (`004 §8.2`),
+        // acceptable at all belongs to Acquisition & Validation,
         // which arrives at M6.
         // A damaged file never reaches Verovio: a broken zip would abort the
         // whole application, and half a MusicXML file would read as a piece.

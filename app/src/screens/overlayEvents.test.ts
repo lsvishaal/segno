@@ -10,7 +10,7 @@ describe("cursorFor", () => {
     expect(cursorFor(event, { position: 0 })).toEqual({ position: 5 });
   });
 
-  // 003 §7.16 — the Cursor moves only when a position is satisfied. A
+  // the Cursor moves only when a position is satisfied. A
   // `Played` event, correct or not, is not that signal on its own.
   it("does not move on a played event, even a correct one", () => {
     const event: PracticeEvent = { kind: "played", position: 3, correct: true, pitch: 60 };

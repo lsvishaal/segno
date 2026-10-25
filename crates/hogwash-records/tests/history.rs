@@ -1,7 +1,7 @@
 //! Practice history, across a restart.
 //!
 //! Every test here writes to a real temporary directory and reads back
-//! through a **fresh** [`Records`]. That is the point: NFR-100 and FR-704 are
+//! through a **fresh** [`Records`]. That is the point: the requirements are
 //! about surviving a restart, and a test that kept anything in memory between
 //! the writing and the reading would not be testing the thing they ask for.
 
@@ -71,7 +71,7 @@ fn reopened(root: &Path) -> Vec<SessionRecord> {
     sessions
 }
 
-// FR-700, FR-702, NFR-100 — history survives a restart, intact.
+// history survives a restart, intact.
 #[test]
 fn a_session_survives_being_written_and_read_back() {
     let directory = tempfile::tempdir().expect("a temporary directory");
@@ -83,7 +83,7 @@ fn a_session_survives_being_written_and_read_back() {
     assert_eq!(reopened(directory.path()), [session("one")]);
 }
 
-// 003 §7.2 — a Session holds its Attempts in the order they were made. If
+// a Session holds its Attempts in the order they were made. If
 // storage reordered them, "your second attempt" would mean something
 // different after a restart than before it.
 #[test]
@@ -100,7 +100,7 @@ fn attempts_come_back_in_the_order_they_were_made() {
     assert_eq!(attempts[1].played.played().len(), 2);
 }
 
-// FR-702 — "the state of any unclosed practice session" is recovered. A
+// "the state of any unclosed practice session" is recovered. A
 // session the performer walked away from is exactly the one worth resuming,
 // so whether it was closed has to survive.
 #[test]
@@ -123,7 +123,7 @@ fn whether_a_session_was_closed_survives() {
     assert_eq!(states, [true, false]);
 }
 
-// FR-704 — integrity through normal operation. Practising again replaces the
+// integrity through normal operation. Practising again replaces the
 // session rather than accumulating copies of it.
 #[test]
 fn keeping_a_session_again_replaces_it() {
@@ -149,7 +149,7 @@ fn keeping_a_session_again_replaces_it() {
     assert_eq!(sessions[0].attempts.len(), 3);
 }
 
-// 004 §8.9 — prior records remain intact even when the most recent one does
+// prior records remain intact even when the most recent one does
 // not. One corrupt file must not make a performer's whole history
 // unreachable, so it is reported *alongside* the rest rather than instead.
 #[test]
@@ -211,7 +211,7 @@ fn a_history_that_does_not_exist_yet_is_empty_rather_than_broken() {
     assert!(unreadable.is_empty());
 }
 
-// FR-701, FR-703 — an imported score is kept locally, read-only, and apart
+// an imported score is kept locally, read-only, and apart
 // from practice history. Kept where it was found, a piece would vanish the
 // day the performer tidied their downloads folder.
 #[test]
@@ -245,7 +245,7 @@ fn an_imported_score_is_copied_into_the_library_and_kept_apart_from_history() {
         Some("Minuet_in_G.musicxml")
     );
 
-    // FR-701 — "in read-only form".
+    // "in read-only form".
     assert!(
         std::fs::metadata(&kept.source)
             .expect("reads the metadata")
@@ -343,7 +343,7 @@ fn imported_pieces_are_listed_after_a_restart() {
     );
 }
 
-// FR-406 in spirit: a directory's ordering is the filesystem's business, and
+// The requirement in spirit: a directory's ordering is the filesystem's business, and
 // two runs must not disagree about what order a performer's sessions are in.
 #[test]
 fn sessions_come_back_in_a_stable_order() {

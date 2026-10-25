@@ -4,14 +4,14 @@
 //! this module.
 //!
 //! A performer plays a *key*, which produces a sound. A Score writes a
-//! *spelling* — F sharp, or G flat, which are the same key. `003 §7.6`
+//! *spelling* — F sharp, or G flat, which are the same key. The design
 //! scopes Analysis to *"whether the right notes were played"*, and a
 //! performer cannot play a spelling, so correctness is decided on the sound
 //! ([`Pitch`]). Notation keeps the spelling ([`PitchSpelling`]) because
 //! Presentation must draw what the composer wrote.
 //!
 //! Collapsing the two would report every correctly-played G flat in a
-//! sharp-spelled score as a wrong note. See ADR-0001.
+//! sharp-spelled score as a wrong note.
 
 /// A sounding pitch — what a key produces.
 ///
@@ -132,7 +132,7 @@ impl PitchSpelling {
     ///
     /// This returns an `Option` rather than offering a panicking companion,
     /// because spellings arrive from imported files and a malformed one must
-    /// become a Validation Issue (`003 §7.14`), never a crash.
+    /// become a Validation Issue, never a crash.
     #[must_use]
     pub const fn sounding(self) -> Option<Pitch> {
         // Middle C is C4 = 60, so C0 = 12 and the octave offset is
@@ -158,7 +158,7 @@ impl PitchSpelling {
 mod tests {
     use super::*;
 
-    // 003 §7.9 — a Note "has a pitch". A piano keyboard produces a bounded
+    // a Note "has a pitch". A piano keyboard produces a bounded
     // set of them, and MIDI numbers them 0..=127. Anything outside that is
     // not a pitch an instrument can produce, so it is not constructible.
     #[test]
@@ -175,12 +175,12 @@ mod tests {
     // The finding that motivates separating spelling from sound.
     //
     // A performer plays a key; a score writes a spelling. F sharp and G flat
-    // are different spellings of one key. 003 §7.6 scopes Analysis to
+    // are different spellings of one key. The design scopes Analysis to
     // "whether the right notes were played", and the performer cannot play a
     // spelling -- so correctness has to be decided on the sound.
     //
     // Without this, every correctly-played G flat in a sharp-spelled score
-    // would be reported as a wrong note. See ADR-0001.
+    // would be reported as a wrong note.
     #[test]
     fn f_sharp_and_g_flat_sound_the_same_pitch() {
         let f_sharp = PitchSpelling::new(Step::F, 1, 4);

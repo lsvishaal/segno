@@ -1,7 +1,7 @@
 //! Importing a `MusicXML` file, against a real engraving engine.
 //!
 //! `#[ignore]`d and run with `just provided-test`'s sibling recipe, for the
-//! same reason as `tests/provided.rs` (`ADR-0005`): Verovio is loaded at run
+//! same reason as `tests/provided.rs`: Verovio is loaded at run
 //! time, so these need `HOGWASH_VEROVIO_LIB`/`HOGWASH_VEROVIO_DATA` set.
 
 #![expect(
@@ -39,7 +39,7 @@ fn fixture() -> Vec<u8> {
     .expect("the acquisition fixture ships in the repo")
 }
 
-// FR-100 — importing a well-formed, supported MusicXML file produces a
+// importing a well-formed, supported MusicXML file produces a
 // corresponding Piece, and it joins the pieces already on the shelf rather
 // than replacing them.
 #[test]
@@ -101,7 +101,7 @@ fn importing_the_same_bytes_twice_does_not_duplicate() {
     assert_eq!(hogwash(&root).library().count(), before);
 }
 
-// FR-104 — content in an unsupported format is refused, not partially
+// content in an unsupported format is refused, not partially
 // accepted, and the refusal is something a performer can read: it names the
 // format and says what to do instead, verbatim from `hogwash-acquisition`.
 #[test]

@@ -1,13 +1,13 @@
-//! The Score — the notated representation of a Piece (`003 §7.10`).
+//! The Score — the notated representation of a Piece.
 
 use hogwash_domain::MeasureNumber;
 
 use crate::Measure;
 
 /// The notated representation of a Piece — the written music a performer
-/// practises from (`003 §7.10`).
+/// practises from.
 ///
-/// A Score is fixed once it exists. `003 §9.1` puts it first among the
+/// A Score is fixed once it exists. The design puts it first among the
 /// structural invariants: *"Written music is never altered. [...] Nothing a
 /// performer does while practising modifies what they practise from."* That
 /// is carried by the type rather than by discipline — there is no `&mut`
@@ -15,7 +15,7 @@ use crate::Measure;
 /// cannot be edited after construction.
 ///
 /// A Score does not know how it is drawn, and does not know the file it
-/// arrived in (`003 §7.10` Non-Responsibilities).
+/// arrived in (the design Non-Responsibilities).
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct Score {
     measures: Vec<Measure>,
@@ -30,17 +30,17 @@ impl Score {
     ///
     /// Rejects three things, each from a stated invariant:
     ///
-    /// - **No measures at all.** `003 §7.10` says a Score is "divided
+    /// - **No measures at all.** The design says a Score is "divided
     ///   completely into Measures"; a division into none is the absence of
     ///   notation.
-    /// - **Not starting at one.** `003 §7.8` — "Measures are numbered from
+    /// - **Not starting at one.** The design — "Measures are numbered from
     ///   one, following the convention performers use."
-    /// - **Numbers that repeat or descend.** `003 §7.8` — "Measures are
+    /// - **Numbers that repeat or descend.** The design — "Measures are
     ///   ordered, and their order does not change." A repeated number makes
     ///   "bar four" ambiguous, which defeats the reason Measures exist
-    ///   (`003 §7.7`, Feedback locates findings by Measure).
+    ///   (the design, Feedback locates findings by Measure).
     ///
-    /// Gaps are permitted: real editions skip numbers, and `001 §11` forbids
+    /// Gaps are permitted: real editions skip numbers, and the design forbids
     /// altering what the notation says. Ascending is what location requires;
     /// consecutive is not.
     #[must_use]
@@ -128,7 +128,7 @@ mod tests {
         Measure::new(MeasureNumber::new(number).unwrap(), positions)
     }
 
-    // 003 §7.10 — "A Score is divided completely into Measures."
+    // "A Score is divided completely into Measures."
     #[test]
     fn a_score_is_divided_into_measures() {
         let score = Score::new(vec![
@@ -140,18 +140,18 @@ mod tests {
         assert_eq!(score.measures().len(), 2);
     }
 
-    // A Score with no measures is not written music. 003 §7.10 says a Score
+    // A Score with no measures is not written music. The design says a Score
     // is "divided completely into Measures", and a division into none is not
     // a division -- it is the absence of notation, which the Library must
-    // never hold (003 §9.1, "Practice material is always present").
+    // never hold (the design, "Practice material is always present").
     #[test]
     fn a_score_with_no_measures_is_not_a_score() {
         assert!(Score::new(vec![]).is_none());
     }
 
-    // 003 §7.8 — "Measures are numbered from one, following the convention
+    // "Measures are numbered from one, following the convention
     // performers use." Enforced at the Score rather than left to the importer,
-    // because Feedback locates findings by Measure (003 §7.7) and a Score
+    // because Feedback locates findings by Measure and a Score
     // whose first bar is bar seven sends the performer to the wrong place.
     #[test]
     fn a_scores_measures_are_numbered_from_one() {
@@ -160,7 +160,7 @@ mod tests {
         assert!(starting_at_two.is_none());
     }
 
-    // 003 §7.8 — "Measures are ordered, and their order does not change."
+    // "Measures are ordered, and their order does not change."
     // Numbers that repeat or go backwards make "bar four" ambiguous, which
     // defeats the only reason Measures are modelled at all.
     #[test]
@@ -177,7 +177,7 @@ mod tests {
     }
 
     // Gaps are permitted. Real editions skip numbers -- around repeats, or
-    // where an editor numbers a first and second ending -- and 001 §11
+    // where an editor numbers a first and second ending -- and the design
     // forbids altering what the notation says. Ascending is what location
     // requires; consecutive is not.
     #[test]
@@ -234,7 +234,7 @@ mod tests {
         );
     }
 
-    // 003 §7.10 — "Every Note in a Score belongs to exactly one Measure of
+    // "Every Note in a Score belongs to exactly one Measure of
     // it." Guaranteed by construction: a Note reaches a Score only inside a
     // Position inside a Measure, so there is no way to express one that
     // floats free. This counts them to prove nothing is lost or duplicated on

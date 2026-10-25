@@ -2,8 +2,8 @@
 //!
 //! # Why this exists
 //!
-//! `MVP §6.6` / Amendment A's FR-802 want live per-note correctness on
-//! screen, but `003 §7.16` is explicit that the Cursor renders no verdict —
+//! The design wants live per-note correctness on
+//! screen, but the design is explicit that the Cursor renders no verdict —
 //! `CursorMovement` has exactly two values, `Advanced` and `Held`, and `Held`
 //! means "wrong note" *or* "chord not finished yet" indistinguishably. So the
 //! live correctness signal cannot come from `CursorMovement`; it is computed
@@ -11,7 +11,7 @@
 //! whether the played pitch was a member of `Cursor::expecting()`'s sounding
 //! set *before* the Cursor is given the note. Same rule, same source, so the
 //! marks on screen and the summary afterwards agree by construction
-//! (`004 §6.5`) rather than by coincidence. The frontend still judges
+//! rather than by coincidence. The frontend still judges
 //! nothing; this boolean is the only thing that crosses the boundary.
 //!
 //! # One channel, one owner — a second time
@@ -21,7 +21,7 @@
 //! an `Attempt` and a `PracticeSession` moving together through a lifecycle
 //! that a Tauri command pool — several threads, running concurrently — has
 //! no natural place to hold. Giving them one thread and a channel is
-//! `ADR-0009`'s "one channel, one owner", relocated from a frame loop (which
+//! The design's "one channel, one owner", relocated from a frame loop (which
 //! a webview does not have) to a loop this module supplies instead.
 //!
 //! # Session scope
@@ -64,7 +64,7 @@ type Sink = Box<dyn Fn(&PracticeEvent) + Send>;
 
 /// How often the loop drains the keyboard while an attempt is running.
 ///
-/// Comfortably inside Amendment A's proposed 100 ms budget (NFR-202).
+/// Comfortably inside Amendment A's proposed 100 ms budget.
 const CONNECTED_POLL: Duration = Duration::from_millis(25);
 
 /// How long the loop waits when nothing is running — no keyboard to drain.
@@ -76,7 +76,7 @@ const RECONNECT_ATTEMPT_EVERY: Duration = Duration::from_secs(2);
 /// How long an attempt waits for a lost instrument before ending itself.
 ///
 /// The hybrid: neither "auto-end immediately" nor "wait forever" — the loss
-/// is reported at once (`004 §8.5`'s *visibly*), and the attempt only ends on
+/// is reported at once (the design's *visibly*), and the attempt only ends on
 /// its own if the instrument does not come back within this window.
 const RECONNECT_WINDOW: Duration = Duration::from_mins(1);
 
@@ -91,7 +91,7 @@ pub enum PracticeEvent {
     /// this module exists to compute — never derived from `CursorMovement`.
     ///
     /// `pitch` is the bare chromatic (MIDI) number a keyboard reports,
-    /// nothing more — `ADR-0001` never attaches a spelling to a played
+    /// nothing more — the design never attaches a spelling to a played
     /// note, and this event does not either. It exists only so a wrong
     /// note can be shown *somewhere* sensible; any spelling the interface
     /// invents for that is its own display concern, not this event's.
@@ -142,8 +142,8 @@ pub enum PracticeEvent {
 
 /// What an ended attempt is reported as.
 ///
-/// `MVP §10` leaves the exact content of an attempt summary as an open
-/// design question beyond "one overall result" (FR-408); this is Stage D's
+/// The design leaves the exact content of an attempt summary as an open
+/// design question beyond "one overall result"; this is Stage D's
 /// minimum to make the loop demonstrable end-to-end. Stage E designs the
 /// screen this deserves.
 #[derive(Debug, Clone, Serialize)]

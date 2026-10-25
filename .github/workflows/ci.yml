@@ -34,7 +34,7 @@ jobs:
         run: just ci
         shell: bash
 
-  # Verovio is deliberately NOT part of the job above. ADR-0005 loads it at
+  # Verovio is deliberately NOT part of the job above. The design loads it at
   # run time so that building and testing Hogwash needs no C++ toolchain —
   # and a gate that quietly required one would give that property away
   # without anyone deciding to.

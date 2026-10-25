@@ -13,7 +13,7 @@ import { MAX_SCALE, MIN_SCALE, SCALE_STEP } from "./zoom";
 
 /**
  * Everything about how the score is shown and heard, gathered behind one
- * gear trigger instead of five separate floating controls (`BFR-8`).
+ * gear trigger instead of five separate floating controls.
  * A pure props-in/callbacks-out panel — `scale` and
  * `showNoteNames` stay owned by `Practice.tsx`, since it also drives the
  * rescale effect and the Ctrl+scroll handler from `scale`.

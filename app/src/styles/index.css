@@ -28,11 +28,11 @@
   --color-correct: #2f6f4e;
   --color-wrong: #dc2626;
 
-  /* The band behind looped bars (ROADMAP §16.2), always used faint. */
+  /* The band behind looped bars, always used faint. */
   --color-loop-band: #2563eb;
 
   /* A pause, marked on the results' bar cut-outs: the amber of the heatmap
-     scale (ROADMAP §16.2), never red, so a pause reads as "slow here", not
+     scale (docs/DESIGN.md), never red, so a pause reads as "slow here", not
      "wrong". */
   --color-pause: #d97706;
 
@@ -95,7 +95,7 @@ body {
 
 
 /*
-  Entrances that need no exit (ROADMAP §16.5: 160 ms, ease-out): a fade with
+  Entrances that need no exit (docs/DESIGN.md: 160 ms, ease-out): a fade with
   a 4 px rise for content appearing, a plain fade for marks on the score.
   With reduced motion, both are plain fades.
 */

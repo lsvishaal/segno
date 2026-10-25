@@ -1,4 +1,4 @@
-//! The Cursor — where the performer is expected to be (`003 §7.16`).
+//! The Cursor — where the performer is expected to be.
 
 use std::collections::BTreeSet;
 use std::sync::Arc;
@@ -8,14 +8,14 @@ use hogwash_notation::{ExpectedNotes, ReferencePerformance};
 
 /// Whether observing a note moved the Cursor.
 ///
-/// **This is not a verdict.** `003 §7.16` — *"The Cursor does not judge what
+/// **This is not a verdict.** The design — *"The Cursor does not judge what
 /// was played."* A wrong note and a correct-but-incomplete one both yield
 /// [`Held`](Self::Held), and the Cursor has no way to tell them apart.
-/// Correctness is decided by Analysis (`004 §8.6`) after the Attempt ends,
+/// Correctness is decided by Analysis after the Attempt ends,
 /// over the whole performance.
 ///
 /// Adding a `Correct` or `Incorrect` variant here would move a
-/// responsibility across a component boundary `004 §14` makes governance.
+/// responsibility across a component boundary the design makes governance.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum CursorMovement {
     /// The position was satisfied; the Cursor moved on.
@@ -24,17 +24,16 @@ pub enum CursorMovement {
     Held,
 }
 
-/// The position in a Piece the performer is expected to play next
-/// (`003 §7.16`).
+/// The position in a Piece the performer is expected to play next.
 ///
 /// It advances only when the Notes expected at its position have been played,
 /// which means **it can never be ahead of the performer**. That single
-/// property is what `MVP §5` calls the decision shaping Version 1: a bar
+/// property is what the design calls the decision shaping Version 1: a bar
 /// cannot be skipped, a pause needs no handling, and a system that has lost
 /// its place cannot keep confidently scoring.
 ///
 /// It holds the Reference Performance rather than pointing at one elsewhere.
-/// `003 §7.16` says a Cursor's position *"is always a position the Reference
+/// The design says a Cursor's position *"is always a position the Reference
 /// Performance contains"*, and holding it makes that a fact about the type:
 /// there is no Cursor without the sequence it indexes into.
 ///
@@ -52,7 +51,7 @@ pub struct Cursor {
     ///
     /// Held as sounding pitches rather than as note indices because a chord
     /// may write one key twice — F♯ against G♭ — and a keyboard has one key
-    /// for both (ADR-0001). Requiring two presses would ask for something no
+    /// for both. Requiring two presses would ask for something no
     /// instrument can do.
     satisfied: BTreeSet<Pitch>,
     /// The step an attempt started on, with the notes held into its measure
@@ -64,7 +63,7 @@ pub struct Cursor {
 impl Cursor {
     /// A Cursor resting on the first thing `reference` expects.
     ///
-    /// `003 §7.16` Lifecycle — *"Begins at the first expected position when
+    /// The design Lifecycle — *"Begins at the first expected position when
     /// an Attempt begins."*
     #[must_use]
     pub fn at_the_beginning(reference: Arc<ReferencePerformance>) -> Self {
@@ -120,7 +119,7 @@ impl Cursor {
 
     /// The Measure the Cursor is standing in, or `None` at the end.
     ///
-    /// `003 §7.16` — *"It occupies a position within a Measure, which is how
+    /// *"It occupies a position within a Measure, which is how
     /// a performer sees where it is."*
     #[must_use]
     pub fn measure(&self) -> Option<MeasureNumber> {
@@ -137,8 +136,8 @@ impl Cursor {
     ///
     /// A chord is satisfied one note at a time, and two components need to
     /// know which of them are down: Presentation, to show the performer what
-    /// the chord still wants (`MVP §6.6`), and Analysis, so that a note which
-    /// *was* played is not reported as one that never arrived (FR-402).
+    /// the chord still wants, and Analysis, so that a note which
+    /// *was* played is not reported as one that never arrived.
     ///
     /// Scoped to the current position. Progress belongs to the position being
     /// played, not to the piece, and is forgotten on advancing.
@@ -152,14 +151,14 @@ impl Cursor {
     ///
     /// An unexpected note is **ignored entirely** — it does not advance the
     /// Cursor, and it does not discard progress already made on a chord
-    /// (ADR-0002). Two reasons, both from the documents:
+    ///. Two reasons, both from the documents:
     ///
-    /// - `003 §7.16` says the Cursor does not judge what was played, and
+    /// - the design says the Cursor does not judge what was played, and
     ///   discarding progress because a note was wrong is a judgement.
-    /// - `MVP §5` requires that noodling and tuning up are not "silently
+    /// - the design requires that noodling and tuning up are not "silently
     ///   recorded as failure", and a reset is precisely a penalty for them.
     ///
-    /// The note is not lost: `003 §7.5` records notes the Score never asked
+    /// The note is not lost: the design records notes the Score never asked
     /// for, so it still reaches the Attempt's summary. Only the Cursor
     /// ignores it.
     pub fn observe(&mut self, pitch: Pitch) -> CursorMovement {
@@ -184,7 +183,7 @@ impl Cursor {
         //
         // A rolled chord satisfies its position: "all of them have been
         // played" is the only test available, because distinguishing
-        // together from one-after-another needs a clock (003 §15, 004 §6.7).
+        // together from one-after-another needs a clock.
         let complete = self.expecting().is_some_and(|expected| {
             expected
                 .sounding()
@@ -214,10 +213,10 @@ mod tests {
         unison_pitch,
     };
 
-    // MVP §5, pause row -- "Long pause to work something out: the cursor
+    // The design, pause row -- "Long pause to work something out: the cursor
     // waits. No special handling needed."
     //
-    // The pause cannot be expressed as elapsed time, because 004 §6.7 forbids
+    // The pause cannot be expressed as elapsed time, because the design forbids
     // a clock here. It does not need to be: waiting is what the Cursor does
     // when nothing arrives, so "indefinitely" is the absence of any advance.
     #[test]
@@ -229,7 +228,7 @@ mod tests {
         assert_eq!(cursor.expecting(), reference.at(0));
     }
 
-    // MVP §5 -- "Skipped bar: cannot occur -- the cursor will not move past
+    // - "Skipped bar: cannot occur -- the cursor will not move past
     // unplayed notes." Playing bar two's notes while bar one is unplayed
     // achieves nothing.
     #[test]
@@ -244,7 +243,7 @@ mod tests {
         assert_eq!(cursor.measure(), Some(MeasureNumber::FIRST));
     }
 
-    // MVP §5 -- "Wrong note played, user carries on: the cursor stays put.
+    // - "Wrong note played, user carries on: the cursor stays put.
     // Nothing downstream is mis-scored."
     #[test]
     fn a_wrong_note_does_not_advance_the_cursor() {
@@ -256,7 +255,7 @@ mod tests {
         assert_eq!(cursor.position(), 0);
     }
 
-    // MVP §5 -- "Noodling, tuning up, playing something else: the cursor
+    // - "Noodling, tuning up, playing something else: the cursor
     // holds. Nothing is silently recorded as failure."
     #[test]
     fn noodling_does_not_advance_the_cursor() {
@@ -280,7 +279,7 @@ mod tests {
         assert_eq!(cursor.position(), 1);
     }
 
-    // 003 §7.16 -- the Cursor "advances only when those expected Notes have
+    // - the Cursor "advances only when those expected Notes have
     // been played". For a chord that means all of them; two of three is not
     // the position satisfied.
     #[test]
@@ -296,11 +295,11 @@ mod tests {
         assert_eq!(cursor.position(), 1);
     }
 
-    // ADR-0002, stated consequence. A rolled chord satisfies its position.
+    // The design, stated consequence. A rolled chord satisfies its position.
     //
     // This is forced rather than chosen: telling "together" from "one after
-    // another" requires measuring time, which 003 §15 does not model. 003
-    // §7.16 says the Cursor advances when the expected Notes "have been
+    // another" requires measuring time, which the design does not model.
+    // The design says the Cursor advances when the expected Notes "have been
     // played" -- played, not held -- so this reading is also the literal one.
     #[test]
     fn a_rolled_chord_satisfies_its_position() {
@@ -314,15 +313,15 @@ mod tests {
         assert_eq!(cursor.observe(pitch(Step::E)), CursorMovement::Advanced);
     }
 
-    // ADR-0002. The Cursor ignores unexpected notes entirely, so partial
+    // The Cursor ignores unexpected notes entirely, so partial
     // progress on a chord survives a fumble.
     //
-    // 003 §7.16 says the Cursor "does not judge what was played"; discarding
-    // progress because a note was wrong is a judgement. MVP §5 also requires
+    // The design says the Cursor "does not judge what was played"; discarding
+    // progress because a note was wrong is a judgement. The design also requires
     // that noodling not be "silently recorded as failure", and resetting is
     // precisely a penalty for it.
     //
-    // The note is still recorded -- 003 §7.5 records notes the Score never
+    // The note is still recorded -- the design records notes the Score never
     // asked for -- so it still reaches the attempt summary. Only the Cursor
     // ignores it.
     #[test]
@@ -337,7 +336,7 @@ mod tests {
         assert_eq!(cursor.observe(pitch(Step::G)), CursorMovement::Advanced);
     }
 
-    // 003 §7.16 Non-Responsibilities -- "The Cursor does not judge what was
+    // The design Non-Responsibilities -- "The Cursor does not judge what was
     // played -- playing a wrong note is Analysis's concern, not the
     // Cursor's."
     //
@@ -358,7 +357,7 @@ mod tests {
         assert_eq!(wrong, incomplete);
     }
 
-    // 003 §7.16 -- "it can never be ahead of the performer". The position is
+    // - "it can never be ahead of the performer". The position is
     // bounded by how many expected notes have actually been played, so no
     // sequence of input can outrun it.
     #[test]
@@ -374,7 +373,7 @@ mod tests {
         assert_eq!(cursor.position(), 2);
     }
 
-    // 003 §7.16 Business Invariant -- "A Cursor's position is always a
+    // The design Business Invariant -- "A Cursor's position is always a
     // position the Reference Performance contains."
     #[test]
     fn a_cursor_position_is_always_one_the_reference_contains() {
@@ -421,7 +420,7 @@ mod tests {
     }
 
     // A chord may write one key twice -- F sharp in one voice against G flat
-    // in another. ADR-0001 establishes those are one sounding pitch, and a
+    // in another. The design establishes those are one sounding pitch, and a
     // keyboard has one key for them, so one press satisfies both. Requiring
     // two would ask for something no instrument can do.
     #[test]
@@ -434,8 +433,8 @@ mod tests {
 
     // A chord is satisfied one note at a time, and both Presentation and
     // Analysis need to know which of them are already down: Presentation to
-    // show the performer (MVP §6.6), Analysis so it does not report a note
-    // that was played as one that never arrived (FR-402).
+    // show the performer, Analysis so it does not report a note
+    // that was played as one that never arrived.
     #[test]
     fn the_cursor_knows_which_of_the_expected_notes_are_already_played() {
         let reference = one_chord(&[Step::C, Step::E, Step::G]);
@@ -462,9 +461,9 @@ mod tests {
         assert!(!cursor.has_been_played(pitch(Step::C)));
     }
 
-    // 003 §7.16 -- "It occupies a position within a Measure, which is how a
+    // - "It occupies a position within a Measure, which is how a
     // performer sees where it is." Feedback locates findings by Measure
-    // (003 §7.7), so the Cursor must be able to say which one it is in.
+    //, so the Cursor must be able to say which one it is in.
     #[test]
     fn the_cursor_knows_which_measure_it_is_in() {
         let reference = two_bars(&[Step::C], &[Step::D]);

@@ -1,16 +1,16 @@
-//! One thing Feedback says (`003 §7.7`).
+//! One thing Feedback says.
 
 use hogwash_domain::{Location, MeasureNumber, PitchSpelling, Step};
 use hogwash_notation::Note;
 
 /// One statement about an Attempt, located in the Piece.
 ///
-/// Structured rather than prose, because `004 §8.7` sends Feedback to
+/// Structured rather than prose, because the design sends Feedback to
 /// Practice Record Keeping as well as to Presentation: storing the words
 /// would mean that rewording them later makes old records inconsistent with
 /// new ones. [`describe`](Self::describe) produces the English on demand.
 ///
-/// There is no statement for a correct note. `003 §7.7` says Feedback exists
+/// There is no statement for a correct note. The design says Feedback exists
 /// to make an Analysis understandable, and the overall result already reports
 /// how many notes were right; a line per correct note would bury the
 /// deviations the performer is looking for.
@@ -18,8 +18,8 @@ use hogwash_notation::Note;
 pub enum Statement {
     /// The Score wrote this note here, and something else was played.
     ///
-    /// What was played is deliberately not carried. ADR-0001 forbids
-    /// reconstructing a spelling from a sounding pitch, and ADR-0004 records
+    /// What was played is deliberately not carried. The design forbids
+    /// reconstructing a spelling from a sounding pitch, and the design records
     /// the consequence: Feedback names what was written and reports that a
     /// different note was played, without inventing a name for it.
     NotPlayedAsWritten {
@@ -39,7 +39,7 @@ pub enum Statement {
 
     /// Notes were played after the end of the Piece.
     ///
-    /// Counted rather than located, because ADR-0003 gives these findings no
+    /// Counted rather than located, because the design gives these findings no
     /// position — nothing in the Score corresponds to them. Counting findings
     /// the Analysis already produced is presentation, not a new finding.
     PlayedAfterTheEnd {
@@ -54,10 +54,10 @@ impl Statement {
     /// `None` only for [`PlayedAfterTheEnd`](Statement::PlayedAfterTheEnd),
     /// which belongs to no place in the music.
     ///
-    /// A full [`Location`] rather than a bar number, because `003 §7.7` locates
+    /// A full [`Location`] rather than a bar number, because the design locates
     /// Feedback *"by reference to the Piece — to the Notes and Measures
-    /// concerned"*, and `MVP §6.6` shows a deviation **on the score**, which
-    /// needs the note and not only the bar. This does not reopen ADR-0004: the
+    /// concerned"*, and the design shows a deviation **on the score**, which
+    /// needs the note and not only the bar. This does not reopen the design: the
     /// words still say only the bar, because a position index is not something
     /// a performer says aloud.
     #[must_use]
@@ -106,13 +106,13 @@ impl Statement {
 
 /// A written note in words — "F", "F sharp", "B flat".
 ///
-/// NFR-800 requires feedback understandable without music theory beyond the
+/// The requirement requires feedback understandable without music theory beyond the
 /// target user's baseline, so the accidental is spelled out rather than given
 /// as `#` or `♯`.
 ///
 /// This names a **written spelling**, which the Score supplies. It never
 /// names a sounding pitch, because that would require choosing between two
-/// readings of one key (ADR-0001).
+/// readings of one key.
 fn name_of(spelling: PitchSpelling) -> String {
     let letter = match spelling.step() {
         Step::C => 'C',
@@ -149,7 +149,7 @@ mod tests {
         MeasureNumber::new(number).expect("fixture measures are numbered from one")
     }
 
-    // 003 §7.7 -- "expressed in musical terms rather than measurements". The
+    // - "expressed in musical terms rather than measurements". The
     // performer reads "F", not 65.
     #[test]
     fn a_written_note_is_named_by_its_letter() {
@@ -162,7 +162,7 @@ mod tests {
         assert!(!statement.describe().contains("65"));
     }
 
-    // NFR-800 -- understandable without music theory expertise beyond the
+    // - understandable without music theory expertise beyond the
     // target user's baseline. "F sharp", not "F#" or "F♯".
     #[test]
     fn accidentals_are_named_in_words() {
@@ -189,7 +189,7 @@ mod tests {
         assert!(statement.describe().contains("C double sharp"));
     }
 
-    // ADR-0001 / ADR-0004 -- the played note is never named, because naming
+    // - the played note is never named, because naming
     // it would mean choosing between F sharp and G flat, which is a guess
     // about notation the instrument cannot support.
     //
@@ -205,7 +205,7 @@ mod tests {
         assert_eq!(note_letters_in(&statement.describe()), vec!['F']);
     }
 
-    // 003 §7.7 -- Feedback locates its findings "by reference to the Piece --
+    // - Feedback locates its findings "by reference to the Piece --
     // to the Notes and Measures concerned".
     #[test]
     fn a_statement_says_which_bar_it_concerns() {
@@ -217,7 +217,7 @@ mod tests {
         assert!(statement.describe().contains('7'));
     }
 
-    // Notes played after the piece has ended have no location (ADR-0003), so
+    // Notes played after the piece has ended have no location, so
     // they are counted rather than placed.
     #[test]
     fn notes_played_after_the_end_are_reported_with_their_number() {

@@ -11,10 +11,10 @@
 #
 # WHY TWO PROCESSES: a seed that was only reset per-process would pass an
 # in-process comparison and fail on the first restart. The identifiers reach
-# what the performer sees — MVP §6.6 highlights a note by pointing at one — so
-# FR-406 and NFR-300/301 apply, and MVP §9.2 makes it release-blocking.
+# what the performer sees — the design highlights a note by pointing at one — so
+# The requirements apply, and the design makes it release-blocking.
 #
-# Not part of `just ci`. ADR-0005 loads Verovio at run time precisely so the
+# Not part of `just ci`. The design loads Verovio at run time precisely so the
 # ordinary build needs no C++ toolchain; this needs a real library and says so
 # rather than skipping quietly.
 

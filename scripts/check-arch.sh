@@ -2,8 +2,8 @@
 #
 # The architecture, enforced by the build.
 #
-# 004_System_Architecture.md §14 makes component boundaries a governance rule
-# rather than a suggestion, and §6.3 requires dependencies to point inward,
+# the design makes component boundaries a governance rule
+# rather than a suggestion, and the design requires dependencies to point inward,
 # toward domain concepts and never outward toward presentation or storage.
 # A rule nothing checks is a rule that erodes, so this script checks it.
 #
@@ -11,12 +11,12 @@
 #
 #   1. hogwash-domain has NO dependencies at all — not on another hogwash
 #      crate, not on anything from crates.io. It is shared vocabulary
-#      (003 §7) and nothing else.
+# and nothing else.
 #
 #   2. The pure crates — notation, capture, practice, analysis, feedback,
 #      engraving, library and acquisition — depend on no I/O, filesystem,
 #      MIDI, GUI, rendering or async crate.
-#      These are the components 004 §12 relies on for correctness and
+#      These are the components the design relies on for correctness and
 #      determinism, and they must stay testable with no device and no window
 #      attached.
 #
@@ -25,7 +25,7 @@
 #      filesystem, a device, a C library. That is what an adapter is for.
 #
 #      hogwash-capture is on that list despite owning a concept fed by live
-#      MIDI (004 §8.5). The concept is not the hardware: Observed Performance
+#      MIDI. The concept is not the hardware: Observed Performance
 #      is a record of sounding pitches, and the instrument belongs behind a
 #      port in a separate adapter crate. Without that split, every test of
 #      practice, analysis and feedback would need a keyboard attached.
@@ -115,8 +115,8 @@ done
 
 # --- 3. nothing in a pure crate is ordered by a hash -------------------------
 #
-# FR-406, NFR-300 and NFR-301 require identical results across separate
-# executions, and MVP §9.2 makes that release-blocking. Rust's HashMap and
+# The requirement requires identical results across separate
+# executions, and the design makes that release-blocking. Rust's HashMap and
 # HashSet seed their hasher randomly *per process*, so iterating one yields a
 # different order on every run. That is the classic way a comparison which
 # looks deterministic silently is not, and it fails only sometimes, which is
@@ -134,7 +134,7 @@ for crate in "${PURE_CRATES[@]}"; do
         echo "DETERMINISM VIOLATION: $crate uses a hash-ordered container."
         echo "$hashed" | sed 's/^/    /'
         echo "    Use BTreeMap/BTreeSet: hash iteration order is randomised"
-        echo "    per process, which breaks FR-406 and NFR-301."
+        echo "    per process, which breaks identical results across runs."
         failed=1
     fi
 done
@@ -147,7 +147,7 @@ done
 # workspace lint table and declaring its own.
 #
 # Exactly one crate does: hogwash-engraving-verovio, which calls Verovio's C
-# functions (ADR-0005). That exception is reviewed, documented at every call
+# functions. That exception is reviewed, documented at every call
 # site, and quarantined behind a safe API. What must not happen is a second
 # one appearing quietly, because "we already have an unsafe crate" is how a
 # forbidden thing becomes an ordinary one.
@@ -160,7 +160,7 @@ EXPECTED_EXCEPTION="hogwash-engraving-verovio"
 # other, and it is where an `unsafe` block would be least surprising and most
 # dangerous — the application shell is the one crate touching a window system.
 # Globbing only `crates/*` would have quietly stopped covering it the day the
-# interface moved out of that directory (ADR-0012).
+# interface moved out of that directory.
 exceptions=()
 for manifest in crates/*/Cargo.toml app/src-tauri/Cargo.toml; do
     [ -f "$manifest" ] || continue
@@ -192,7 +192,7 @@ else
     printf '    %s\n' "${exceptions[@]:-(none)}"
     echo
     echo "  Declining '[lints] workspace = true' is how a crate escapes"
-    echo "  unsafe_code = \"forbid\". ADR-0005 permits one such crate, for the"
+    echo "  unsafe_code = \"forbid\". The design permits one such crate, for the"
     echo "  Verovio C boundary. A second needs its own ADR, not a copy of that"
     echo "  Cargo.toml."
     failed=1
@@ -200,8 +200,8 @@ fi
 
 if [ "$failed" -ne 0 ]; then
     echo
-    echo "The dependency direction in 004 §6.3 has been violated."
-    echo "This is a governance rule (004 §14), not a style preference:"
+    echo "The dependency direction (pure crates point inward) has been violated."
+    echo "This is a governance rule, not a style preference:"
     echo "fix the dependency, or amend the architecture document first."
     exit 1
 fi

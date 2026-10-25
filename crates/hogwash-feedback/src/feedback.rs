@@ -1,4 +1,4 @@
-//! Feedback — an Analysis a performer can read (`003 §7.7`).
+//! Feedback — an Analysis a performer can read.
 
 use std::collections::BTreeSet;
 
@@ -7,17 +7,16 @@ use hogwash_domain::MeasureNumber;
 
 use crate::statement::Statement;
 
-/// The presentation of an Analysis in terms the performer can act on
-/// (`003 §7.7`).
+/// The presentation of an Analysis in terms the performer can act on.
 ///
-/// **Derived entirely from one Analysis, adding nothing.** `003 §7.7` —
+/// **Derived entirely from one Analysis, adding nothing.** The design —
 /// *"Feedback introduces no findings of its own"*. The same Analysis always
 /// yields the same Feedback, so revisiting an Attempt later reads the same
 /// way it did on the day.
 ///
-/// FR-502 (recurring mistakes across attempts) is deferred (`MVP §8`), and is
+/// The requirement (recurring mistakes across attempts) is deferred, and is
 /// not merely unimplemented: [`of`](Self::of) takes one Analysis, and one
-/// Analysis concerns one Attempt (`003 §7.6`), so recurrence across attempts
+/// Analysis concerns one Attempt, so recurrence across attempts
 /// is not expressible here.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct Feedback {
@@ -72,27 +71,27 @@ impl Feedback {
         &self.statements
     }
 
-    /// The overall result for the Attempt (FR-408).
+    /// The overall result for the Attempt.
     ///
     /// The Analysis's summary unchanged — counts, with no grade or
-    /// percentage. `003 §7.7` says Feedback adds nothing.
+    /// percentage. The design says Feedback adds nothing.
     #[must_use]
     pub const fn overall(&self) -> Summary {
         self.overall
     }
 
-    /// The bars containing something to look at (FR-501).
+    /// The bars containing something to look at.
     ///
-    /// Sorted and without repeats. This is FR-501 read through its acceptance
+    /// Sorted and without repeats. This is the requirement read through its acceptance
     /// criterion — *"the areas of the piece associated with those deviations
     /// are identified"* — which asks **where**, not what to do.
     ///
-    /// It is not FR-407, which asks for analysis results *aggregated* per
-    /// measure and stays deferred (`MVP §8`): a list of bars is not a per-bar
+    /// It is not the requirement, which asks for analysis results *aggregated* per
+    /// measure and stays deferred: a list of bars is not a per-bar
     /// result. Nothing here says how many notes went wrong in bar four.
     ///
     /// A `BTreeSet` rather than a `HashSet`, so the order is the Score's
-    /// order on every run (FR-406, NFR-301).
+    /// order on every run.
     #[must_use]
     pub fn measures_with_deviations(&self) -> Vec<MeasureNumber> {
         self.statements
@@ -148,7 +147,7 @@ mod tests {
         feedback.lines().join("\n")
     }
 
-    // FR-500 -- "present the results of analysis in a form comprehensible to
+    // - "present the results of analysis in a form comprehensible to
     // the target user without requiring interpretation of raw data".
     #[test]
     fn feedback_says_what_was_written_where_a_wrong_note_was_played() {
@@ -166,7 +165,7 @@ mod tests {
         );
     }
 
-    // ADR-0001, ADR-0004. The rendered text may name what the Score wrote and
+    // The rendered text may name what the Score wrote and
     // must never name what the performer played -- naming it would choose
     // between two spellings of one key, which is a guess about notation.
     #[test]
@@ -189,7 +188,7 @@ mod tests {
         );
     }
 
-    // FR-501, read through its acceptance criterion: "the areas of the piece
+    // The requirement, read through its acceptance criterion: "the areas of the piece
     // associated with those deviations are identified". Which bars to look
     // at -- not what to do about them.
     #[test]
@@ -216,8 +215,8 @@ mod tests {
     }
 
     // Each bar appears once however many deviations it holds, and in score
-    // order. Anything else would be a per-measure result, which is FR-407 and
-    // deferred (MVP §8).
+    // order. Anything else would be a per-measure result, which is the requirement and
+    // deferred.
     #[test]
     fn each_measure_is_identified_once_and_in_order() {
         let reference = bars(&[&[(Step::C, 0), (Step::D, 0)]]);
@@ -229,7 +228,7 @@ mod tests {
         );
     }
 
-    // FR-402 reaches the performer as plain words.
+    // The requirement reaches the performer as plain words.
     #[test]
     fn feedback_reports_notes_that_were_never_played() {
         let reference = bars(&[&[(Step::C, 0)], &[(Step::D, 0)]]);
@@ -248,10 +247,10 @@ mod tests {
         );
     }
 
-    // Notes played after the end have no location (ADR-0003), so they are
+    // Notes played after the end have no location, so they are
     // counted in one statement rather than repeated without a place. Counting
     // findings the Analysis already produced is presentation, not a new
-    // finding (003 §7.7).
+    // finding.
     #[test]
     fn notes_played_after_the_end_are_gathered_into_one_statement() {
         let reference = bars(&[&[(Step::C, 0)]]);
@@ -263,9 +262,9 @@ mod tests {
         );
     }
 
-    // 003 §7.7 -- Feedback holds nothing of its own. A faultless attempt has
+    // - Feedback holds nothing of its own. A faultless attempt has
     // nothing to report, and says so rather than inventing praise, which
-    // would be a judgement (003 §7.6).
+    // would be a judgement.
     #[test]
     fn a_faultless_attempt_yields_feedback_with_no_deviations() {
         let reference = bars(&[&[(Step::C, 0), (Step::D, 0)]]);
@@ -277,7 +276,7 @@ mod tests {
         assert!(feedback.measures_with_deviations().is_empty());
     }
 
-    // 003 §7.7 -- "Feedback presents exactly one Analysis and adds nothing to
+    // - "Feedback presents exactly one Analysis and adds nothing to
     // it." Every deviation the Analysis found is accounted for, and none is
     // invented: the statements reconcile exactly with the Analysis's counts.
     #[test]
@@ -303,7 +302,7 @@ mod tests {
         assert_eq!(missing, summary.omitted());
     }
 
-    // 003 §7.7 Business Invariant -- "The same Analysis always yields the
+    // The design Business Invariant -- "The same Analysis always yields the
     // same Feedback." It derives from a fixed Analysis, so revisiting an
     // Attempt later yields the same words.
     #[test]

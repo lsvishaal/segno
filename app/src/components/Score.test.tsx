@@ -7,9 +7,9 @@ import { marksOf } from "./__fixtures__/pages";
 import { Score } from "./Score";
 
 /**
- * The mechanism `MVP §6.6` rests on.
+ * The mechanism the design rests on.
  *
- * `ADR-0012` chose a webview on the strength of one claim: that a note's
+ * The design chose a webview on the strength of one claim: that a note's
  * on-screen position can be trusted, because the browser's own layout is
  * doing the measuring rather than a static-file geometry library parsing
  * output after the fact. jsdom does no real layout at all — every element's

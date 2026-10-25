@@ -8,7 +8,7 @@
  *    Confining them to this file means there is one place to check.
  * 2. It keeps the boundary visible. Every line here is a thing the interface
  *    depends on Rust for — which is nearly everything, by design, because
- *    `004 §8.8` says Presentation originates no finding of its own.
+ *    The design says Presentation originates no finding of its own.
  */
 import { getVersion } from "@tauri-apps/api/app";
 import { invoke } from "@tauri-apps/api/core";
@@ -67,7 +67,7 @@ export type {
   WeakBars,
 };
 
-/** The Pieces available to practise. Never empty (FR-207). */
+/** The Pieces available to practise. Never empty. */
 /** The version this build of Hogwash reports. */
 export function appVersion(): Promise<string> {
   return getVersion();
@@ -77,7 +77,7 @@ export function library(): Promise<PieceSummary[]> {
   return invoke<PieceSummary[]>("library");
 }
 
-/** Engraves a Piece and returns everything needed to draw it (FR-800). */
+/** Engraves a Piece and returns everything needed to draw it. */
 export function openPiece(id: string): Promise<OpenedPiece> {
   return invoke<OpenedPiece>("open_piece", { id });
 }
@@ -112,12 +112,12 @@ export function startupFailure(): Promise<Unavailable | null> {
   return invoke<Unavailable | null>("startup_failure");
 }
 
-/** The MIDI instruments currently connected (FR-307). */
+/** The MIDI instruments currently connected. */
 export function instruments(): Promise<InstrumentSummary[]> {
   return invoke<InstrumentSummary[]>("instruments");
 }
 
-/** Begins an attempt at `pieceId`, on `instrument` (FR-801). */
+/** Begins an attempt at `pieceId`, on `instrument`. */
 export function startAttempt(pieceId: string, instrument: string): Promise<void> {
   return invoke<void>("start_attempt", { pieceId, instrument });
 }
@@ -159,7 +159,7 @@ export function loopTarget(target: number | null): Promise<void> {
 /** How the performer ended an attempt. Leaving also puts the start back at bar 1. */
 export type Ending = "stop" | "finished" | "left";
 
-/** Ends whatever attempt is running, and returns its summary (FR-408). */
+/** Ends whatever attempt is running, and returns its summary. */
 export function endAttempt(ending: Ending): Promise<AttemptSummary> {
   return invoke<AttemptSummary>("end_attempt", { ending });
 }

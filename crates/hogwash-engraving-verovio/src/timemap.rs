@@ -2,7 +2,7 @@
 //!
 //! # Why the timemap rather than the document's structure
 //!
-//! A Position is *the notes required together* (`003 §7.4`), and in written
+//! A Position is *the notes required together*, and in written
 //! music "together" is not a structural relationship. A chord is one element,
 //! but the right hand and left hand of a piano score are two staves, and a
 //! note in each sounding on the same beat is still one Position — the
@@ -173,7 +173,7 @@ mod tests {
         assert_eq!(onsets, vec![vec!["a".to_owned()], vec!["b".to_owned()]]);
     }
 
-    // FR-406 / NFR-301. The order the Cursor walks is the order the music is
+    // The order the Cursor walks is the order the music is
     // played in, and it must not depend on the order the engine happened to
     // emit its entries.
     #[test]

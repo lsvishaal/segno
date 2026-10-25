@@ -1,6 +1,6 @@
 //! The port between the performer's keyboard and the notes it produces.
 //!
-//! `004 §8.5` says Performance Capture *"requires live input from a connected
+//! The design says Performance Capture *"requires live input from a connected
 //! MIDI instrument"* and, in the same breath, that it *"knows nothing about
 //! what was expected"*. Both are honoured here by declaring what an
 //! instrument must provide and implementing none of it: the hardware lives in
@@ -16,7 +16,7 @@
 //!
 //! So the port is a **pull**: whoever is driving asks what has arrived since
 //! last time. The adapter does the thread-crossing behind it, and the domain
-//! stays single-threaded with no locks (`ADR-0009`).
+//! stays single-threaded with no locks.
 
 use std::time::Instant;
 
@@ -48,7 +48,7 @@ impl Instrument {
 
 /// Why no notes can be captured.
 ///
-/// `004 §8.5` requires a disconnected or malfunctioning instrument not to
+/// The design requires a disconnected or malfunctioning instrument not to
 /// corrupt what was already captured, and requires capture to stop
 /// **visibly**. Visibly is the hard part: a performer whose keyboard has
 /// quietly stopped reporting sees a cursor that will not move and concludes
@@ -78,7 +78,7 @@ pub enum NoInstrument {
 }
 
 impl NoInstrument {
-    /// The obstacle in words, for the performer (NFR-800).
+    /// The obstacle in words, for the performer.
     #[must_use]
     pub fn describe(&self) -> String {
         match self {
@@ -144,7 +144,7 @@ pub trait Keyboard {
 
     /// Whether the instrument is still there.
     ///
-    /// `004 §8.5`: capture stops **visibly**. This is what makes that
+    /// capture stops **visibly**. This is what makes that
     /// possible, and the reason it is on the connection rather than reported
     /// once at the start.
     fn is_connected(&self) -> bool;
@@ -158,7 +158,7 @@ pub trait MidiSource {
     ///
     /// [`NoInstrument::NoneConnected`] if there are none, rather than an
     /// empty list — an empty list invites a caller to carry on and find out
-    /// later, and `004 §8.5` wants the absence said.
+    /// later, and the design wants the absence said.
     fn instruments(&self) -> Result<Vec<Instrument>, NoInstrument>;
 
     /// Opens `instrument` and begins capturing.
@@ -180,7 +180,7 @@ mod tests {
         assert_eq!(instrument.name(), "Digital Piano");
     }
 
-    // 004 §8.5 — capture stops *visibly*. A performer whose keyboard has
+    // capture stops *visibly*. A performer whose keyboard has
     // quietly stopped reporting sees a cursor that will not move and
     // concludes they are playing wrong notes, which is the worst available
     // outcome. Every way of having no instrument therefore has something to

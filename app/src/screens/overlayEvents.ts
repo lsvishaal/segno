@@ -18,7 +18,7 @@ export interface Dot {
   readonly pitch: number;
 }
 
-/** The Cursor's resting position before an attempt has begun (`003 §7.16`). */
+/** The Cursor's resting position before an attempt has begun. */
 export const BEFORE_STARTING: CursorState = { position: 0 };
 
 /**
@@ -26,10 +26,10 @@ export const BEFORE_STARTING: CursorState = { position: 0 };
  * back to a loop's start when a pass wraps or the loop ends. Unchanged for
  * anything else.
  *
- * Never derived from a `Played` event: `003 §7.16` says the Cursor moves
+ * Never derived from a `Played` event: the design says the Cursor moves
  * only when a position is satisfied, and `Advanced` is Rust's own signal
  * for exactly that, computed by the same `Cursor` `Analysis` replays
- * afterwards (`004 §6.5`) — this function only carries that decision to
+ * afterwards — this function only carries that decision to
  * the screen, it does not make one of its own.
  */
 export function cursorFor(event: PracticeEvent, current: CursorState): CursorState {

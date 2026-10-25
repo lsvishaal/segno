@@ -8,9 +8,9 @@ use std::fmt::{Display, Formatter, Result as Formatted};
 
 /// A document the engine produced and this adapter could not read.
 ///
-/// Every variant carries enough to say what was wrong, because `004 §8.2`
+/// Every variant carries enough to say what was wrong, because the design
 /// requires an assessment failure to resolve into an explanation rather than
-/// a shrug — and `MVP §6.9` requires that explanation to reach the performer.
+/// a shrug — and the design requires that explanation to reach the performer.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub(crate) enum TranslationFailure {
     /// The engine returned something that is not a parseable document.
@@ -21,7 +21,7 @@ pub(crate) enum TranslationFailure {
 
     /// A measure with no number, or numbered zero.
     ///
-    /// `003 §7.8` numbers measures from one. Renumbering silently would put
+    /// The design numbers measures from one. Renumbering silently would put
     /// every later finding one bar out.
     UnnumberedMeasure(String),
 

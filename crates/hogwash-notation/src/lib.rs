@@ -2,10 +2,10 @@
 //!
 //! This crate holds the notation side of the domain — the Score a performer
 //! practises from, and the Reference Performance derived from it that says
-//! what *correct* means (`003 §7.4`, `§7.8`, `§7.9`, `§7.10`).
+//! what *correct* means.
 //!
 //! It is pure. It contains no file formats, no rendering, and no I/O.
-//! `003 §7.10` is explicit that a Score "does not know how it is drawn" and
+//! The design is explicit that a Score "does not know how it is drawn" and
 //! "does not know the file it arrived in"; keeping those out of this crate is
 //! how that stays true rather than merely intended. `scripts/check-arch.sh`
 //! enforces it.

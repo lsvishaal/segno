@@ -1,12 +1,12 @@
 //! Finding the engraving engine, and saying so when it is not there.
 //!
-//! `ADR-0005` loads Verovio at run time rather than linking it, which is what
-//! keeps `cargo build` free of a C++ toolchain and what makes LGPL-3.0 §4's
-//! replaceable-library obligation true by construction (`ADR-0007`). The cost
+//! The design loads Verovio at run time rather than linking it, which is what
+//! keeps `cargo build` free of a C++ toolchain and what makes section 4 of LGPL-3.0's
+//! replaceable-library obligation true by construction. The cost
 //! of that choice is paid here: the library has to be *found*, and it can be
 //! absent.
 //!
-//! `004 §8.2` requires a failure to resolve into an explanation. So a missing
+//! The design requires a failure to resolve into an explanation. So a missing
 //! engine is a value describing what was looked for and where — never a
 //! panic, and never an empty window.
 
@@ -49,7 +49,7 @@ impl Startup {
     ///    to it.
     /// 3. **`HOGWASH_VEROVIO_LIB` / `HOGWASH_VEROVIO_DATA`.** For development,
     ///    and for a performer who has deliberately substituted their own build
-    ///    — which `ADR-0007` exists to permit.
+    ///    — which the design exists to permit.
     ///
     /// # Errors
     ///
@@ -127,7 +127,7 @@ impl Startup {
 
     /// Where the performer's library and practice history are kept.
     ///
-    /// Given by the platform rather than chosen: `004 §8.9` keeps history
+    /// Given by the platform rather than chosen: the design keeps history
     /// local, and a program that invented its own location would put a
     /// performer's records somewhere their backups do not look.
     #[must_use]

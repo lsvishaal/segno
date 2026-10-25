@@ -13,12 +13,12 @@ all-features = true
 # Permissive only.
 #
 # This list was expected to need amending for Verovio's LGPL-3.0. It did not:
-# ADR-0005 loads Verovio at run time, so it never enters the Cargo graph and
+# The design loads Verovio at run time, so it never enters the Cargo graph and
 # cargo-deny cannot see it at all. That gap is covered by
-# scripts/check-native-licences.sh and THIRD_PARTY.md instead — see ADR-0007.
+# scripts/check-native-licences.sh and THIRD_PARTY.md instead — see the design.
 #
 # It briefly carried MPL-2.0 and two font licences, admitted for `resvg`,
-# `usvg` and egui's bundled typefaces. ADR-0012 replaced that interface with a
+# `usvg` and egui's bundled typefaces. The design replaced that interface with a
 # webview, so none of those crates is in the graph any more and the
 # exemptions were removed rather than left behind. An allow-list that outlives
 # its reasons stops being a record of decisions and becomes a list of things
@@ -81,7 +81,7 @@ yanked = "deny"
 # Nothing is ignored.
 #
 # Two `unmaintained` advisories were accepted here for `ttf-parser` and
-# `rustybuzz`, the text-shaping layer beneath egui and resvg. ADR-0012 moved
+# `rustybuzz`, the text-shaping layer beneath egui and resvg. The design moved
 # the interface to a webview, which draws its own text, so neither crate is in
 # the graph and both exemptions were removed with the reason that justified
 # them.
@@ -103,7 +103,7 @@ yanked = "deny"
 # draw the *application's own window furniture*, not anything a performer
 # supplies. What is attacker-shaped is a MusicXML file, and that reaches
 # Verovio and then the webview's SVG parser — neither of which is on this
-# list. Against even that: NFR-400 and C-300 make Hogwash entirely offline, so
+# list. Against even that: the requirements make Hogwash entirely offline, so
 # a hostile file must be deliberately obtained and opened, and there is
 # nothing for it to exfiltrate to.
 #

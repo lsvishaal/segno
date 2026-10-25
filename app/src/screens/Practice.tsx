@@ -77,9 +77,9 @@ const PANEL = {
  * Everything it says about the music, and about how it was played, comes
  * from Rust — the engraved score, the marks, and every `PracticeEvent`. This
  * component turns them into a cursor position and a `Dot`, and it judges
- * nothing (`004 §8.8`): `correct`/`wrong` on a `Played` event is computed in
+ * nothing: `correct`/`wrong` on a `Played` event is computed in
  * `hogwash-app`'s practice thread from `Cursor::expecting()`, never derived
- * here from whether the Cursor moved (`003 §7.16`).
+ * here from whether the Cursor moved.
  */
 export function PracticeScreen({
   piece,
@@ -252,7 +252,7 @@ export function PracticeScreen({
         const found = await fetchInstruments();
         if (live) setAvailable(found);
       } catch {
-        // No instrument connected is ordinary (FR-307); the picker below
+        // No instrument connected is ordinary; the picker below
         // says so on its own once `available` stays empty.
         if (live) setAvailable([]);
       }
@@ -852,7 +852,7 @@ function StatusLine({
 }) {
   const link =
     "ml-2 cursor-pointer rounded-full border border-rule px-2.5 py-0.5 text-xs text-ink transition-colors hover:border-accent hover:text-accent focus-visible:outline-2 focus-visible:outline-accent";
-  // A new message fades in rather than snapping (ROADMAP §16.5).
+  // A new message fades in rather than snapping.
   const showing = lost ? "lost" : (message ?? (afterRun ? "afterRun" : ""));
   return (
     <p role="status" className="min-w-0 shrink truncate text-xs text-ink-muted">
@@ -901,7 +901,7 @@ function GearIcon() {
   );
 }
 
-/** Lets the performer pick which connected instrument to play on (FR-801). */
+/** Lets the performer pick which connected instrument to play on. */
 function InstrumentPicker({
   available,
   refusal,

@@ -1,4 +1,4 @@
-//! Keeping practice history, and the scores it refers to (`004 §8.9`).
+//! Keeping practice history, and the scores it refers to.
 
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -22,16 +22,16 @@ use crate::stored::{
 pub struct SessionRecord {
     /// What this session is called.
     pub id: String,
-    /// Which Piece was practised (`003 §7.2` — exactly one).
+    /// Which Piece was practised (the design — exactly one).
     pub piece: PieceId,
     /// When it began, as the caller reported it.
     ///
-    /// Supplied, never read from a clock. `004 §6.7` keeps the clock out of
+    /// Supplied, never read from a clock. The design keeps the clock out of
     /// the domain, and storage is not the place to smuggle one back in: a
     /// store that timestamped its own writes would make two runs of the same
     /// test produce different records.
     pub started: String,
-    /// Whether the performer closed it, or simply stopped (FR-702).
+    /// Whether the performer closed it, or simply stopped.
     pub closed: bool,
     /// Every attempt, in the order they were made.
     pub attempts: Vec<AttemptRecord>,
@@ -62,7 +62,7 @@ pub struct AttemptRecord {
 pub struct PieceRecord {
     /// Its durable name.
     pub id: PieceId,
-    /// What to call it (FR-201).
+    /// What to call it.
     pub title: String,
     /// Who wrote it, where the source said.
     pub composer: Option<String>,
@@ -113,12 +113,12 @@ impl From<std::io::Error> for RecordsFailure {
 
 /// Where everything is kept.
 ///
-/// # Two directories, because FR-703 asks for two
+/// # Two directories, because the requirement asks for two
 ///
 /// *"A clear separation between imported piece content and user-generated
 /// data such as practice history."* It is a real separation and not a tidiness
 /// preference: imported scores are the performer's own material, held
-/// read-only (FR-701) and replaceable from wherever they came from, while
+/// read-only and replaceable from wherever they came from, while
 /// history is the thing that cannot be reconstructed if it is lost. Backing
 /// up one is not the same job as backing up the other.
 #[derive(Debug, Clone)]
@@ -146,13 +146,13 @@ impl Records {
         self.root.join("history")
     }
 
-    /// Where imported scores live (FR-701, FR-703).
+    /// Where imported scores live.
     #[must_use]
     pub fn scores(&self) -> PathBuf {
         self.root.join("scores")
     }
 
-    /// Keeps `session`, replacing any earlier version of it (FR-700).
+    /// Keeps `session`, replacing any earlier version of it.
     ///
     /// # Errors
     ///
@@ -186,7 +186,7 @@ impl Records {
 
         // Pretty-printed. A practice record is a few kilobytes and a
         // performer's own history; being able to read it with `cat` is worth
-        // more than the bytes it costs, and `001 §7` is local-first, which
+        // more than the bytes it costs, and the design is local-first, which
         // means the files are theirs.
         let written = serde_json::to_string_pretty(&stored).map_err(|failure| {
             RecordsFailure::Unreadable {
@@ -200,11 +200,11 @@ impl Records {
         Ok(())
     }
 
-    /// Every session kept, oldest name first (FR-600, FR-702).
+    /// Every session kept, oldest name first.
     ///
     /// A record that cannot be read is **skipped, not fatal**. One corrupt
     /// file must not make the rest of a performer's history unreachable —
-    /// `004 §8.9`'s failure boundary is precisely that prior records remain
+    /// The design's failure boundary is precisely that prior records remain
     /// intact — so the unreadable ones are returned alongside rather than
     /// instead.
     ///
@@ -226,7 +226,7 @@ impl Records {
             .filter(|path| path.extension().is_some_and(|kind| kind == "json"))
             .collect();
 
-        // Sorted, so two runs list them the same way (FR-406 in spirit: a
+        // Sorted, so two runs list them the same way (the requirement in spirit: a
         // directory's order is the filesystem's business and no one else's).
         paths.sort();
 
@@ -243,7 +243,7 @@ impl Records {
         Ok((sessions, unreadable))
     }
 
-    /// Keeps an imported score and a record of it (FR-701, FR-703).
+    /// Keeps an imported score and a record of it.
     ///
     /// The score is copied into the library, not referred to where it lies.
     /// A performer who tidies their downloads folder must not thereby lose a
@@ -265,9 +265,9 @@ impl Records {
         fs::create_dir_all(self.scores())?;
         fs::write(&score, source)?;
 
-        // FR-701 — "in read-only form". Advisory rather than absolute; a
+        // "in read-only form". Advisory rather than absolute; a
         // performer with a text editor can still change it. What it prevents
-        // is Hogwash doing so by accident, which is the case FR-202 is about.
+        // is Hogwash doing so by accident, which is the case the requirement is about.
         if let Ok(metadata) = fs::metadata(&score) {
             let mut permissions = metadata.permissions();
             permissions.set_readonly(true);
@@ -438,10 +438,10 @@ impl Records {
         Ok(forgotten)
     }
 
-    /// The score a Piece was imported from, if it is here (FR-701).
+    /// The score a Piece was imported from, if it is here.
     ///
     /// Returns the bytes rather than the path, so a caller cannot be tempted
-    /// to hold a path across a restart — `ADR-0010` copies imported material
+    /// to hold a path across a restart — the design copies imported material
     /// into the library precisely so that the performer's own file may move.
     #[must_use]
     pub fn source_of(&self, id: &PieceId) -> Option<Vec<u8>> {

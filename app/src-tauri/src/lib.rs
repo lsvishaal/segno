@@ -1,7 +1,7 @@
-//! The application shell (`004 §8.8`).
+//! The application shell.
 //!
 //! Presentation is split across a boundary now: the *state* is here, in Rust,
-//! and the *drawing* is in a webview. `004 §8.8` says Presentation "owns
+//! and the *drawing* is in a webview. The design says Presentation "owns
 //! nothing — it observes Score, Cursor and Feedback, and renders them", and
 //! that description survives the split intact. What matters is which side of
 //! the boundary each responsibility sits on:
@@ -47,7 +47,7 @@ const PRACTICE_CHANNEL: &str = "practice";
 /// returned rather than panicked, and `main` prints it where a terminal can
 /// see it. Everything the performer might plausibly have got wrong (a missing
 /// engraving library, an unreadable score, no keyboard) is a value carried to
-/// the interface instead (`004 §8.2`).
+/// the interface instead.
 pub fn run() -> Result<(), tauri::Error> {
     tauri::Builder::default()
         .plugin(tauri_plugin_dialog::init())
@@ -55,7 +55,7 @@ pub fn run() -> Result<(), tauri::Error> {
             let handle = app.handle().clone();
 
             // Startup can fail in ways a performer can act on — a missing
-            // engraving library, above all — and `004 §8.2` wants those
+            // engraving library, above all — and the design wants those
             // explained rather than fatal. So the failure becomes state the
             // interface can render as a screen, and the window opens either
             // way. A program that exited here would have nowhere to say why.

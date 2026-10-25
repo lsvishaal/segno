@@ -1,4 +1,4 @@
-//! Analysis — the comparison itself (`003 §7.6`).
+//! Analysis — the comparison itself.
 
 use std::ops::Range;
 use std::sync::Arc;
@@ -11,14 +11,14 @@ use hogwash_practice::Cursor;
 use crate::finding::Finding;
 
 /// The comparison of an Observed Performance against the Reference
-/// Performance of the Piece it was played from (`003 §7.6`).
+/// Performance of the Piece it was played from.
 ///
-/// Determined entirely by its two inputs. `003 §7.6` Domain Classification —
+/// Determined entirely by its two inputs. The design Domain Classification —
 /// *"the same inputs are the same Analysis. Treating it as having independent
 /// identity would suggest it could differ between runs, which is precisely
 /// what the domain forbids."*
 ///
-/// It does not present itself. `003 §7.6` assigns that to Feedback, so there
+/// It does not present itself. The design assigns that to Feedback, so there
 /// is deliberately no `Display` here.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct Analysis {
@@ -32,9 +32,9 @@ impl Analysis {
     /// The comparison **replays the Cursor**. That is what makes the account
     /// agree with what the performer saw: the same rule that advanced the
     /// cursor on screen decides here which played note answered which written
-    /// one (`004 §6.5`, one source of truth).
+    /// one (the design, one source of truth).
     ///
-    /// Both inputs are taken by shared reference, so `003 §7.6`'s *"never
+    /// Both inputs are taken by shared reference, so the design's *"never
     /// alters what it examines"* is carried by the signature.
     #[must_use]
     pub fn of(observed: &ObservedPerformance, reference: &ReferencePerformance) -> Self {
@@ -65,7 +65,7 @@ impl Analysis {
     ) -> Self {
         let Range { start: from, end } = steps;
         // A Cursor holds a share of what it indexes into, so one is made here.
-        // The copy is deliberate: `004 §8.6` says an Analysis is given an
+        // The copy is deliberate: the design says an Analysis is given an
         // Observed Performance and a Reference Performance, and taking an
         // `Arc` instead would push the Cursor's storage choice out into every
         // caller's signature. It happens once per Attempt, not once per note.
@@ -102,9 +102,9 @@ impl Analysis {
             cursor.observe(played);
         }
 
-        // Whatever the performer never reached (FR-402). Under wait-for-me
+        // Whatever the performer never reached. Under wait-for-me
         // this is the tail and nothing else, because a note cannot be skipped
-        // mid-piece — the Cursor will not pass it (MVP §5).
+        // mid-piece — the Cursor will not pass it.
         let stopped_at = cursor.position();
         for position in stopped_at..end.min(reference.len()) {
             // Where it stopped, what the Cursor was asking for: on the step
@@ -142,13 +142,13 @@ impl Analysis {
     ///
     /// Played notes appear in the order they were played; omissions follow,
     /// in the order the Score writes them. The ordering is fixed by the
-    /// inputs alone, which is what FR-406 requires.
+    /// inputs alone, which is what the requirement requires.
     #[must_use]
     pub fn findings(&self) -> &[Finding] {
         &self.findings
     }
 
-    /// The single overall result for the Attempt (FR-408).
+    /// The single overall result for the Attempt.
     #[must_use]
     pub const fn summary(&self) -> Summary {
         self.summary
@@ -197,19 +197,19 @@ impl Summary {
         self.correct
     }
 
-    /// How many played notes differed from what was written there (FR-401).
+    /// How many played notes differed from what was written there.
     #[must_use]
     pub const fn incorrect(&self) -> usize {
         self.incorrect
     }
 
-    /// How many written notes never arrived (FR-402).
+    /// How many written notes never arrived.
     #[must_use]
     pub const fn omitted(&self) -> usize {
         self.omitted
     }
 
-    /// How many notes were played when nothing was expected (FR-403).
+    /// How many notes were played when nothing was expected.
     #[must_use]
     pub const fn unexpected(&self) -> usize {
         self.unexpected
@@ -217,7 +217,7 @@ impl Summary {
 
     /// Whether the performer reached the end of the Piece.
     ///
-    /// Not a judgement: `003 §7.3` is explicit that a short or abandoned
+    /// Not a judgement: the design is explicit that a short or abandoned
     /// Attempt is still an Attempt.
     #[must_use]
     pub const fn reached_the_end(&self) -> bool {
@@ -240,7 +240,7 @@ mod tests {
         MeasureNumber::new(number).expect("fixture measures are numbered from one")
     }
 
-    // FR-400 -- "compare the observed performance of an attempt against the
+    // - "compare the observed performance of an attempt against the
     // reference performance of the associated piece".
     #[test]
     fn a_faultless_performance_is_all_correct() {
@@ -253,7 +253,7 @@ mod tests {
         assert_eq!(analysis.summary().correct(), 3);
     }
 
-    // FR-401 -- "identify notes in the observed performance whose pitch
+    // - "identify notes in the observed performance whose pitch
     // differs from the corresponding note in the reference performance".
     //
     // The corresponding note is the one expected where the Cursor was
@@ -276,7 +276,7 @@ mod tests {
         );
     }
 
-    // MVP §5 -- the Cursor holds on a wrong note, so the position is not
+    // - the Cursor holds on a wrong note, so the position is not
     // consumed. The performer plays the right note next and it is correct.
     // One position, two findings, which is a faithful account.
     #[test]
@@ -291,12 +291,12 @@ mod tests {
         assert_eq!(analysis.summary().omitted(), 0);
     }
 
-    // FR-402 -- "identify notes present in the reference performance but
+    // - "identify notes present in the reference performance but
     // absent from the observed performance".
     //
     // Under wait-for-me these are exactly the tail the performer never
     // reached: a note cannot be skipped mid-piece, because the Cursor will
-    // not pass it (MVP §5).
+    // not pass it.
     #[test]
     fn notes_after_the_point_the_performer_stopped_are_omitted() {
         let reference = two_bars(&[Step::C, Step::D], &[Step::E]);
@@ -340,11 +340,11 @@ mod tests {
         );
     }
 
-    // FR-403 -- "identify notes present in the observed performance but
+    // - "identify notes present in the observed performance but
     // absent from the reference performance".
     //
     // Nothing corresponds to a note played when nothing is expected, which
-    // is what distinguishes this from FR-401. It has no location for the
+    // is what distinguishes this from the requirement. It has no location for the
     // same reason.
     #[test]
     fn a_note_played_after_the_piece_has_ended_is_unexpected() {
@@ -362,8 +362,8 @@ mod tests {
         assert_eq!(analysis.findings()[1].measure(), None);
     }
 
-    // 003 §7.6 Business Invariant -- "Identical inputs always produce an
-    // identical Analysis." FR-406; and 003 §7.6 Notes: "A comparison that
+    // The design Business Invariant -- "Identical inputs always produce an
+    // identical Analysis." the requirement; and the design Notes: "A comparison that
     // could differ between runs would not be a comparison of these two
     // things."
     #[test]
@@ -377,7 +377,7 @@ mod tests {
         );
     }
 
-    // 003 §7.6 -- "It never alters what it examines." The inputs are taken
+    // - "It never alters what it examines." The inputs are taken
     // by shared reference, so mutation is not expressible; this records that
     // they survive unchanged.
     #[test]
@@ -391,7 +391,7 @@ mod tests {
         assert_eq!((observed, reference), before);
     }
 
-    // FR-408 -- "produce a single overall analysis summary for each attempt".
+    // - "produce a single overall analysis summary for each attempt".
     // Exactly one, and it is counts.
     #[test]
     fn an_attempt_has_exactly_one_overall_result() {
@@ -440,13 +440,13 @@ mod tests {
         assert_eq!(rebuilt, summary);
     }
 
-    // FR-404 (timing) and FR-405 (duration) are deferred (MVP §8), for the
-    // reason MVP §5 derives: with practice waiting for the performer, the
+    // The requirement (timing) and the requirement (duration) are deferred, for the
+    // reason the design derives: with practice waiting for the performer, the
     // tempo is the performer's speed and there is no reference to measure
     // against.
     //
     // Guarded structurally: an Analysis is fully determined by the two
-    // sequences it compares, neither of which carries time (003 §15). A
+    // sequences it compares, neither of which carries time. A
     // deviation figure would have to come from somewhere, and there is
     // nowhere for it to come from.
     #[test]
@@ -461,8 +461,8 @@ mod tests {
         );
     }
 
-    // FR-407 (aggregate per measure) is deferred (MVP §8). Findings carry a
-    // MeasureNumber because Feedback locates findings by Measure (003 §7.7),
+    // The requirement (aggregate per measure) is deferred. Findings carry a
+    // MeasureNumber because Feedback locates findings by Measure,
     // and location is not aggregation: there is no per-measure result, only
     // findings that know where they are.
     #[test]
@@ -476,11 +476,11 @@ mod tests {
         assert_eq!(analysis.findings()[1].measure(), Some(bar(2)));
 
         // The whole result is one flat ordered sequence plus one overall
-        // summary -- FR-408's "single overall result", and nothing between.
+        // summary -- the requirement's "single overall result", and nothing between.
         assert_eq!(analysis.findings().len(), 2);
     }
 
-    // 003 §7.2 allows an Attempt in which nothing was played. Every expected
+    // The design allows an Attempt in which nothing was played. Every expected
     // note is then omitted, and nothing else is reported.
     #[test]
     fn an_attempt_in_which_nothing_was_played_omits_everything() {
@@ -493,7 +493,7 @@ mod tests {
         assert_eq!(analysis.summary().incorrect(), 0);
     }
 
-    // ADR-0001 -- comparison is on sounding pitch. A performer plays a key,
+    // - comparison is on sounding pitch. A performer plays a key,
     // and F sharp and G flat are one key; the analysis must agree with what
     // the Cursor did on screen.
     #[test]

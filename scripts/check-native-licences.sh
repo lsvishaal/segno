@@ -4,7 +4,7 @@
 #
 # deny.toml polices every crate in the Cargo graph and prints "licenses ok".
 # That is reassuring and incomplete: Verovio is not a Cargo dependency. It is
-# a shared library opened by name at run time (ADR-0005), so it never appears
+# a shared library opened by name at run time, so it never appears
 # in the graph, and the single most licence-significant component in the
 # product — LGPL-3.0 — is invisible to the gate that exists to catch exactly
 # that.
@@ -21,7 +21,7 @@
 #      here — found by looking for the library names the code actually opens.
 #
 # It cannot verify that the obligations are *discharged* at distribution time;
-# shipping the notice files is a release gate (MVP §9.2), not a build one.
+# shipping the notice files is a release gate, not a build one.
 
 set -euo pipefail
 
@@ -40,7 +40,7 @@ declared=$(grep -m1 '^license = ' Cargo.toml | cut -d'"' -f2 || true)
 
 if [ -z "$declared" ]; then
     echo "LICENCE VIOLATION: the workspace declares no license."
-    echo "  Product_Discovery.md §3 commits to open source. ADR-0007 chose one."
+    echo "  Hogwash is open source, under one chosen licence."
     failed=1
 elif [ ! -s LICENSE ]; then
     echo "LICENCE VIOLATION: Cargo.toml declares $declared but LICENSE is missing or empty."
@@ -80,7 +80,7 @@ fi
 # there should be one.
 #
 # Both `crates/*/src` and the application shell are searched. The shell lives
-# outside `crates/` (ADR-0012), and a glob that missed it would have left the
+# outside `crates/`, and a glob that missed it would have left the
 # one crate most likely to reach for a system library unchecked.
 opening=$(grep -rl 'Library::new' crates/*/src app/src-tauri/src 2>/dev/null \
     | sed -e 's|^crates/||' -e 's|^app/src-tauri/src.*|hogwash-app|' \
@@ -101,7 +101,7 @@ fi
 
 if [ "$failed" -ne 0 ]; then
     echo
-    echo "Native licence obligations are not a formality: ADR-0007's choice of"
+    echo "Native licence obligations are not a formality: the choice of"
     echo "Apache-2.0 for Hogwash depends on Verovio staying a separate,"
     echo "replaceable shared library. Changing how it is linked changes what"
     echo "this project may be licensed as."

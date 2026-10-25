@@ -1,6 +1,6 @@
 //! Score fixtures shared by this crate's tests.
 //!
-//! Hand-constructed, never parsed. `003 §7.4` derives a Reference Performance
+//! Hand-constructed, never parsed. The design derives a Reference Performance
 //! from a Score, so a test that needs one builds the Score it came from —
 //! which keeps these tests honest about the shape the real thing has.
 
@@ -82,7 +82,7 @@ pub(crate) fn one_chord(steps: &[Step]) -> Arc<ReferencePerformance> {
 
 /// A single bar holding one chord written with two spellings of one key.
 ///
-/// F sharp and G flat are one key on a keyboard (ADR-0001), so this is a
+/// F sharp and G flat are one key on a keyboard, so this is a
 /// chord a performer satisfies with a single press.
 pub(crate) fn one_enharmonic_unison() -> Arc<ReferencePerformance> {
     let f_sharp = Note::new(PitchSpelling::new(Step::F, 1, 4)).expect("F sharp 4 sounds");

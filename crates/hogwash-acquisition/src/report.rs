@@ -1,22 +1,20 @@
-//! What was noticed, and what to say when nothing can be done
-//! (`003 §7.13`, `§7.14`, `§7.15`).
+//! What was noticed, and what to say when nothing can be done.
 
 use hogwash_domain::Location;
 
 use crate::format::OfferedFormat;
 
-/// Something noticed while reading material that was otherwise accepted
-/// (`003 §7.14`).
+/// Something noticed while reading material that was otherwise accepted.
 ///
 /// An issue is **not** a refusal. The Piece exists and can be practised;
 /// this records what will be a little worse than it should be, which
-/// `MVP §6.10` requires to be visible rather than silent.
+/// The design requires to be visible rather than silent.
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum ValidationIssue {
     /// A note is in the music but nothing on the page corresponds to it.
     ///
     /// It will still be expected, and playing it will still advance the
-    /// cursor; what will not happen is `MVP §6.6`'s highlight, because there
+    /// cursor; what will not happen is the design's highlight, because there
     /// is nothing to highlight. Silently, that reads as a bug.
     NotDrawn {
         /// Where in the music.
@@ -38,10 +36,10 @@ impl ValidationIssue {
     }
 }
 
-/// What was noticed about one piece of material (`003 §7.13`).
+/// What was noticed about one piece of material.
 ///
 /// Produced whether or not anything was wrong. An empty report is a
-/// statement — *nothing was lost* — and `MVP §6.10` needs that said as much
+/// statement — *nothing was lost* — and the design needs that said as much
 /// as it needs the other case.
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct ValidationReport {
@@ -53,7 +51,7 @@ impl ValidationReport {
     #[must_use]
     pub fn of(mut issues: Vec<ValidationIssue>) -> Self {
         // Sorted so the report reads in the order a performer would meet the
-        // problems, and so two runs agree (FR-406).
+        // problems, and so two runs agree.
         issues.sort();
         issues.dedup();
 
@@ -72,7 +70,7 @@ impl ValidationReport {
         self.issues.is_empty()
     }
 
-    /// The report in words, one line per issue (FR-105, `MVP §6.10`).
+    /// The report in words, one line per issue.
     #[must_use]
     pub fn lines(&self) -> Vec<String> {
         if self.issues.is_empty() {
@@ -83,17 +81,17 @@ impl ValidationReport {
     }
 }
 
-/// Material that cannot become a Piece, and why (`003 §7.15`).
+/// Material that cannot become a Piece, and why.
 ///
-/// `003 §7.15` requires that *"what it is, and why it cannot be used, are
-/// always known"*, and `MVP §6.9` requires three things to reach the
+/// The design requires that *"what it is, and why it cannot be used, are
+/// always known"*, and the design requires three things to reach the
 /// performer: the format supplied, why it will not work, and the route to one
 /// that will. So all three are fields, and none of them is optional — a
-/// refusal with no way forward is the thing `Product_Discovery.md §5` exists
+/// refusal with no way forward is the thing the design exists
 /// to prevent.
 ///
 /// It carries **no implication that the performer did anything wrong**
-/// (`003 §7.15`), and the wording throughout is chosen accordingly.
+///, and the wording throughout is chosen accordingly.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct UnsupportedInput {
     format: OfferedFormat,
@@ -148,19 +146,19 @@ impl UnsupportedInput {
         }
     }
 
-    /// What the material was recognised as (FR-106).
+    /// What the material was recognised as.
     #[must_use]
     pub const fn format(&self) -> OfferedFormat {
         self.format
     }
 
-    /// Why it cannot be used (FR-107). Never empty.
+    /// Why it cannot be used. Never empty.
     #[must_use]
     pub fn reason(&self) -> &str {
         &self.reason
     }
 
-    /// A way to get to something that will work (FR-107). Never empty.
+    /// A way to get to something that will work. Never empty.
     #[must_use]
     pub fn route(&self) -> &str {
         &self.route
@@ -176,7 +174,7 @@ impl UnsupportedInput {
     }
 }
 
-/// Why this format cannot be used, in the performer's terms (NFR-800).
+/// Why this format cannot be used, in the performer's terms.
 fn why(format: OfferedFormat) -> String {
     match format {
         OfferedFormat::Midi => "A MIDI file records a performance — which keys were \
@@ -208,7 +206,7 @@ fn why(format: OfferedFormat) -> String {
     }
 }
 
-/// What to do instead (`MVP §6.9`).
+/// What to do instead.
 fn route_from(format: OfferedFormat) -> String {
     match format {
         OfferedFormat::Midi => "If you have the sheet music in a notation program such as \
@@ -240,7 +238,7 @@ mod tests {
     use crate::format::OfferedFormat;
     use crate::report::{UnsupportedInput, ValidationIssue, ValidationReport};
 
-    // MVP §6.9 requires all three of format, reason and route. A refusal
+    // The design requires all three of format, reason and route. A refusal
     // missing any one of them is a dead end.
     #[test]
     fn every_unsupported_format_has_a_reason_and_a_route() {
@@ -273,7 +271,7 @@ mod tests {
         );
     }
 
-    // 003 §7.15 — Unsupported Input "carries no implication that the
+    // Unsupported Input "carries no implication that the
     // performer did anything wrong". Scanning the words is how that stays
     // true as the wording changes.
     #[test]
@@ -315,7 +313,7 @@ mod tests {
         assert!(refused.route().contains("not a problem with your file"));
     }
 
-    // MVP §6.10 — the clean case has to be said, not merely implied by
+    // the clean case has to be said, not merely implied by
     // silence.
     #[test]
     fn a_report_with_nothing_wrong_says_so() {

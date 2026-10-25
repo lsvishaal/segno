@@ -1,6 +1,6 @@
 //! Verovio as Hogwash's engraver.
 //!
-//! `ADR-0005`. This is the sole implementor of [`Engraver`], and the only
+//! This is the sole implementor of [`Engraver`], and the only
 //! crate in the workspace that knows C exists. Everything above it deals in
 //! [`EngravedScore`] and never learns which engine drew the notes.
 //!

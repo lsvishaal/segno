@@ -1,4 +1,4 @@
-//! The Reference Performance derived from a Score (`003 §7.4`).
+//! The Reference Performance derived from a Score.
 
 use core::ops::Range;
 
@@ -9,10 +9,10 @@ use crate::{Note, Score};
 /// One step of a Reference Performance: the Notes required together at one
 /// point, and the Measure they are written in.
 ///
-/// `003 §7.9` names this role — *"an expected Note — a Note the Reference
+/// The design names this role — *"an expected Note — a Note the Reference
 /// Performance requires at some position"*. The Measure travels with it
-/// because Feedback locates findings by Measure (`003 §7.7`), and the
-/// Cursor's position is an index into the sequence (`003 §7.16`) — an index
+/// because Feedback locates findings by Measure, and the
+/// Cursor's position is an index into the sequence — an index
 /// alone cannot say "bar four".
 ///
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -32,7 +32,7 @@ impl ExpectedNotes {
     /// if `notes` is empty.
     ///
     /// A step expecting nothing would be one the Cursor could never advance
-    /// past, since no note could satisfy it (`003 §9.2`).
+    /// past, since no note could satisfy it.
     #[must_use]
     pub fn new(measure: MeasureNumber, notes: Vec<Note>) -> Option<Self> {
         if notes.is_empty() {
@@ -61,7 +61,7 @@ impl ExpectedNotes {
 
     /// The pitches these Notes sound.
     ///
-    /// What Analysis compares, per ADR-0001 — a performer presses keys, and a
+    /// What Analysis compares, per the design — a performer presses keys, and a
     /// key has no spelling.
     pub fn sounding(&self) -> impl Iterator<Item = Pitch> + '_ {
         self.notes.iter().map(|note| note.sounding())
@@ -101,13 +101,13 @@ impl ExpectedNotes {
 }
 
 /// The sequence of Notes a Piece's Score requires, in the order the Score
-/// requires them (`003 §7.4`).
+/// requires them.
 ///
 /// This is what establishes what *correct* means. Without it there is nothing
 /// to compare a performance against.
 ///
 /// **Derived only from a Score, never from anything the performer does.**
-/// `003 §9.1` states it as a structural invariant — what was expected and
+/// The design states it as a structural invariant — what was expected and
 /// what was played are permanently distinct, and neither is ever derived from
 /// the other. [`derived_from`](Self::derived_from) taking `&Score` and
 /// nothing else is how that is carried rather than merely intended.
@@ -322,7 +322,7 @@ mod tests {
             .collect()
     }
 
-    // 003 §7.4 — "The sequence of notes a Piece's Score requires, in the order
+    // "The sequence of notes a Piece's Score requires, in the order
     // the Score requires them." Order across measures, not just within one.
     #[test]
     fn the_reference_performance_follows_the_order_the_score_requires() {
@@ -339,7 +339,7 @@ mod tests {
         );
     }
 
-    // 003 §7.4 Business Invariant — "The same Score always produces the same
+    // The design Business Invariant — "The same Score always produces the same
     // Reference Performance."
     #[test]
     fn the_same_score_always_yields_the_same_reference_performance() {
@@ -351,7 +351,7 @@ mod tests {
         );
     }
 
-    // 003 §7.4 Domain Classification — "two Reference Performances with the
+    // The design Domain Classification — "two Reference Performances with the
     // same expected notes in the same order are the same thing." Two Scores
     // built independently, never compared as objects, must agree.
     #[test]
@@ -365,7 +365,7 @@ mod tests {
         );
     }
 
-    // 003 §7.4 — it "says what comes next, and which notes are required
+    // it "says what comes next, and which notes are required
     // together". A chord is one step of the sequence, not three.
     #[test]
     fn a_chord_is_one_step_requiring_several_notes() {
@@ -379,9 +379,9 @@ mod tests {
         assert_eq!(reference.at(0).unwrap().notes().len(), 3);
     }
 
-    // 003 §7.7 — Feedback locates findings by Measure. That is only possible
+    // Feedback locates findings by Measure. That is only possible
     // if the derivation carries the measure through; the Cursor's position is
-    // an index into this sequence (003 §7.16), and an index alone cannot say
+    // an index into this sequence, and an index alone cannot say
     // "bar four".
     #[test]
     fn each_step_knows_which_measure_it_is_in() {
@@ -476,7 +476,7 @@ mod tests {
 
     // A bar of rests asks the performer for nothing, so it contributes no
     // step. If it contributed an empty one, the Cursor would stop at a place
-    // where no note could ever advance it (003 §9.2) -- practice would hang.
+    // where no note could ever advance it -- practice would hang.
     #[test]
     fn a_measure_of_rests_contributes_no_step() {
         let score = score_of(vec![
@@ -491,7 +491,7 @@ mod tests {
         assert_eq!(steps_of(&reference), vec![Step::C, Step::D]);
     }
 
-    // 003 §7.4 Scope in Version 1 — the Reference Performance "carries no
+    // The design Scope in Version 1 — the Reference Performance "carries no
     // timing significance". Asserted by round-trip: a step is fully
     // reconstructible from its measure and its notes. Give it a time, an
     // offset or a duration and this stops holding, because the round trip
@@ -508,7 +508,7 @@ mod tests {
     }
 
     // A Score of nothing but rests yields a Reference Performance with no
-    // steps. Degenerate, but representable -- 001 §11 forbids altering
+    // steps. Degenerate, but representable -- the design forbids altering
     // notation to make it more convenient, so it is reported as what it is.
     #[test]
     fn a_score_of_only_rests_expects_nothing() {

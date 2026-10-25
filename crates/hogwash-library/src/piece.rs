@@ -1,4 +1,4 @@
-//! A practisable work (`003 §7.9`).
+//! A practisable work.
 
 use hogwash_domain::PieceId;
 use hogwash_notation::{ReferencePerformance, Score};
@@ -34,14 +34,14 @@ pub fn title_from(score_title: Option<&str>, file_name: Option<&str>) -> String 
 /// A musical work the performer can practise.
 ///
 /// Holds its notation, a durable name, and enough about itself to be told
-/// apart from another (FR-201).
+/// apart from another.
 ///
-/// The name is a [`PieceId`] rather than a title, because `003 §7.2` fixes a
+/// The name is a [`PieceId`] rather than a title, because the design fixes a
 /// Practice Session to exactly one Piece and a Practice Record has to say
 /// which — across restarts, and after a retitling. What the name is made of
-/// is `ADR-0010`'s business and deliberately invisible here.
+/// is the design's business and deliberately invisible here.
 ///
-/// Immutable. FR-202 treats imported content as read-only after import, and
+/// Immutable. The requirement treats imported content as read-only after import, and
 /// there is no operation here that changes anything.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Piece {
@@ -55,7 +55,7 @@ pub struct Piece {
 impl Piece {
     /// A Piece called `title`, written by `composer` where that is known.
     ///
-    /// FR-201 requires *"at minimum a title and, where available, a
+    /// The requirement requires *"at minimum a title and, where available, a
     /// composer"*, so the title is required and the composer is not. A
     /// missing or blank title becomes a stated placeholder rather than an
     /// error: a score with no title in it is perfectly practisable, and
@@ -97,7 +97,7 @@ impl Piece {
         &self.id
     }
 
-    /// What to call it. Never empty (FR-201).
+    /// What to call it. Never empty.
     #[must_use]
     pub fn title(&self) -> &str {
         &self.title
@@ -115,9 +115,9 @@ impl Piece {
         &self.score
     }
 
-    /// What playing it is expected to produce (FR-204).
+    /// What playing it is expected to produce.
     ///
-    /// Derived once, at construction, rather than on each request. `003 §7.4`
+    /// Derived once, at construction, rather than on each request. The design
     /// makes the derivation total and deterministic — the same Score always
     /// yields the same Reference Performance — so there is nothing to gain by
     /// repeating it and one fewer place for the two to disagree.
@@ -149,7 +149,7 @@ mod tests {
         Score::new(vec![measure]).expect("one measure is a score")
     }
 
-    // FR-201 — "at least a title is available".
+    // "at least a title is available".
     #[test]
     fn a_piece_has_a_title() {
         let piece = Piece::new(named(), "Minuet in G", None, score());
@@ -158,7 +158,7 @@ mod tests {
     }
 
     // A score with no title is still music. Refusing it would be refusing
-    // music over metadata, and FR-201 only requires that a title *is
+    // music over metadata, and the requirement only requires that a title *is
     // available* — not that the source supplied one.
     #[test]
     fn a_piece_with_no_title_still_has_one() {
@@ -197,7 +197,7 @@ mod tests {
         assert_eq!(super::title_from(None, None), "");
     }
 
-    // FR-201 — the composer is "where available", so its absence is ordinary.
+    // the composer is "where available", so its absence is ordinary.
     #[test]
     fn the_composer_is_optional_and_a_blank_one_is_no_composer() {
         assert_eq!(Piece::new(named(), "T", None, score()).composer(), None);
@@ -211,7 +211,7 @@ mod tests {
         );
     }
 
-    // FR-204 — "given an imported piece, when its reference performance is
+    // "given an imported piece, when its reference performance is
     // requested, then a sequence of expected musical events is returned".
     #[test]
     fn a_piece_knows_what_playing_it_should_produce() {
@@ -220,7 +220,7 @@ mod tests {
         assert_eq!(piece.reference().len(), 1);
     }
 
-    // 003 §7.4 — the same Score always yields the same Reference Performance.
+    // the same Score always yields the same Reference Performance.
     #[test]
     fn the_same_score_always_gives_the_same_piece() {
         assert_eq!(

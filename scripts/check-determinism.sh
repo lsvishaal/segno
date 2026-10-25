@@ -2,8 +2,8 @@
 #
 # Determinism, proven across processes.
 #
-# FR-406, NFR-300 and NFR-301 require identical results for identical inputs,
-# and MVP §9.2 lists it as a release-readiness criterion. It is checked here
+# The requirement requires identical results for identical inputs,
+# and the design lists it as a release-readiness criterion. It is checked here
 # rather than asserted in a document.
 #
 # WHY TWO PROCESSES, and not an assertion inside one test:
@@ -53,8 +53,8 @@ if ! cmp -s "$workdir/first" "$workdir/second"; then
     echo
     diff "$workdir/first" "$workdir/second" || true
     echo
-    echo "FR-406 and NFR-301 require identical results across executions."
-    echo "MVP §9.2 makes this release-blocking."
+    echo "Hogwash requires identical results across executions."
+    echo "This is release-blocking."
     exit 1
 fi
 

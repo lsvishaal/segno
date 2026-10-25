@@ -55,7 +55,7 @@ How a release is made and launched.
 
 - GitHub issue templates: Bug (steps, piece, keyboard model, AppImage
   version), Idea (what were you trying to do?).
-- A pinned "Known limits" issue linking `docs/PRODUCT.md` §27.
+- A pinned "Known limits" issue linking `docs/PRODUCT.md`, Known limits.
 - Weekly: read everything, add one line per real signal to the Parking lot,
   reply to everyone. Don't promise dates.
 
@@ -63,7 +63,7 @@ How a release is made and launched.
 
 - [ ] `just ci` green on main, locally and on GitHub
 - [ ] Version bumped in `tauri.conf.json` and `Cargo.toml`
-- [ ] Regression pieces played by hand (`docs/TESTING.md` §22.3)
+- [ ] Regression pieces played by hand (`docs/TESTING.md`, regression pieces)
 - [ ] AppImage tested on a clean system
 - [ ] `THIRD_PARTY.md` and `PROVENANCE.md` current
 - [ ] `CHANGELOG.md`: "Unreleased" becomes the version, dated

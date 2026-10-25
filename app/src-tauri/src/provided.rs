@@ -1,7 +1,7 @@
-//! The practice material that ships with the application (`MVP §6.1`).
+//! The practice material that ships with the application.
 //!
-//! Compiled in rather than read from disk. FR-206 requires material to be
-//! available "without any import having been performed", and FR-207 requires
+//! Compiled in rather than read from disk. The requirement requires material to be
+//! available "without any import having been performed", and the requirement requires
 //! the Library never to be empty — both of which a file on disk cannot
 //! guarantee, because a file on disk can be missing.
 //!
@@ -87,7 +87,7 @@ pub const PROVIDED: [Provided; 6] = [
 ///
 /// # Why the content, and not the title or a counter
 ///
-/// `ADR-0010` left what a [`PieceId`] is made of to storage, and this is
+/// The design left what a [`PieceId`] is made of to storage, and this is
 /// storage's answer. Hashing the source gives three properties that matter
 /// and are hard to get otherwise:
 ///
@@ -141,7 +141,7 @@ mod tests {
         assert_eq!(minuet.map(|piece| piece.level), Some(Level::Intermediate));
     }
 
-    // FR-206 / MVP §6.1 — a first session requires no externally obtained
+    // a first session requires no externally obtained
     // file. Compiled in, so this cannot become false by someone moving a
     // directory.
     #[test]
@@ -154,7 +154,7 @@ mod tests {
     }
 
     // Every provided file must actually be MusicXML, or the Library would be
-    // empty at the first run despite FR-207 — and the failure would appear on
+    // empty at the first run despite the requirement — and the failure would appear on
     // a performer's screen rather than in a test.
     #[test]
     fn every_provided_piece_is_musicxml() {
@@ -169,7 +169,7 @@ mod tests {
         }
     }
 
-    // ADR-0010 — the same file is the same piece, so re-importing one does
+    // the same file is the same piece, so re-importing one does
     // not accumulate duplicates.
     #[test]
     fn the_same_bytes_always_name_the_same_piece() {

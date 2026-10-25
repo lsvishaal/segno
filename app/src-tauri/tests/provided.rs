@@ -1,7 +1,7 @@
 //! The provided material, against a real engraving engine.
 //!
 //! `#[ignore]`d like the engraving tests, and for the same reason
-//! (`ADR-0005`): Verovio is loaded at run time so that `cargo build` and
+//!: Verovio is loaded at run time so that `cargo build` and
 //! `just ci` need no C++ toolchain, and a test that silently passed without
 //! it would stop testing anything. Run with `just provided-test`.
 //!
@@ -62,7 +62,7 @@ fn engraver() -> VerovioEngraver {
         .expect("set HOGWASH_VEROVIO_LIB and HOGWASH_VEROVIO_DATA, or run `just provided-test`")
 }
 
-// FR-206, FR-207, MVP §6.1 — a first session requires no externally obtained
+// a first session requires no externally obtained
 // file. Every provided piece has to survive the whole journey to a Score, not
 // merely exist on disk.
 #[test]
@@ -208,7 +208,7 @@ fn a_two_hand_piece_merges_notes_that_sound_together() {
     );
 }
 
-// FR-201 — a title is always available, and FR-207 — the shelf is never
+// a title is always available, and the requirement — the shelf is never
 // empty. Both are guaranteed in Rust rather than checked in the interface,
 // so this is where they are demonstrated.
 #[test]
@@ -254,7 +254,7 @@ fn drawn_elements_pair_with_the_notes_written_at_the_same_position() {
     let drawn = engraver.engrave(&source).expect("engraves");
     let reference = hogwash_notation::ReferencePerformance::derived_from(drawn.score());
 
-    // Bar two's chord (`003 §7.4`, `PROVENANCE.md`): C4, E4, G4 together.
+    // Bar two's chord (the design, `PROVENANCE.md`): C4, E4, G4 together.
     let chord = drawn
         .placements()
         .find(|(at, _)| at.position() == 4)

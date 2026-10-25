@@ -6,10 +6,10 @@
 //!
 //! # Reproducibility is not a quality goal here, it is the definition
 //!
-//! `003 §7.6` puts it plainly: *"A comparison that could differ between runs
-//! would not be a comparison of these two things."* FR-406, NFR-300 and
-//! NFR-301 require identical results across separate executions, and
-//! `MVP §9.2` makes that release-blocking.
+//! The design puts it plainly: *"A comparison that could differ between runs
+//! would not be a comparison of these two things."* the requirement and
+//! The requirement requires identical results across separate executions, and
+//! The design makes that release-blocking.
 //!
 //! Two concrete mechanisms rather than good intentions:
 //!
@@ -25,13 +25,13 @@
 //!
 //! It reuses [`Cursor`](hogwash_practice::Cursor) rather than re-deriving
 //! which played note answers which written one. The Cursor is not an input to
-//! Analysis — `004 §8.6` names the inputs, and they are an Observed
+//! Analysis — the design names the inputs, and they are an Observed
 //! Performance and a Reference Performance — it is the shared *definition* of
 //! what matches what.
 //!
 //! Duplicating that rule would risk the worst bug this product could have:
 //! the cursor advancing on screen while Analysis later calls the same note
-//! wrong. `004 §6.5` requires one source of truth, and this is it.
+//! wrong. The design requires one source of truth, and this is it.
 
 mod analysis;
 mod bars;
