@@ -237,6 +237,21 @@ STARTER · INTERMEDIATE — around Grades 1–4
   - "Went well" chips
   - Details: big numbers, a per-bar chart, small numbers
   - Practise again, Show on the score, Library
+- **The coach's cards** (rules in `crates/hogwash-analysis/src/coach.rs`, which
+  owns the thresholds; at most 3 cards, judged per pass so one fumble isn't a card):
+  - **Going into bar N:** the pause sits just before the bar's first note.
+  - **Jump in bar N:** a hesitation or wrong key after a leap of more than an
+    octave.
+  - **Fast notes / broken chord:** slips or pauses in notes of an eighth or
+    faster.
+  - **Wrong notes in bar N:** a misread versus "landed a key off".
+  - **Rushed the long notes:** half notes or longer cut short.
+  - **Bars N–M slow you down:** well under your usual tempo.
+  - **You keep stopping at bar N:** stopped or restarted there twice or more.
+  - **This piece is a big step:** trouble in most bars and low accuracy.
+  - **Clean run** or **Play a few bars more** when nothing qualifies.
+  - Pauses are judged against your own pace and the written rhythm, and hunting
+    for one note counts as at most 3 wrong notes (`bars.rs`).
 - **Planned:**
   - a "Progress" button in the header (M2.10)
   - the one-row toolbar (M3.1)
@@ -276,6 +291,15 @@ The **Progress page** (M2.10) will have:
 
 It is reached from the library card, Continue, Results and the practice screen,
 and never opens by itself.
+
+**What history holds** (all of it recomputed from the raw notes, D5):
+- **Per session:** start time, attempts, how each ended, bars covered, time
+  played.
+- **Per attempt:** every note with its time, key and velocity; start and end;
+  loop or not; accuracy, tempo and steadiness; the coach's findings.
+- **Per bar:** passes, pause (total, going into the bar, longest), breaks,
+  wrong notes, stops, tempo and time played.
+- **Not yet known:** the hand a note belongs to, and key signatures in the steps.
 
 ---
 
