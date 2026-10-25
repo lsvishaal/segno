@@ -17,6 +17,28 @@ How Hogwash is tested.
     named `<piece>.<behaviour>.json` (e.g. `minuet-in-g.loop-9-12.json`).
 - Old record formats keep loading: a test with a pre-M1.1 session file.
 
+### 22.1a Test levels as built (25 Oct)
+
+| Command | What it runs | Needs |
+|---|---|---|
+| `just ci` | fmt, clippy, all Rust unit tests, cargo-deny, licence gates, architecture guard, determinism, frontend lint and UI tests (vitest) | nothing extra. `cargo-deny` writes to `~/.cargo`, so run it outside a sandbox |
+| `just engraving-test` | ignored tests in `hogwash-engraving-verovio` and `hogwash-analysis` (coach on real scores) | a built Verovio |
+| `just provided-test` | ignored `hogwash-app` tests: the bundled pieces through the real engine, the practice thread, history | a built Verovio |
+| `just e2e [scenario …]` | builds the AppImage, then drives the real app through `scripts/e2e/scenarios/*.mjs` | `tauri-driver`, ALSA |
+
+**Real pieces only.** Tests use the Minuet in G, the Prelude in C (both in
+`app/src-tauri/library/`), the fixtures in `app/src/components/__fixtures__`
+(made by `scripts/score-fixtures.py`), or pieces you supplied. Never invented
+notes.
+
+**The e2e kit** (`scripts/e2e/`):
+- `run.mjs` starts a virtual MIDI keyboard (`hogwash-midi` example `vkbd`) and
+  `tauri-driver`.
+- Each scenario runs with its own data folder, `target/e2e/data` via `XDG_DATA_HOME`.
+  The real folder is never written; scenarios marked `mine` start from a copy of it.
+- Screenshots go to `target/e2e/shots/`.
+- `just expected` writes the Minuet's notes in cursor order for scenarios to play.
+
 ### 22.2 Manual checklist per behaviour change
 
 Claude Code writes it; you run it with the FP-10 before ticking the box.
@@ -34,5 +56,5 @@ Before each release, play through these by hand:
 
 ### 22.4 The real test
 
-Seven days of self-use (§12), then one outside pianist (M4.9), then three
+Seven days of self-use (ROADMAP.md, self-use week), then one outside pianist (M4.9), then three
 before v1.0. Their hesitations are the backlog.

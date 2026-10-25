@@ -76,7 +76,7 @@ stats, weak bars over time (the Progress page), M4.1 release build.
 - [x] M0.4 Update `CLAUDE.md`
 - [x] M0.5 `docs/` gone (re-created 25 Oct under the docs protocol: what is and what is decided, no specs)
 - [x] M0.6 Start `annoyances.md`
-- [~] M0.7 Decide D1, D6, D8: D6 decided (per-piece log, on the Progress page); D1 and D8 open
+- [ ] M0.7 Decide D1, D6, D8 (all three open; D8 is on the v0.1 checklist)
 
 ## M1 — The practice loop actually loops
 

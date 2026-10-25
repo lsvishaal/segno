@@ -12,23 +12,23 @@ How Hogwash looks, behaves and speaks: the UX, the visual system, each screen, t
 > 2 clicks. From finishing a pass to starting the next: 0 clicks.**
 
 Every flow below has a click budget. A change that adds a click needs a reason
-written in §32.
+written in DECISIONS.md.
 
-### 15.2 Today's friction audit (6 Oct)
+### 15.2 Friction audit (25 Oct)
 
 Launch → play the Minuet, as the code works now:
 
 | Step | Today | Target |
 |---|---|---|
-| Open app | Library | Library (or the last piece, see 15.3) |
-| Open piece | 1 click | 1 click |
-| Choose instrument | 1 click, every time | 0 (remembered / auto) |
-| Press Start | 1 click | 0 (first correct note starts) |
-| Practise bar 9 | Play bars 1–8 first | 1 click on bar 9 |
-| Loop bars 9–12 | Not possible | Click + Shift-click |
-| Try again | 1 click "Again" in summary | 0 (loop wraps) or **R** |
-| Back to library | 1 click (attempt keeps running) | 1 click or Esc (attempt saved) |
-| See where you struggled | Read a list of lines | Heatmap on the score |
+| Open app | Library | Library |
+| Open piece | 1 click (or Continue) | 1 click |
+| Choose instrument | 1 click, every time | 0: remembered / auto-detected (M1.3) |
+| Press Start | 1 click | 0: the first correct note starts |
+| Practise bar 9 | 1 click on bar 9 | 1 click |
+| Loop bars 9–12 | Click + Shift-click, or L | done |
+| Try again | **R** | done |
+| Back to library | 1 click; the attempt is saved | done |
+| See where you struggled | Results after the run (coach cards) | + the Progress page (M2.10) |
 
 ### 15.3 Core flows and click budgets
 
@@ -72,33 +72,31 @@ next action.
 
 | State | What you see | Obvious next action |
 |---|---|---|
-| **Ready** | Score, heatmap on, cursor at start/last bar, "Play the first note to begin" | Play a note |
-| **Playing** | Heatmap off, toolbar dimmed, cursor + position band, live marks | Keep playing |
-| **Looping** | Range band, "2 clean in a row" counter in the toolbar | Keep playing; Esc to stop looping |
-| **Loop done** | Short confirmation: "3 clean passes · bars 9–12" | Next weak bar / keep looping / stop |
-| **Device lost** | Banner with countdown; cursor frozen | Plug the keyboard back in |
-| **Ended** | Inline summary above the score, heatmap back on | Again (Enter) |
+| **Ready** | Score, cursor at the start point; the instrument picker until M1.3 | Start, or play the first note (planned) |
+| **Playing** | Cursor; correct notes green, wrong notes as a red head where they'd be written (today they fade after 1.5 s; from M2.11 they stay for the attempt) | Keep playing |
+| **Looping** | Loop band behind the bars, "2 clean in a row" in the status line | Keep playing; Esc or L to stop |
+| **Loop done** | "3 clean passes · bars 9–12", and "Join it back up · loop bars 8–13" | Widen the loop, or stop |
+| **Device lost** | Status line with a 60 s countdown; cursor frozen | Plug the keyboard back in |
+| **Ended** | Results replace the score (Monkeytype-style); auto-finish 1.5 s after the last note | Enter (first card's drill), R (again), Esc (the score) |
 
 ### 15.5 Keyboard shortcuts
 
 Shortcuts must never fire while typing in a text field (rename, search).
 
+Built:
+
 | Key | Action |
 |---|---|
-| Space | Start / stop the attempt |
-| R | Restart from loop start (or bar 1) |
-| L | Loop the current bar; with a selection, loop the selection; again to stop |
-| ← / → | Move the cursor one bar back / forward (when not mid-chord) |
-| Home | Go to bar 1 |
-| H | Cycle hands: Both → Right → Left |
-| W | Toggle weak-bar heatmap |
-| Y | History panel |
-| N | Toggle note names |
-| + / − / 0 | Zoom in / out / reset |
-| Esc | Clear selection → stop loop → close panel → back to library (in that order) |
-| ? | Shortcut overlay |
-| Ctrl+O | Add a piece |
-| Ctrl+F | Search the library |
+| Click a bar / Shift-click | Start there / loop to it |
+| L | Loop on / off |
+| R | Practise again (from the loop start, or the start point) |
+| Esc | Stop looping; on Results, show the score and back |
+| Enter | On Results: the first card's button (or practise again) |
+| Ctrl+wheel | Zoom |
+| W | Weak-bar tint on/off (removed with M2.10) |
+
+Planned (M3.6 with a `?` overlay): Space start/stop, ← / → move a bar, Home bar 1,
+H hands, N note names, + / − / 0 zoom, Ctrl+O add a piece, Ctrl+F search.
 
 ### 15.6 Small conveniences worth having (all v1.0 unless marked)
 
@@ -138,15 +136,15 @@ Shortcuts must never fire while typing in a text field (rename, search).
 | `rule` / `rule-strong` | `#dde1e7` / `#c7ccd6` | `#2c2e36` / `#3a3d47` | Hairlines |
 | `accent` | `#16a34a` | `#22c55e` | Focus, primary action, selected |
 | `correct` | `#2f6f4e` | `#4ade80` | Correct-note marks |
-| `wrong` | `#dc2626` | `#f87171` | Wrong-note marks (fade after 1.5 s) |
+| `wrong` | `#dc2626` | `#f87171` | Wrong-note marks (today they fade after 1.5 s; from M2.11 they stay for the attempt, with a ring) |
 | `cursor` | accent at 70% | accent at 70% | Cursor line |
 | `position-band` | accent at 8% | accent at 12% | Current position band |
 | `loop-band` | `#2563eb` at 8% | at 14% | Selected loop range |
-| `heat-1…5` | `#fef3c7` → `#f59e0b` → `#b45309` | same hues, lower lightness | Weak-bar heatmap |
+| `heat-1…5` | `#fef3c7` → `#f59e0b` → `#b45309` | same hues, lower lightness | Weak bars over time (Progress page, M2.10); `--color-pause` amber is also the pause mark on Results |
 
 Rules:
 - **Never encode meaning in colour alone.** Wrong notes also get an ✕ shape;
-  heatmap bars also get a number in the bar card; correct notes are a filled
+  weak-bar levels on the Progress page are also drawn as bar heights and listed as facts; correct notes are a filled
   dot, wrong an outlined cross.
 - Heat colours are a **single amber hue**, so the score never looks covered
   in failure-red.
@@ -191,77 +189,68 @@ Only the scale in `index.css` is allowed. No one-off sizes.
 
 ## 17. Screen-by-screen specifications
 
-### 17.1 Library
+### 17.1 Library (as built, 25 Oct)
 
 ```
-┌───────────────────────────────────────────────────────────────────────┐
-│ Hogwash                                        ● Roland FP-10    ⚙    │
-├───────────────────────────────────────────────────────────────────────┤
-│  CONTINUE                                                             │
-│  ┌──────────────────────────────────────────────────┐                 │
-│  │ Minuet in G · bar 9 · weakest: 9, 14, 21  [Continue]│              │
-│  └──────────────────────────────────────────────────┘                 │
-│                                                                       │
-│  YOUR PIECES                                   [Search] [+ Add a piece]│
-│  ┌────────┐ ┌────────┐ ┌────────┐                                     │
-│  │ COMPOSER│ │        │ │        │   cream "sheet-music cover" cards  │
-│  │ Title   │ │        │ │        │                                    │
-│  │ hook    │ │        │ │        │                                    │
-│  │ last ·  │ │        │ │        │                                    │
-│  └────────┘ └────────┘ └────────┘                                     │
-│                                                                       │
-│  BUNDLED · BEGINNER — single lines and first two-hand pieces          │
-│  ...                                                                  │
-│  BUNDLED · INTERMEDIATE — around Grades 1–4                           │
-│  ...                                                                  │
-└───────────────────────────────────────────────────────────────────────┘
+Hogwash
+
+CONTINUE
+┌────────────────────────────────────────────────────────────┐
+│ CHRISTIAN PETZOLD                                          │
+│ Minuet in G Major                                [Continue]│
+│ Practised today · weakest bars 3, 7                        │
+└────────────────────────────────────────────────────────────┘
+YOUR PIECES                                     [+ Add a piece]
+  cards: COMPOSER · Title · 32 bars · 274 notes · "Last practised 2 days ago · weakest bar 9"
+STARTER · BEGINNER — single lines and first two-hand pieces
+STARTER · INTERMEDIATE — around Grades 1–4
 ```
 
-- **Card content:** composer (small caps), title (serif italic), one
-  musical hook line (key · time · one distinguishing feature, written into
-  `PROVENANCE.md` for bundled pieces; for imports: key · time · bars),
-  footer: "Last practised 2 days ago · weakest bar 9" or "Not practised yet."
-- **Card actions:** click opens; a ⋯ menu for Rename, Export MusicXML,
-  Delete (imports only).
-- **Empty "Your pieces":** *"Pieces you add appear here. Hogwash reads
-  MusicXML — export it from MuseScore Studio or download from OpenScore."*
-  plus the Add button.
+- **Continue** appears once anything has been practised: the piece practised last.
+- **Your pieces:** imports, most recently practised first. Empty: *"Pieces you
+  add appear here. Hogwash reads MusicXML — export it from MuseScore Studio or
+  download from OpenScore."*
+- **Cards:** composer in small caps, title in serif italic, size in mono, footer
+  "Last practised … · weakest bar(s) …" or "Not practised yet". Rename and Delete
+  (imports only) appear on hover or focus.
+- **Planned:**
+  - a visible "Progress" link on every card and next to Continue (M2.10)
+  - cream "sheet-music cover" paper and a one-line musical hook (M3.8)
+  - search (M3.9)
+  - a device indicator (M1.3)
 - **No grades as rewards.** Levels are descriptions only.
 
-### 17.2 Practice
+### 17.2 Practice (as built, 25 Oct)
 
-```
-┌──────────────────────────────────────────────────────────────────────────┐
-│ ← Library   Minuet in G · Petzold                  ● FP-10   ⏱  ⚙   ?    │
-├──────────────────────────────────────────────────────────────────────────┤
-│ Bar 9 / 32 │ Both ▾ │ ⟲ Loop 9–12 · 2 clean │ ◎ Weak bars │ −  100%  + │
-├──────────────────────────────────────────────────────────────────────────┤
-│                                                                          │
-│                    (the score, full width, cream paper)                  │
-│                                                                          │
-│   ░░ position band   ▒▒ loop band   heat tint on bars when idle          │
-│                                                                          │
-├──────────────────────────────────────────────────────────────────────────┤
-│ (only when needed) Play the first note to begin · or click a bar         │
-└──────────────────────────────────────────────────────────────────────────┘
-```
-
-- **Header:** back, title + composer, device indicator, history, settings,
-  help. Collapses while playing (M3.2).
-- **Toolbar (left → right):** position "Bar 9 / 32" · hands · loop (state +
-  clean counter) · weak bars (toggle + "Practise weak bars" in its menu) ·
-  zoom. After v1.0: Wait/Tempo toggle and tempo stepper, Listen.
-- **Status line** at the bottom, only when it has something to say.
-- **Summary** appears as an inline panel above the score, never a modal.
+- **Header:**
+  - ← Library, title + composer
+  - Loop, Restart and Stop/Finish while playing
+  - the settings gear
+  - a status line that appears only when it has something to say (keyboard lost,
+    loop counts, "Join it back up")
+- **The score:** full width; the cursor; correct and wrong marks; the loop band
+  behind looped bars; the amber weak-bar tint when idle (removed with M2.10).
+- **After a run, Results replace the score:**
+  - a top line ("Bars 1–8 · 6 s") with accuracy, tempo and steadiness in small mono
+  - up to 3 coach cards (each: a cut-out of the bars, what happened, why, how to fix
+    it, one button)
+  - "Went well" chips
+  - Details: big numbers, a per-bar chart, small numbers
+  - Practise again, Show on the score, Library
+- **Planned:**
+  - a "Progress" button in the header (M2.10)
+  - the one-row toolbar (M3.1)
+  - focus mode while playing (M3.2)
+  - the position band (M3.4)
 
 ### 17.3 Panels (not screens)
 
 | Panel | Opens from | Contents |
 |---|---|---|
-| Settings | ⚙ / device indicator | Keyboard (input, output/thru, range, detect) · Display (theme, note names, bar numbers) · About (version, licence, credits). Developer: show geometry. |
-| History | ⏱ / Y | Session list, practice log (D6), per-session heatmap preview |
-| Bar card | Click a bar when idle | Bar stats, trend, Loop this bar, Start here |
-| Shortcuts | ? | The table from §15.5 |
+| Settings | ⚙ | Appearance (note names, show geometry), Sound (MIDI input and output / Thru), View & export (zoom, export MusicXML), About (version, licence, credits) |
+| Shortcuts (planned, M3.6) | ? | The table in 15.5 |
+
+History and the bar card are no longer panels. They live on the Progress page (M2.10, planned): a session × bar grid, "Work on next", and bar detail on a column click.
 
 ### 17.4 Onboarding and first run
 
@@ -273,15 +262,20 @@ Only the scale in `index.css` is allowed. No one-off sizes.
   start there."* · *"Shift-click a second bar to loop between them."*
 - No tour, no modal walkthrough, no lessons.
 
-### 17.5 The end-of-attempt panel
+### 17.5 Results (as built) and the Progress page (planned)
 
-```
-Bars 1–18 played · 3 bars to work on · 6 min 40 s
-[ Bar 9 · 3 wrong · pause 6.2 s ] [ Bar 14 · 2 wrong ] [ Bar 17 · pause 4.0 s ]
-Bars 19–32 not reached.
-                                   [Again ⏎]  [Practise these bars]  [Library]
-▸ Show every note
-```
+Results are described in 17.2.
+
+The **Progress page** (M2.10) will have:
+- a header: composer, title, "N sessions · total time · last practised …"
+- Work on next: up to 3 passages, each with "⟲ Practise bars …" starting one bar
+  before the trouble
+- the grid: bars × sessions, newest on top, a "Now" row of bar heights, amber cells
+  by absolute level
+- bar detail on a column click (now vs the earliest sessions)
+
+It is reached from the library card, Continue, Results and the practice screen,
+and never opens by itself.
 
 ---
 
@@ -339,7 +333,7 @@ Bars 19–32 not reached.
 | Piece with > 2 staves or several parts | Refuse clearly on import for v1.0: "Hogwash handles one piano part (two staves)." |
 | Piece with a pickup (anacrusis) bar | Bar numbering must match the printed score (test with a PD Für Elise) |
 | Very long piece (300+ bars) | Engraving and history stay within budgets (§21) |
-| Mid-bar clef change | Known limit (§27) |
+| Mid-bar clef change | Known limit (`docs/PRODUCT.md` §27) |
 | Played an octave off everywhere | Octave-shift hint (M3.14) |
 | Piece needs keys the keyboard lacks | Warn on open (M3.13) |
 | Session file corrupted on disk | Skip it, keep the rest, note it in Details |
@@ -350,10 +344,10 @@ Bars 19–32 not reached.
 ### 19.3 Empty states (all need copy and one action)
 
 - No pieces imported yet (library section)
-- Piece never practised (heatmap toggle, history panel)
+- Piece never practised (Progress page: one line and a Practise button)
 - Not enough data for a bar (bar card: "Play this bar twice to see stats.")
 - No keyboard connected (header + practice status line)
-- History panel with one session ("Practise again to see changes over time.")
+- Progress page with one session: the grid with one row, no trend text
 
 ---
 
@@ -376,16 +370,37 @@ Not a polish item — a correctness item. Minimum bar for v1.0:
 
 ## 21. Performance budgets
 
-Targets to **measure** (write the numbers in §32 when measured), not claims.
+Targets to **measure** (measured numbers are dated below), not claims.
 
 | What | Budget | How to measure |
 |---|---|---|
 | Key press → mark on screen | < 30 ms on your machine | Log MIDI timestamp vs. paint (devtools performance), 50 presses |
 | Opening the Prelude (engrave + show) | < 800 ms | Timer around `open_piece` + first paint |
 | Reflow after zoom/resize | < 300 ms | Timer around `engrave_piece` |
-| Loading 50 sessions + heatmap | < 100 ms | Unit benchmark in `hogwash-analysis` |
+| Loading 50 sessions + weak bars | < 100 ms | Unit benchmark in `hogwash-analysis` |
 | Cold start to library | < 1.5 s | Stopwatch on the AppImage |
 | Idle CPU | ~0% | `top` with the app open, no input |
 | AppImage size | < 60 MB | `ls -lh` |
 
 If a budget is blown, fix it before adding features in that area.
+
+### 21.1 Measured, 25 Oct 2026 (this machine; median of 5, click → painted)
+
+Measured with a WebDriver script and the virtual keyboard, on a copy of real data.
+"Debug" is debug Rust with the built frontend. `just run` is debug Rust plus the
+Vite dev server.
+
+| What | Release | Debug | `just run` | Budget |
+|---|---|---|---|---|
+| Cold start → library | 1.2–1.5 s | 1.8 s | 1.6 s | < 1.5 s (met in release) |
+| Open the Prelude (engrave + show) | 430 ms | 508 ms | 585 ms | < 800 ms ✓ |
+| Key press → mark painted | 23 ms (max 34) | — | 24 ms (max 36) | < 30 ms ✓ (median) |
+| Zoom step → re-engraved (incl. 250 ms debounce) | 486 ms | 585 ms | 606 ms | < 300 ms for the reflow itself; not separated |
+| Start → playing | 12 ms | 12 ms | 12 ms | — |
+| Stop → Results | 69 ms | 68 ms | 72 ms | — |
+| ← Library → library (incl. ~0.4 s of fades) | 294 ms | 292 ms | 300 ms | — |
+| `library` command, 10 pieces, 6 sessions | 3 ms | 46 ms | 46 ms | — |
+| 50 Minuet sessions replayed | < 100 ms (test) | ~104 ms | — | < 100 ms ✓ (release) |
+| AppImage size | 115 MB | — | — | **< 60 MB ✗ over budget** |
+
+Not measured yet: idle CPU.

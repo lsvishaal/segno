@@ -48,14 +48,14 @@ it, today?*
 
 ## 3. Product rules (and why each exists)
 
-These are settled. Reopen one only with new evidence, and log it in §32.
+These are settled. Reopen one only with new evidence, and log it in DECISIONS.md.
 
 | Rule | Why |
 |---|---|
-| **Two screens: Library and Practice.** Settings, history and help are panels, not tabs. | MidiSlayer has eight top-level tabs and its identity got lost in them. A practice tool should open straight into practice. |
+| **Three screens: Library, Practice, and a per-piece Progress page.** Settings and help are panels, not tabs. Results stays first after a run; Progress never opens by itself (25 Oct). | MidiSlayer has eight top-level tabs and its identity got lost in them. A practice tool should open straight into practice. |
 | **Pieces, not drills.** No flashcards, interval trainers, theory lessons, exams or games. | That's MidiSlayer's lane; they're far ahead and charge for it. Depth in one lane beats breadth in five. |
 | **No gamification.** No XP, ranks, levels, streaks, points or badges. | It optimises for opening the app, not for getting better. Motivation should come from watching a bar improve. |
-| **Factual feedback.** Location + measurement, never praise or judgment. | "Bar 9: stalled 4 s, 2 wrong notes" is useful. "Great job!" is noise, and "You struggled" stings. |
+| **Factual feedback.** Location + measurement, never praise or judgment. Accuracy % and tempo may appear, never as the headline (24 Oct). | "Bar 9: stalled 4 s, 2 wrong notes" is useful. "Great job!" is noise, and "You struggled" stings. |
 | **The cursor waits.** Wait mode is the core experience. | It's what makes reading practice possible at your own speed. Tempo comes later, as a graduation step. |
 | **Local-first.** No accounts, no network, no telemetry. | Your practice history is personal. It also means nothing to host, nothing to break. |
 | **Everything is free.** No locked features, ever. | MidiSlayer charges $50 to play a public-domain Bach prelude. Being the free version is the point. |
@@ -110,7 +110,7 @@ are all about reading single notes, not about bars of a piece.
 - "PRO" badges on 8 of 9 cards: the free tier feels like a shop window.
 - A raw `UnhandledPromise: Failed to start the audio device` error toast on
   every screen. Errors must never leak internals.
-- Built-in software synth that fails on Linux (PipeWire/ALSA): we send MIDI
+- Built-in software synth that fails on Linux (PipeWire/ALSA) (D13 reopens whether we add one; if so, test Linux audio first): we send MIDI
   out to the user's piano instead.
 - Ranks ("Novice"), points per minute, XP levels, practice streaks.
 
@@ -228,7 +228,6 @@ Carried over from the previous roadmap; each one is real but rare.
 | Flashcards, theory drills, lessons, exams, games | MidiSlayer's lane; we win on depth with pieces |
 | Falling notes as a mode | Synthesia/Neothesia's lane; Hogwash is about reading real notation |
 | PDF / photo scanning (OMR) | A funded multi-year problem (Soundslice); point to Audiveris |
-| A built-in software synth (reopened, D13) | Linux audio is where MidiSlayer broke; the user's piano has speakers |
 | Locked or paid features | The point is that it's free |
 | Bundling copyrighted arrangements | Legal risk to the whole repo |
 | An in-app store or content marketplace | Not a business; not the product |
