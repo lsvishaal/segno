@@ -26,6 +26,7 @@ use tauri::{Emitter as _, Manager as _};
 // reachable is what keeps that part small.
 pub mod commands;
 pub mod engraving;
+pub mod history;
 pub mod practice;
 pub mod provided;
 pub mod review;
@@ -97,6 +98,7 @@ pub fn run() -> Result<(), tauri::Error> {
             commands::import_musicxml,
             commands::rename_piece,
             commands::history_count,
+            commands::weak_bars,
             commands::delete_piece,
             commands::output_ports,
             commands::set_thru,

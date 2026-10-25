@@ -110,6 +110,30 @@ pub fn history_count(id: String, state: State<'_, Shared>) -> Result<usize, Refu
     Ok(hogwash.records().sessions_of(&piece_id))
 }
 
+/// Which bars of a piece have been hard over every attempt kept for it.
+///
+/// # Errors
+///
+/// If the state is unreadable, or there is no such piece.
+#[tauri::command]
+pub fn weak_bars(
+    id: String,
+    state: State<'_, Shared>,
+) -> Result<crate::history::WeakBars, Refused> {
+    let hogwash = state.inner().0.lock().map_err(|_| POISONED.to_owned())?;
+    let pieces = hogwash.library().pieces();
+    let piece = pieces
+        .iter()
+        .find(|piece| piece.id().as_str() == id)
+        .ok_or_else(|| format!("There is no piece called `{id}` in the library."))?;
+
+    Ok(crate::history::weak_bars(
+        hogwash.records(),
+        piece.id(),
+        piece.reference(),
+    ))
+}
+
 /// Deletes an imported Piece: its copy of the file, and every practice
 /// session kept for it.
 ///

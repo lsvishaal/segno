@@ -212,7 +212,38 @@ impl Bars {
     pub fn iter(&self) -> impl Iterator<Item = (MeasureNumber, &Bar)> {
         self.0.iter().map(|(measure, bar)| (*measure, bar))
     }
+
+    /// How hard each bar is next to the piece's others, 0 to 4: 0 for a bar
+    /// that gave no trouble worth noticing, then 1–4 by quarter among the
+    /// rest, hardest last. Bars passed fewer than twice say too little and
+    /// are left out.
+    #[must_use]
+    pub fn levels(&self) -> BTreeMap<MeasureNumber, u8> {
+        let known = || self.0.iter().filter(|(_, bar)| bar.passes >= 2);
+        let mut hard: Vec<u64> = known()
+            .map(|(_, bar)| bar.difficulty())
+            .filter(|&difficulty| difficulty >= NOTICEABLE)
+            .collect();
+        hard.sort_unstable();
+        let level = |difficulty: u64| {
+            if difficulty < NOTICEABLE {
+                return 0;
+            }
+            // The share of weak bars this one is at least as hard as, in
+            // quarters rounded up: the hardest is always 4, and equal bars
+            // share a level.
+            let as_hard = hard.partition_point(|&other| other <= difficulty);
+            u8::try_from((as_hard * 4).div_ceil(hard.len())).unwrap_or(4)
+        };
+        known()
+            .map(|(measure, bar)| (*measure, level(bar.difficulty())))
+            .collect()
+    }
 }
+
+/// Below this `difficulty` (half a second of pause, or half a wrong note,
+/// per pass) a bar went fine.
+const NOTICEABLE: u64 = 500;
 
 /// One attempt, step by step: what the coach and the bar stats are both
 /// worked out from.
@@ -421,6 +452,51 @@ mod tests {
 
     fn bar(number: u32) -> MeasureNumber {
         MeasureNumber::new(number).expect("a bar number")
+    }
+
+    // Two runs; the second stalls 3 s into one step. Only that bar is
+    // weak, so it alone is tinted, at the deepest level.
+    #[test]
+    fn a_bar_stalled_in_is_the_weakest_and_the_rest_went_fine() {
+        let reference = minuet_in_time();
+        let all = 0..reference.len();
+        let stalled = all.end / 2;
+        let mut bars = Bars::default();
+        for late in [&[][..], &[(stalled, 3_000_000)]] {
+            let observed = played_in_time(&reference, all.clone(), QUARTER_US, late);
+            bars.add(&Bars::of(&observed, &reference, all.clone(), false));
+        }
+        let weak = reference.at(stalled).expect("a step").measure();
+
+        let levels = bars.levels();
+
+        assert_eq!(levels.get(&weak), Some(&4));
+        assert!(
+            levels
+                .iter()
+                .all(|(measure, &level)| *measure == weak || level == 0)
+        );
+        assert_eq!(levels.len(), bars.iter().count());
+    }
+
+    #[test]
+    fn a_bar_played_once_is_not_judged() {
+        let reference = minuet_in_time();
+        let observed = played_in_time(
+            &reference,
+            0..reference.len(),
+            QUARTER_US,
+            &[(5, 3_000_000)],
+        );
+
+        let bars = Bars::of(&observed, &reference, 0..reference.len(), false);
+
+        let levels = bars.levels();
+        let once = bars
+            .iter()
+            .find(|(_, bar)| bar.passes == 1)
+            .expect("a bar played once");
+        assert!(!levels.contains_key(&once.0));
     }
 
     #[test]
