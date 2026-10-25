@@ -30,7 +30,8 @@ import type {
 import { DeviceSelect } from "../components/DeviceSelect";
 import { Results } from "../components/Results";
 import { Score } from "../components/Score";
-import type { CursorState, Dot, ScoreReview } from "../components/Score";
+import type { CursorState, Dot, ScoreHandle, ScoreReview } from "../components/Score";
+import type { CutOutRequest } from "../components/scoreCutout";
 import { BEFORE_STARTING, cursorFor, dotFor } from "./overlayEvents";
 import { SettingsPanel } from "./PracticeSettings";
 import { REFLOW_THRESHOLD, clampScale, loadZoom, saveZoom, scoreWidth, stepScale } from "./zoom";
@@ -132,6 +133,7 @@ export function PracticeScreen({
   // The width the score is engraved for, in pixels, once measured.
   const [width, setWidth] = useState<number | null>(null);
   const scoreRef = useRef<HTMLDivElement>(null);
+  const scoreApi = useRef<ScoreHandle>(null);
 
   // A refusal is transient — it says its piece and then gets out of the way.
   useEffect(() => {
@@ -533,18 +535,14 @@ export function PracticeScreen({
     [begin, practise, pieceId],
   );
 
-  // Position in the piece → the notes drawn for it, for the cut-outs.
-  const notesAt = useMemo(
-    () => new Map(engraving.marks.map((mark) => [mark.position, mark.notes] as const)),
-    [engraving.marks],
+  // What the results ask of the drawn score.
+  const cutOut = useCallback(
+    (request: CutOutRequest) => scoreApi.current?.cutOut(request) ?? null,
+    [],
   );
 
   // A column of the review's strip: that bar, brought into view.
-  const showBar = useCallback((measure: number) => {
-    scoreRef.current
-      ?.querySelector(`[data-bar="${measure}"]`)
-      ?.scrollIntoView({ behavior: "smooth", block: "center" });
-  }, []);
+  const showBar = useCallback((measure: number) => scoreApi.current?.showBar(measure), []);
 
   // Back to the score from the results, its marks left on; at a bar if one
   // was picked on the chart.
@@ -779,6 +777,7 @@ export function PracticeScreen({
           aria-hidden={resultsShown || undefined}
         >
           <Score
+            ref={scoreApi}
             hidden={!fitted}
             pages={engraving.pages}
             marks={engraving.marks}
@@ -813,8 +812,7 @@ export function PracticeScreen({
                 <Results
                   review={phase.summary.review}
                   reason={phase.summary.autoEnded ? phase.summary.reason : null}
-                  scoreRoot={scoreRef.current}
-                  notesAt={notesAt}
+                  cutOut={cutOut}
                   onCard={(card) => practiseCard(card, phase.instrument)}
                   onNoteNames={() => setShowNoteNames(true)}
                   onAgain={() => again(phase.instrument)}

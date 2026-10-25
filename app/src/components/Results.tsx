@@ -1,9 +1,10 @@
-import { useState } from "react";
+import { useCallback, useState } from "react";
 
 import { motion } from "motion/react";
 
-import type { DrawnNote, Numbers, Review, ReviewBar, ReviewCard, ReviewPass } from "../bridge";
+import type { Numbers, Review, ReviewBar, ReviewCard, ReviewPass } from "../bridge";
 import { BarCutout } from "./BarCutout";
+import type { CutOutRequest } from "./scoreCutout";
 
 /**
  * The results after a run, where the score was: what to work on (at most
@@ -15,8 +16,7 @@ import { BarCutout } from "./BarCutout";
 export function Results({
   review,
   reason,
-  scoreRoot,
-  notesAt,
+  cutOut,
   onCard,
   onNoteNames,
   onAgain,
@@ -26,10 +26,8 @@ export function Results({
   readonly review: Review;
   /** Why the run ended by itself, if it did. */
   readonly reason: string | null;
-  /** The engraved score, laid out behind the results: where cut-outs come from. */
-  readonly scoreRoot: HTMLElement | null;
-  /** Position in the piece → the notes drawn for it. */
-  readonly notesAt: ReadonlyMap<number, readonly DrawnNote[]>;
+  /** Bars cut out of the score, laid out behind the results. */
+  readonly cutOut: (request: CutOutRequest) => SVGSVGElement | null;
   /** A card's button: practise what it is about. */
   readonly onCard: (card: ReviewCard) => void;
   /** Turn note names on, from a card about reading. */
@@ -70,8 +68,7 @@ export function Results({
             number={toFix ? 1 : null}
             large
             marks={review.marks}
-            scoreRoot={scoreRoot}
-            notesAt={notesAt}
+            cutOut={cutOut}
             onCard={onCard}
             onNoteNames={onNoteNames}
             onShowScore={onShowScore}
@@ -85,8 +82,7 @@ export function Results({
                   number={index + 2}
                   large={false}
                   marks={review.marks}
-                  scoreRoot={scoreRoot}
-                  notesAt={notesAt}
+                  cutOut={cutOut}
                   onCard={onCard}
                   onNoteNames={onNoteNames}
                   onShowScore={onShowScore}
@@ -138,8 +134,7 @@ function CoachCard({
   number,
   large,
   marks,
-  scoreRoot,
-  notesAt,
+  cutOut,
   onCard,
   onNoteNames,
   onShowScore,
@@ -149,12 +144,15 @@ function CoachCard({
   readonly number: number | null;
   readonly large: boolean;
   readonly marks: Review["marks"];
-  readonly scoreRoot: HTMLElement | null;
-  readonly notesAt: ReadonlyMap<number, readonly DrawnNote[]>;
+  readonly cutOut: (request: CutOutRequest) => SVGSVGElement | null;
   readonly onCard: (card: ReviewCard) => void;
   readonly onNoteNames: () => void;
   readonly onShowScore: (measure?: number) => void;
 }) {
+  const draw = useCallback(
+    () => cutOut({ first: card.first, last: card.last, marks, pauseInto: card.pauseInto }),
+    [cutOut, card.first, card.last, marks, card.pauseInto],
+  );
   return (
     <article
       aria-label={card.title}
@@ -162,15 +160,7 @@ function CoachCard({
       className={`panel flex gap-6 rounded-2xl p-6 ${large ? "flex-col md:flex-row" : "flex-col"}`}
     >
       <div className={large ? "h-40 shrink-0 md:h-auto md:min-h-40 md:w-[44%]" : "h-28 shrink-0"}>
-        <BarCutout
-          root={scoreRoot}
-          first={card.first}
-          last={card.last}
-          marks={marks}
-          notesAt={notesAt}
-          pauseInto={card.pauseInto}
-          onPick={onShowScore}
-        />
+        <BarCutout first={card.first} last={card.last} draw={draw} onPick={onShowScore} />
       </div>
 
       <div className="flex min-w-0 flex-1 flex-col gap-3">

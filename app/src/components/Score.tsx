@@ -1,9 +1,12 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useImperativeHandle, useMemo, useRef, useState } from "react";
+import type { Ref } from "react";
 import { createPortal } from "react-dom";
 
 import type { Bar, DrawnNote, Mark, ReviewMark } from "../bridge";
 import { SCORE_MAX_WIDTH } from "../screens/zoom";
 import { NoteNames } from "./NoteNames";
+import { cutOut } from "./scoreCutout";
+import type { CutOutRequest } from "./scoreCutout";
 import { showGeometry as drawGeometry } from "./scoreDebug";
 import { cursorLine, drawingSurface, readPage } from "./scoreGeometry";
 import type { PageGeometry } from "./scoreGeometry";
@@ -31,8 +34,22 @@ export interface Box {
   readonly height: number;
 }
 
+/** What the rest of the app may ask of the drawn score, through a `ref`. */
+export interface ScoreHandle {
+  /** Some bars, cut out as a picture (for the results' cards). */
+  readonly cutOut: (request: CutOutRequest) => SVGSVGElement | null;
+  /** Scrolls bar `measure` into view. */
+  readonly showBar: (measure: number) => void;
+}
+
 /**
  * The engraved score, with a cursor and correctness dots drawn on it.
+ *
+ * # Only this module touches the score's SVG
+ *
+ * Verovio's drawing lives outside React. Everything that reads or marks it
+ * (cursor, marks, tints, cut-outs) is here or in a helper only this file
+ * imports; the rest of the app passes data in and asks through `ScoreHandle`.
  *
  * # Why the SVG is not React's business
  *
@@ -81,6 +98,7 @@ export function Score({
   hidden = false,
   showNoteNames = false,
   showGeometry = false,
+  ref,
 }: {
   readonly pages: readonly string[];
   readonly marks: readonly Mark[];
@@ -104,6 +122,7 @@ export function Score({
   readonly hidden?: boolean;
   readonly showNoteNames?: boolean;
   readonly showGeometry?: boolean;
+  readonly ref?: Ref<ScoreHandle>;
 }) {
   const wrapper = useRef<HTMLDivElement>(null);
   const container = useRef<HTMLDivElement>(null);
@@ -188,6 +207,18 @@ export function Score({
 
     return index;
   }, [marks]);
+
+  useImperativeHandle(
+    ref,
+    () => ({
+      cutOut: (request) => (wrapper.current ? cutOut(wrapper.current, notesAt, request) : null),
+      showBar: (measure) =>
+        wrapper.current
+          ?.querySelector(`[data-bar="${measure}"]`)
+          ?.scrollIntoView({ behavior: "smooth", block: "center" }),
+    }),
+    [notesAt],
+  );
 
   // Every stored box is a snapshot of `getBoundingClientRect()`, which goes
   // stale the instant the container's actual on-screen size changes — a
