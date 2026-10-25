@@ -35,3 +35,6 @@ Thumbs.db
 # Local design reference screenshots, not part of the project.
 /ideal-pics
 /picofcurrentapp
+
+# A briefing to paste into Claude chat: personal, not project documentation.
+/CLAUDE-CHAT-BRIEF.md
