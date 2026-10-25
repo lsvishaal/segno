@@ -511,7 +511,7 @@ export function Score({
           <div
             key={`weak-${box.left},${box.top}`}
             data-weak-bar={level}
-            className={`absolute rounded-sm mix-blend-multiply ${WEAK_TINT[level] ?? ""}`}
+            className={`hw-fade-in absolute rounded-sm mix-blend-multiply ${WEAK_TINT[level] ?? ""}`}
             style={box}
           />
         ))}

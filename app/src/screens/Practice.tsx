@@ -795,7 +795,9 @@ export function PracticeScreen({
           />
         </div>
 
-        {weakShown && <WeakLegend weak={weak} hasWeak={weakLevels.size > 0} />}
+        <AnimatePresence>
+          {weakShown && <WeakLegend weak={weak} hasWeak={weakLevels.size > 0} />}
+        </AnimatePresence>
 
         <AnimatePresence>
           {resultsShown && (
@@ -850,8 +852,11 @@ function StatusLine({
 }) {
   const link =
     "ml-2 cursor-pointer rounded-full border border-rule px-2.5 py-0.5 text-xs text-ink transition-colors hover:border-accent hover:text-accent focus-visible:outline-2 focus-visible:outline-accent";
+  // A new message fades in rather than snapping (ROADMAP §16.5).
+  const showing = lost ? "lost" : (message ?? (afterRun ? "afterRun" : ""));
   return (
     <p role="status" className="min-w-0 shrink truncate text-xs text-ink-muted">
+      <span key={showing} className="hw-fade-in">
       {lost ? (
         `${lost.instrument} stopped reporting · waiting ${lost.secondsRemaining} s · what you played is kept`
       ) : message ? (
@@ -871,6 +876,7 @@ function StatusLine({
           </button>
         </>
       ) : null}
+      </span>
     </p>
   );
 }
@@ -956,8 +962,12 @@ function InstrumentPicker({
 function WeakLegend({ weak, hasWeak }: { readonly weak: WeakBars; readonly hasWeak: boolean }) {
   const runs = `from ${weak.runs} ${weak.runs === 1 ? "run" : "runs"}`;
   return (
-    <div
+    <motion.div
       data-weak-legend
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      transition={{ duration: 0.16, ease: "easeOut" }}
       className="pointer-events-none absolute right-4 bottom-3 flex items-center gap-2 rounded-md border border-rule bg-paper-raised/90 px-3 py-1.5 text-xs text-ink-muted"
     >
       {hasWeak ? (
@@ -974,6 +984,6 @@ function WeakLegend({ weak, hasWeak }: { readonly weak: WeakBars; readonly hasWe
       ) : (
         <span>No weak bars yet ({runs})</span>
       )}
-    </div>
+    </motion.div>
   );
 }

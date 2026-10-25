@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 
-import { motion } from "motion/react";
+import { AnimatePresence, motion } from "motion/react";
 
 import type { PieceSummary } from "../bridge";
 import { PieceCard } from "../components/PieceCard";
@@ -131,6 +131,7 @@ export function LibraryScreen({
       animate="shown"
       className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3"
     >
+      <AnimatePresence initial={false}>
       {shown.map((piece) => (
         <PieceCard
           key={piece.id}
@@ -143,6 +144,7 @@ export function LibraryScreen({
           onDelete={onDelete}
         />
       ))}
+      </AnimatePresence>
     </motion.ul>
   );
 

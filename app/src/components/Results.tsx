@@ -13,6 +13,13 @@ import type { CutOutRequest } from "./scoreCutout";
  * the chart wait under Details. Every word and number comes from Rust; this
  * only lays them out.
  */
+/** The results come in top to bottom, 50 ms apart (ROADMAP §16.5). */
+const STAGGER = { hidden: {}, shown: { transition: { staggerChildren: 0.05 } } };
+const ITEM = {
+  hidden: { opacity: 0, y: 6 },
+  shown: { opacity: 1, y: 0, transition: { duration: 0.2, ease: "easeOut" } },
+} as const;
+
 export function Results({
   review,
   reason,
@@ -42,8 +49,14 @@ export function Results({
   const toFix = review.cards.some((card) => card.kind !== "clean");
 
   return (
-    <section aria-label="Results" className="mx-auto flex w-full max-w-[1040px] flex-col gap-8 px-8 py-10">
-      <header className="flex flex-wrap items-baseline justify-between gap-x-8 gap-y-2">
+    <motion.section
+      aria-label="Results"
+      variants={STAGGER}
+      initial="hidden"
+      animate="shown"
+      className="mx-auto flex w-full max-w-[1040px] flex-col gap-8 px-8 py-10"
+    >
+      <motion.header variants={ITEM} className="flex flex-wrap items-baseline justify-between gap-x-8 gap-y-2">
         <p className="text-subtitle text-ink">{review.headline}</p>
         <p className="font-mono text-xs text-ink-muted tabular-nums">
           {[
@@ -55,13 +68,13 @@ export function Results({
             .filter(Boolean)
             .join("   ")}
         </p>
-      </header>
+      </motion.header>
 
       {reason && <p className="text-sm text-ink-muted">{reason}</p>}
       {review.note && <p className="text-sm text-ink-muted">{review.note}</p>}
 
       {main && (
-        <div className="flex flex-col gap-4">
+        <motion.div variants={ITEM} className="flex flex-col gap-4">
           {toFix && <h2 className="text-label text-ink-muted uppercase">Work on these</h2>}
           <CoachCard
             card={main}
@@ -90,11 +103,11 @@ export function Results({
               ))}
             </div>
           )}
-        </div>
+        </motion.div>
       )}
 
       {review.wentWell.length > 0 && (
-        <div className="flex flex-wrap items-center gap-2" aria-label="Went well">
+        <motion.div variants={ITEM} className="flex flex-wrap items-center gap-2" aria-label="Went well">
           <h2 className="mr-2 text-label text-ink-muted uppercase">Went well</h2>
           {review.wentWell.map((line) => (
             <span key={line} className="rounded-full border border-rule px-3 py-1 text-sm text-ink">
@@ -102,10 +115,10 @@ export function Results({
               {line}
             </span>
           ))}
-        </div>
+        </motion.div>
       )}
 
-      <div className="flex flex-wrap items-center gap-3">
+      <motion.div variants={ITEM} className="flex flex-wrap items-center gap-3">
         <motion.button
           type="button"
           onClick={onAgain}
@@ -121,10 +134,12 @@ export function Results({
         <button type="button" onClick={onLibrary} className={SECONDARY}>
           ← Library
         </button>
-      </div>
+      </motion.div>
 
-      <Details review={review} onShowScore={onShowScore} />
-    </section>
+      <motion.div variants={ITEM}>
+        <Details review={review} onShowScore={onShowScore} />
+      </motion.div>
+    </motion.section>
   );
 }
 
@@ -216,7 +231,7 @@ function Details({
   return (
     <details className="group">
       <summary className="cursor-pointer text-sm text-ink-muted select-none hover:text-accent">Details</summary>
-      <div className="mt-6 flex flex-col gap-8">
+      <div className="hw-details-body mt-6 flex flex-col gap-8">
         <div className="flex flex-col gap-8 sm:flex-row sm:items-stretch">
           <div className="flex shrink-0 flex-col gap-6 sm:w-48">
             <Big label="accuracy" value={numbers.accuracy === null ? "—" : `${numbers.accuracy}%`} />

@@ -645,7 +645,8 @@ describe("weak bars over time", () => {
 
     await press("w");
     expect(drawn.last?.weak).toBeNull();
-    expect(screen.queryByText(/Weak bars/)).toBeNull();
+    // The legend fades out before it goes.
+    await waitFor(() => expect(screen.queryByText(/Weak bars/)).toBeNull());
 
     await press("W");
     expect(drawn.last?.weak?.get(6)).toBe(4);

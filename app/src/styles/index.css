@@ -93,3 +93,33 @@ body {
   box-shadow: 0 12px 32px -14px color-mix(in srgb, var(--color-accent) 18%, transparent);
 }
 
+
+/*
+  Entrances that need no exit (ROADMAP §16.5: 160 ms, ease-out): a fade with
+  a 4 px rise for content appearing, a plain fade for marks on the score.
+  With reduced motion, both are plain fades.
+*/
+@keyframes hw-enter {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+}
+@keyframes hw-fade {
+  from {
+    opacity: 0;
+  }
+}
+.hw-enter,
+details[open] > .hw-details-body {
+  animation: hw-enter 160ms ease-out;
+}
+.hw-fade-in {
+  animation: hw-fade 160ms ease-out;
+}
+@media (prefers-reduced-motion: reduce) {
+  .hw-enter,
+  details[open] > .hw-details-body {
+    animation-name: hw-fade;
+  }
+}

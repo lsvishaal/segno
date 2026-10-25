@@ -8,8 +8,19 @@ import { practisedWhen, weakestLine } from "../screens/Library";
 /** Entrance only — the parent `motion.ul` staggers when each of these plays. */
 const VARIANTS = {
   hidden: { opacity: 0, y: 10 },
-  shown: { opacity: 1, y: 0 },
-};
+  shown: { opacity: 1, y: 0, transition: { duration: 0.2, ease: "easeOut" } },
+} as const;
+
+/**
+ * On a shelf: enters with the others, fades out when deleted, and slides to
+ * close a gap a deleted neighbour leaves (ROADMAP §16.5: 160 ms, ease-out).
+ */
+const SHELVED = {
+  variants: VARIANTS,
+  layout: "position",
+  exit: { opacity: 0, scale: 0.98, transition: { duration: 0.16, ease: "easeOut" } },
+  transition: { layout: { duration: 0.16, ease: "easeOut" } },
+} as const;
 
 /**
  * One piece, on the library shelf: composer, title, how much music there is,
@@ -82,8 +93,8 @@ export function PieceCard({
 
   if (confirming !== null) {
     return (
-      <motion.li variants={VARIANTS} style={{ listStyle: "none" }}>
-        <div role="alertdialog" aria-label={`Delete ${piece.title}?`} className={CARD}>
+      <motion.li {...SHELVED} style={{ listStyle: "none" }}>
+        <div role="alertdialog" aria-label={`Delete ${piece.title}?`} className={`hw-fade-in ${CARD}`}>
           <p className="text-sm text-ink">
             Delete <span className="font-serif">“{piece.title}”</span>?{" "}
             {confirming === 0
@@ -115,9 +126,9 @@ export function PieceCard({
 
   if (editing) {
     return (
-      <motion.li variants={VARIANTS} style={{ listStyle: "none" }}>
+      <motion.li {...SHELVED} style={{ listStyle: "none" }}>
         <form
-          className={CARD}
+          className={`hw-fade-in ${CARD}`}
           onSubmit={(event) => {
             event.preventDefault();
             void rename();
@@ -162,11 +173,11 @@ export function PieceCard({
           .join(" · ");
 
   return (
-    <motion.li variants={VARIANTS} className="group/card relative h-full" style={{ listStyle: "none" }}>
+    <motion.li {...SHELVED} className="group/card relative h-full" style={{ listStyle: "none" }}>
       <button
         type="button"
         onClick={() => onOpen(piece.id)}
-        className={`flex h-full w-full cursor-pointer flex-col ${CARD} text-left transition duration-[120ms] ease-out hover:-translate-y-0.5 hover:border-ink/20 hover:shadow-[0_8px_24px_-12px_rgb(28_26_23/0.18)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent motion-reduce:transition-none motion-reduce:hover:translate-y-0`}
+        className={`hw-fade-in flex h-full w-full cursor-pointer flex-col ${CARD} text-left transition duration-[120ms] ease-out hover:-translate-y-0.5 hover:border-ink/20 hover:shadow-[0_8px_24px_-12px_rgb(28_26_23/0.18)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent motion-reduce:transition-none motion-reduce:hover:translate-y-0`}
       >
         <p className="min-h-4 pr-24 text-label text-ink-muted uppercase">{piece.composer}</p>
         <h3 className="mt-1 font-serif text-title italic text-pretty">{piece.title}</h3>
