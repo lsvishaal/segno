@@ -3,7 +3,7 @@
 // and Esc; a loop over the repeat sign.
 import fs from "node:fs";
 import * as w from "../wd.mjs";
-import { DIR, check, log, sessionFiles, openPiece, chooseKeyboard, clickButton, waitForButton, cursorX, kb, shot } from "../lib.mjs";
+import { DIR, check, log, sessionFiles, openPiece, chooseKeyboard, clickButton, waitForButton, cursorX, kb, shot, barBox, clickBar } from "../lib.mjs";
 
 const expected = JSON.parse(fs.readFileSync(`${DIR}/minuet.expected.json`, "utf8"));
 /** The notes of bar `n`'s first occurrence. */
@@ -17,22 +17,6 @@ const PASS = [...firstPass(9), ...firstPass(10)];
 const FROM = 36;
 const TO = 44;
 
-const barBox = (n) =>
-  w.run(
-    `const m = document.querySelector('.hw-page g.measure[data-bar="' + arguments[0] + '"]');
-     if (!m) return null;
-     m.scrollIntoView({ block: 'center' });
-     const r = m.getBoundingClientRect();
-     return { left: r.left, right: r.right, top: r.top, bottom: r.bottom };`,
-    n,
-  );
-async function clickBar(n, shift = false) {
-  await barBox(n);
-  await w.sleep(400);
-  const box = await barBox(n);
-  await w.clickAt(box.right - 6, box.bottom - 6, { shift });
-  await w.sleep(700);
-}
 const cursorIn = async (n) => {
   const box = await barBox(n);
   const x = await cursorX();

@@ -3,7 +3,7 @@
 // puts the start back at bar 1.
 import fs from "node:fs";
 import * as w from "../wd.mjs";
-import { DIR, check, log, sessionFiles, openPiece, chooseKeyboard, clickButton, waitForButton, cursorX, kb, shot } from "../lib.mjs";
+import { DIR, check, log, sessionFiles, openPiece, chooseKeyboard, clickButton, waitForButton, cursorX, kb, shot, barBox, hintOver, clickBar } from "../lib.mjs";
 
 // The Minuet's expected notes with their bars, in played order.
 const expected = JSON.parse(fs.readFileSync(`${DIR}/minuet.expected.json`, "utf8"));
@@ -15,40 +15,6 @@ const firstPass = (n) => {
 };
 // Bar 9 is step 36 of the Minuet in played order (`just replay ... --from-bar 9`).
 const BAR_9 = 36;
-
-const WRAPPER = "document.querySelector('.hw-page').parentElement.parentElement";
-
-/** Bar `n`'s box on screen, scrolled into view. */
-const barBox = (n) =>
-  w.run(
-    `const m = document.querySelector('.hw-page g.measure[data-bar="' + arguments[0] + '"]');
-     if (!m) return null;
-     m.scrollIntoView({ block: 'center' });
-     const r = m.getBoundingClientRect();
-     return { left: r.left, right: r.right, top: r.top, bottom: r.bottom };`,
-    n,
-  );
-
-/** The hover hint over bar `n`, as the pointer shows it. */
-async function hintOver(n) {
-  const box = await barBox(n);
-  await w.run(
-    `${WRAPPER}.dispatchEvent(new PointerEvent('pointermove', { bubbles: true, clientX: arguments[0], clientY: arguments[1] }))`,
-    box.right - 6,
-    box.bottom - 6,
-  );
-  await w.sleep(300);
-  return w.run(`return ${WRAPPER}.getAttribute('title')`);
-}
-
-async function clickBar(n) {
-  await barBox(n);
-  await w.sleep(400);
-  const box = await barBox(n);
-  // Blank paper near the bar's lower right: a click anywhere in the bar counts.
-  await w.clickAt(box.right - 6, box.bottom - 6);
-  await w.sleep(700);
-}
 
 const cursorIn = async (n) => {
   const box = await barBox(n);

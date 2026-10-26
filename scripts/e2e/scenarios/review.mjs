@@ -4,7 +4,7 @@
 // suggestion. A loop run, a too-short run and nothing played, too.
 import fs from "node:fs";
 import * as w from "../wd.mjs";
-import { DIR, check, log, openPiece, chooseKeyboard, clickButton, waitForButton, kb, shot, flashed } from "../lib.mjs";
+import { DIR, check, log, openPiece, chooseKeyboard, clickButton, waitForButton, kb, shot, flashed, clickBar } from "../lib.mjs";
 
 const expected = JSON.parse(fs.readFileSync(`${DIR}/minuet.expected.json`, "utf8"));
 /** Bars 1-8 the first time through, each note with its bar. */
@@ -128,22 +128,4 @@ export default async function review() {
   await waitForButton("Start");
   await w.sleep(400);
   check("nothing played: no results, a quiet note, Start again", (await results()) === null && (await status()).includes("Nothing played."), JSON.stringify({ results: await results(), status: await status() }));
-}
-
-async function clickBar(n) {
-  const box = await w.run(
-    `const m = document.querySelector('.hw-page g.measure[data-bar="' + arguments[0] + '"]');
-     if (!m) return null;
-     m.scrollIntoView({ block: 'center' });
-     const r = m.getBoundingClientRect();
-     return { right: r.right, bottom: r.bottom };`,
-    n,
-  );
-  await w.sleep(300);
-  const again = await w.run(
-    `const r = document.querySelector('.hw-page g.measure[data-bar="' + arguments[0] + '"]').getBoundingClientRect(); return { right: r.right, bottom: r.bottom };`,
-    n,
-  );
-  if (box) await w.clickAt(again.right - 6, again.bottom - 6);
-  await w.sleep(600);
 }

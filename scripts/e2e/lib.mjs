@@ -101,3 +101,47 @@ export async function play(notes, gap = 35) {
   for (const n of notes) kb(`on ${n} 80`, `wait ${gap}`, `off ${n}`);
   await w.sleep(gap * notes.length + 400);
 }
+
+/**
+ * Bar `n`'s box on screen, scrolled into view and measured only once it has
+ * stopped moving: the same in two frames running. A smooth scroll (the
+ * cursor following its line) can still be under way, and a box measured
+ * mid-scroll points at another bar.
+ */
+export const barBox = (n) =>
+  w.runAsync(
+    `const [n, done] = arguments;
+     const m = document.querySelector('.hw-page g.measure[data-bar="' + n + '"]');
+     if (!m) return done(null);
+     m.scrollIntoView({ block: 'center' });
+     const box = () => { const r = m.getBoundingClientRect(); return { left: r.left, right: r.right, top: r.top, bottom: r.bottom }; };
+     let last = box(), still = 0;
+     const until = performance.now() + 3000;
+     const look = () => {
+       const now = box();
+       still = now.left === last.left && now.top === last.top ? still + 1 : 0;
+       last = now;
+       if (still >= 2 || performance.now() > until) done(now); else requestAnimationFrame(look);
+     };
+     requestAnimationFrame(look);`,
+    n,
+  );
+
+/** The pointer over bar `n`'s blank lower right, as a real mouse would move there. */
+export async function hintOver(n) {
+  const box = await barBox(n);
+  await w.run(
+    "document.querySelector('.hw-page').parentElement.parentElement.dispatchEvent(new PointerEvent('pointermove', { bubbles: true, clientX: arguments[0], clientY: arguments[1] }))",
+    box.right - 6,
+    box.bottom - 6,
+  );
+  await w.sleep(300);
+  return w.run("return document.querySelector('.hw-page').parentElement.parentElement.getAttribute('title')");
+}
+
+/** A real click on bar `n`'s blank lower right (a click anywhere in a bar counts), Shift held if `shift`. */
+export async function clickBar(n, shift = false) {
+  const box = await barBox(n);
+  await w.clickAt(box.right - 6, box.bottom - 6, { shift });
+  await w.sleep(700);
+}

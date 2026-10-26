@@ -42,6 +42,8 @@ export async function stop() {
 }
 
 export const run = (script, ...args) => call("POST", `/session/${sid}/execute/sync`, { script, args });
+/** Runs `script` in the page until it calls its last argument with the result. */
+export const runAsync = (script, ...args) => call("POST", `/session/${sid}/execute/async`, { script, args });
 
 /** Waits until `script` returns something truthy, and returns it. */
 export async function until(script, what, ms = 15000) {
