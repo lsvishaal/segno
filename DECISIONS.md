@@ -18,7 +18,7 @@ replaced). A new decision is a log line, plus a status row if it has a D-number.
 | D7 | Computer-keyboard fallback | Recommended: yes, v1.0 (M3.12), labelled "for trying Hogwash" |
 | D8 | The name | **Open.** Must be decided for v0.1 |
 | D9 | Velocity | **Decided by implementation 20 Oct:** stored, not analysed until after v1.0 |
-| D10 | What "weak" means over time | **Decided 25 Oct:** see the log; replaces "average of the last 3 sessions of the piece" and the quartile ranking in the code |
+| D10 | What "weak" means over time | **Decided 25 Oct**, thresholds 26 Oct (provisional): see the log; replaces "average of the last 3 sessions of the piece" and the quartile ranking in the code |
 | D11 | Clean pass in a loop | **Decided by implementation 22 Oct:** every position right, no wrong notes |
 | D12 | Bundled library for v1.0 | Recommended: 12–15 pieces across levels (M3.18) |
 | D13 | Where Listen's sound comes from | **Open** (reopened 24 Oct). "Built-in synth" is no longer on the Never list |
@@ -94,3 +94,7 @@ _Date · decision · why · what it replaced._
 - 2026-10-26 · Release builds strip symbols (`strip = true`): the binary 13.9 → 9.2 MB, the AppImage 120.4 → 120.0 MB (its compression already squeezed them). LTO measured and left off: fat 7.3 MB but a release rebuild 17 → 83 s, thin 9.3 MB; no run-time gain from either · smaller install, no build-time cost · default release profile
 - 2026-10-26 · Screens cross-fade in 120 ms (old out while new in) instead of a 200 ms fade out then a 200 ms fade in · the ~0.4 s switch was the likeliest felt lag · docs/DESIGN.md motion "200 ms (screens)"
 - 2026-10-26 · Personal test scores live in the ignored test-scores/ folder, kept on disk, untracked · they're mine, not redistributable · tracked in app/src-tauri/library/
+- 2026-10-26 · D10 thresholds, provisional: level 0 = no wrong notes, no stops, pause under 0.5 s per pass; then difficulty per pass under 2 → 1, under 5 → 2, under 10 → 3, 10 or more → 4; the same scale for every piece and session · calibrated on the history so far (30 bar-sessions; re-checked at the 1 Nov cut-check) · the quartile ranking (under 0.5 s → 0, the rest by quarter within the piece)
+- 2026-10-26 · Difficulty stays a total per pass, not normalised per note · levels answer "where to practise", and a dense bar with several slips does need the work; teachers judge bars as secure or not; facts read as "3 wrong notes per pass", not a percentage; nothing compares pieces against each other, and progress compares a bar with itself · — (per-note normalisation was the alternative)
+- 2026-10-26 · Per-session grid cells show their level even with 1 pass (a cell is a factual record of that session); cells with no passes are blank. The ≥ 2 passes rule applies only to judgements: the Now level, weakest bars (library card, Continue) and Work on next · a cell describes, a judgement decides · ≥ 2 passes everywhere, and a hairline outline for cells under 2 passes (the 25 Oct plan)
+- 2026-10-26 · Stop attribution stays: a stop counts only in a bar you'd begun · a stop at a bar line is ambiguous (a hard bar, or done playing) · —

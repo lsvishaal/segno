@@ -108,8 +108,10 @@ passes, difficulty, levels) are owned by the doc comments in
 - [x] M2.8 Library card shows the weakest bars and when last practised — 25 Oct
 - [ ] **M2.9 · M** D10: a bar's "Now" level comes from the last 3 sessions in which
       that bar was played. Absolute thresholds, the same in every piece, calibrated on
-      real history and approved before commit. At least 2 passes, or "not enough yet".
-      Also gives difficulty per session × per bar. Library cards use it.
+      real history: 0.5 s / 2 / 5 / 10 (provisional, 26 Oct). At least 2 passes, or
+      "not enough yet", for judgements only (Now, weakest bars, Work on next); grid cells
+      show their level from 1 pass. Also gives difficulty per session × per bar. Library
+      cards use it.
 - [ ] **M2.10 · L** The per-piece Progress page.
       - Contents: header, "Work on next" (up to 3 passages), the session × bar grid,
         and bar detail on a column click.
@@ -220,3 +222,4 @@ _One dated line per idea. Reviewed between milestones; survivors move into a mil
 - 2026-10-25 · Screen-switch fades (~0.4 s) may be the felt lag; consider shortening · done 26 Oct: a 120 ms cross-fade
 - 2026-10-25 · AppImage is 115 MB against a 60 MB budget (`docs/DESIGN.md`); look at what's in it · 26 Oct: WebKit 95 MB, JavaScriptCore 40 MB, ICU data 32 MB, plus AV1/JPEG-XL codecs (libaom, SvtAv1, rav1e, jxl, openraw, dav1d) pulled from this rolling distro; revisit with the CI build on Ubuntu (M4.1)
 - 2026-10-26 · Windows/macOS builds and an optional portable mode (data next to the app); macOS needs signing. After v1.0, with Next 6.
+- 2026-10-26 · Re-check level thresholds (0.5 s / 2 / 5 / 10) against the self-use week's data at the 1 Nov cut-check.
