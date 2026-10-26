@@ -1,6 +1,6 @@
 # Hogwash — briefing for Claude chat
 
-> Generated 2026-10-25 from `README.md`, `ROADMAP.md`, `DECISIONS.md`, `CLAUDE.md`
+> Generated 2026-10-26 from `README.md`, `ROADMAP.md`, `DECISIONS.md`, `CLAUDE.md`
 > and `docs/`. It makes no claim those files don't. Regenerated at the end of every
 > milestone or phase, and before a release.
 
@@ -166,8 +166,8 @@ tint on the idle score (W toggles). It is to be replaced by the Progress page.
   - "Practise my weak bars" (which should rotate between passages)
 
 ## v0.1 checklist (`ROADMAP.md`)
-- **M0.2:** purge the unlicensed scores. `resources` is done; the history purge is
-  pending.
+- **M0.2:** purge the unlicensed scores. `resources` is done; the five files are
+  still tracked, and the history purge is pending.
 - **M0.3:** swap the Prelude for the OpenWTC edition.
 - **M2.9–M2.11:** D10, the Progress page, live marks.
 - **M1.3:** remember the keyboard and auto-detect it.
@@ -193,11 +193,12 @@ tint on the idle score (W toggles). It is to be replaced by the Progress page.
 - **Colour is never the only signal.** British spelling.
 - **Glossary:** piece, bar, attempt, session, loop, clean pass, weak bars, pause,
   keyboard, library.
-- **Measured 25 Oct:**
+- **Measured 25–26 Oct:**
   - Release is fast: opening the Prelude takes 430 ms, key press → mark 23 ms.
-  - `just run` is barely slower.
-  - Over budget: the AppImage is 115 MB against a 60 MB target.
-  - A felt lag is unexplained (Parking lot: the ~0.4 s screen-switch fades).
+  - Debug builds now optimise dependencies, so `just run` is close to release.
+  - Screens cross-fade in 120 ms (was ~0.4 s of fades, the likeliest felt lag).
+  - Over budget: the AppImage is 115 MB against a 60 MB target; most of it is
+    WebKit and host codecs, to revisit with the CI build (M4.1).
 
 ## Open decisions (`DECISIONS.md`)
 | ID | Topic | Status |

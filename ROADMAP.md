@@ -28,7 +28,8 @@ What used to be here (as-built notes, the 6 Oct inventory, the feature catalogue
 
 - [~] **M0.2** Purge the five unlicensed `.mxl` scores and narrow `resources`.
       `resources` already lists only Verovio, and the AppImage holds no scores. Still
-      to do: the history purge (`git filter-repo` + force-push), in its own session.
+      to do: the five files are still tracked in `app/src-tauri/library/`; remove
+      them, then purge history (`git filter-repo` + force-push), in its own session.
 - [ ] **M0.3** Swap the Prelude for the OpenWTC edition (D4).
 - [ ] **M2.9 + M2.10 + M2.11** D10 absolute weak levels, the per-piece Progress
       page, and live marks while playing (see M2 below).
