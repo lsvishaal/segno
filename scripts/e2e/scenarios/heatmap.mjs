@@ -1,5 +1,5 @@
 // M2.3: bars that have been hard over time are tinted amber on the score
-// while not playing, deepest for the hardest; W hides them.
+// while not playing, by absolute level (D10); W hides them.
 import fs from "node:fs";
 import * as w from "../wd.mjs";
 import { DIR, check, log, openPiece, chooseKeyboard, clickButton, waitForButton, kb, shot } from "../lib.mjs";
@@ -44,8 +44,8 @@ export default async function heatmap() {
 
   const shown = await tints();
   log("    tints:", JSON.stringify(shown));
-  const deepest = Math.max(0, ...shown.map((t) => t.level));
-  check("bar 6 is tinted, at the deepest level", shown.some((t) => t.bar === "6" && t.level === deepest && deepest === 4), JSON.stringify(shown));
+  // 4 s before bar 6 in each of two runs: 4 s of pause per pass is level 2.
+  check("only bar 6 is tinted, at level 2", shown.length === 1 && shown[0].bar === "6" && shown[0].level === 2, JSON.stringify(shown));
   check("the legend says what the amber means", /Weak bars from \d+ runs · lighter = easier for you, deeper = harder/.test((await legend()) ?? ""), await legend());
 
   await press("w");

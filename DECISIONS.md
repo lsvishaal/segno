@@ -18,7 +18,7 @@ replaced). A new decision is a log line, plus a status row if it has a D-number.
 | D7 | Computer-keyboard fallback | Recommended: yes, v1.0 (M3.12), labelled "for trying Hogwash" |
 | D8 | The name | **Open.** Must be decided for v0.1 |
 | D9 | Velocity | **Decided by implementation 20 Oct:** stored, not analysed until after v1.0 |
-| D10 | What "weak" means over time | **Decided 25 Oct**, thresholds 26 Oct (provisional): see the log; replaces "average of the last 3 sessions of the piece" and the quartile ranking in the code |
+| D10 | What "weak" means over time | **Decided 25 Oct**, thresholds 26 Oct (provisional), built 26 Oct (M2.9): see the log; replaces "average of the last 3 sessions of the piece" and the quartile ranking in the code |
 | D11 | Clean pass in a loop | **Decided by implementation 22 Oct:** every position right, no wrong notes |
 | D12 | Bundled library for v1.0 | Recommended: 12–15 pieces across levels (M3.18) |
 | D13 | Where Listen's sound comes from | **Open** (reopened 24 Oct). "Built-in synth" is no longer on the Never list |

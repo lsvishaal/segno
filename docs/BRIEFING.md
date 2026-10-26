@@ -1,6 +1,6 @@
 # Hogwash — briefing for Claude chat
 
-> Generated 2026-10-26 from `README.md`, `ROADMAP.md`, `DECISIONS.md`, `CLAUDE.md`
+> Generated 2026-10-26 (after M2.9) from `README.md`, `ROADMAP.md`, `DECISIONS.md`, `CLAUDE.md`
 > and `docs/`. It makes no claim those files don't. Regenerated at the end of every
 > milestone or phase, and before a release.
 
@@ -28,8 +28,8 @@
    - wait-mode practice; start from any bar; loop bars
    - Results after each run with up to 3 coach cards
    - weak bars over time
-6. **Next:** absolute weak-bar levels (D10), a per-piece **Progress page**, and live
-   marks that stay for the whole attempt (M2.9–M2.11).
+6. **Next:** a per-piece **Progress page** and live marks that stay for the whole
+   attempt (M2.10–M2.11). Absolute weak-bar levels (D10, M2.9) are built.
 7. **v0.1 preview:** Sun 8 Nov 2026. **v1.0:** Sun 13 Dec 2026. The active milestone
    is the v0.1 checklist below.
 8. **Deadline guard:** if the Progress page isn't done by Sun 1 Nov, ship v0.1 with
@@ -127,8 +127,16 @@
 Thresholds live in `coach.rs`. Pauses are judged against your own pace and the
 written rhythm, and hunting for one note counts as at most 3 wrong notes.
 
-**Weak bars over time:** per-bar difficulty over all attempts, shown as an amber
-tint on the idle score (W toggles). It is to be replaced by the Progress page.
+**Weak bars over time (D10, built 26 Oct):**
+- Each bar gets a level 0–4 on one fixed scale for every piece:
+  - 0 = no wrong notes, no stops, pause under 0.5 s per pass
+  - then difficulty per pass (seconds of pause + 1 per wrong note + 2 per stop)
+    under 2 / 5 / 10 → 1 / 2 / 3, else 4
+  - provisional, re-checked at the 1 Nov cut-check
+- **Now** is a bar's own last 3 sessions in which it was played, judged only with ≥ 2
+  passes. Per-session cells show their level from 1 pass.
+- Shown on the library cards ("weakest bars …", level 3+) and as an amber tint on
+  the idle score (W toggles), which the Progress page replaces.
 
 ## What history holds (`docs/DESIGN.md` §17.5)
 - **Per session:** start time, attempts, how each ended, bars covered, time played.
@@ -138,16 +146,15 @@ tint on the idle score (W toggles). It is to be replaced by the Progress page.
   notes, stops, tempo, time played.
 - **Not yet known:** which hand a note is in; key signatures in the steps.
 
-## Decided on 25 Oct and about to be built (`DECISIONS.md`, `ROADMAP.md` M2)
-- **M2.9, D10:**
-  - A bar's "Now" level comes from the last 3 sessions in which that bar was played.
-  - Absolute thresholds, the same in every piece, calibrated on real history.
-  - At least 2 passes, or "not enough yet".
+## Decided on 25–26 Oct and about to be built (`DECISIONS.md`, `ROADMAP.md` M2)
+- **M2.9, D10:** built (see "Weak bars over time" above). Difficulty stays a total
+  per pass, not per note; a stop counts only in a bar you'd begun.
 - **M2.10, the Progress page:**
   - Contents:
     - a header ("N sessions · total time · last practised …")
     - Work on next (up to 3 passages)
-    - a session × bar grid with a "Now" row of bar heights
+    - a session × bar grid with a "Now" row of bar heights; cells show their level
+      from 1 pass, blank when not played
     - bar detail ("avg pause 14.1 s → 3.2 s over 6 sessions")
   - Reached from: the library card, Continue, Results and the practice screen.
   - It removes the on-score tint and W.
@@ -169,7 +176,7 @@ tint on the idle score (W toggles). It is to be replaced by the Progress page.
 - **M0.2 part 1 (done):** the five personal scores are untracked, kept in the
   ignored `test-scores/`. Part 2, the history purge, blocks going public, not v0.1.
 - **M0.3:** swap the Prelude for the OpenWTC edition.
-- **M2.9–M2.11:** D10, the Progress page, live marks.
+- **M2.9 (done):** D10 absolute levels. **M2.10–M2.11:** the Progress page, live marks.
 - **M1.3:** remember the keyboard and auto-detect it.
 - **D8:** the name.
 - **M4.1:** a release build made by CI from a tag.

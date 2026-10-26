@@ -16,7 +16,7 @@ use std::fmt::Write as _;
 use std::path::Path;
 use std::sync::Arc;
 
-use hogwash_analysis::{Analysis, Bars};
+use hogwash_analysis::{Analysis, Bar, Bars};
 use hogwash_domain::{MeasureNumber, PieceId, Pitch, PitchSpelling, Step};
 use hogwash_engraving::{EngravedScore, Engraver as _};
 use hogwash_engraving_verovio::VerovioEngraver;
@@ -178,7 +178,8 @@ pub(crate) fn expected(score: &Path) -> Result<String, String> {
 }
 
 /// `hogwash-cli bars <score> <data> <piece>`: every session of the piece
-/// kept under the data folder `data`, added up bar by bar. Only reads.
+/// kept under the data folder `data`, added up bar by bar, with each bar's
+/// level now (its own last three sessions, as the app judges it). Only reads.
 pub(crate) fn bars(score: &Path, data: &Path, piece: &str) -> Result<String, String> {
     let engraved = engrave(score)?;
     let reference = ReferencePerformance::derived_from(engraved.score());
@@ -188,30 +189,47 @@ pub(crate) fn bars(score: &Path, data: &Path, piece: &str) -> Result<String, Str
         .map_err(|failure| format!("cannot read sessions: {failure:?}"))?;
 
     let mut out = header(&engraved, &reference);
+    let mut mine: Vec<_> = sessions
+        .iter()
+        .filter(|session| session.piece == piece)
+        .collect();
+    mine.sort_by_key(|session| session.started.parse::<u64>().unwrap_or(0));
     let mut total = Bars::default();
+    let mut per_session = Vec::new();
     let mut attempts = 0;
-    for session in sessions.iter().filter(|session| session.piece == piece) {
+    for session in mine {
+        let mut bars = Bars::default();
         for attempt in &session.attempts {
-            let steps = attempt.from..attempt.to.unwrap_or(reference.len());
+            let to = attempt.to.unwrap_or(reference.len()).min(reference.len());
             let gave_up = matches!(attempt.ended, Some(Ended::Restart | Ended::Stop));
-            total.add(&Bars::of(&attempt.played, &reference, steps, gave_up));
+            bars.add(&Bars::of(
+                &attempt.played,
+                &reference,
+                attempt.from.min(to)..to,
+                gave_up,
+            ));
             attempts += 1;
         }
+        total.add(&bars);
+        per_session.push(bars);
     }
+    let now = Bars::now(&per_session);
+    let level = |measure| now.get(measure).and_then(Bar::judged);
     let _ = writeln!(
         out,
-        "{attempts} attempts; {} session files unreadable\n",
+        "{attempts} attempts in {} sessions; {} session files unreadable\n",
+        per_session.len(),
         unreadable.len()
     );
 
     out.push_str(
-        "bar  passes  timed  pause s  into s  longest s  breaks  wrong  gave up  difficulty\n",
+        "bar  passes  timed  pause s  into s  longest s  breaks  wrong  gave up  difficulty  level now\n",
     );
     let tenths = |us: u64| format!("{}.{}", us / 1_000_000, us / 100_000 % 10);
     for (measure, bar) in total.iter() {
         let _ = writeln!(
             out,
-            "{:>3}  {:>6}  {:>5}  {:>7}  {:>6}  {:>9}  {:>6}  {:>5}  {:>7}  {:>10}",
+            "{:>3}  {:>6}  {:>5}  {:>7}  {:>6}  {:>9}  {:>6}  {:>5}  {:>7}  {:>10}  {:>9}",
             measure.get(),
             bar.passes,
             bar.timed,
@@ -222,17 +240,24 @@ pub(crate) fn bars(score: &Path, data: &Path, piece: &str) -> Result<String, Str
             bar.wrong,
             bar.gave_up,
             bar.difficulty(),
+            level(measure).map_or_else(|| "·".to_owned(), |level| level.to_string()),
         );
     }
 
-    let mut hardest: Vec<_> = total.iter().filter(|(_, bar)| bar.passes >= 2).collect();
-    hardest.sort_by_key(|(measure, bar)| (std::cmp::Reverse(bar.difficulty()), *measure));
+    let mut hardest: Vec<_> = now
+        .iter()
+        .filter_map(|(measure, bar)| Some((measure, bar.judged()?, bar.difficulty())))
+        .filter(|&(_, level, _)| level >= 3)
+        .collect();
+    hardest.sort_by_key(|&(measure, level, difficulty)| {
+        (std::cmp::Reverse((level, difficulty)), measure)
+    });
     let names: Vec<String> = hardest
         .iter()
-        .take(3)
-        .map(|(measure, _)| measure.get().to_string())
+        .take(2)
+        .map(|(measure, _, _)| measure.get().to_string())
         .collect();
-    let _ = writeln!(out, "\nhardest (2+ passes): bars {}", names.join(", "));
+    let _ = writeln!(out, "\nweakest (level 3+ now): bars {}", names.join(", "));
     Ok(out)
 }
 

@@ -59,12 +59,49 @@ pub struct Bar {
 impl Bar {
     /// How hard this bar was, in thousandths, per pass: seconds of pause,
     /// plus one per wrong note, plus two per time given up. Zero with no
-    /// passes. Only ever compared with other bars, never shown.
+    /// passes. A total per pass, not per note: a dense bar with several slips
+    /// does need the work. Placed on [`Bar::level`]'s scale, never shown.
     #[must_use]
     pub fn difficulty(&self) -> u64 {
         let total =
             self.pause_us / 1000 + 1000 * u64::from(self.wrong) + 2000 * u64::from(self.gave_up);
         total.checked_div(u64::from(self.passes)).unwrap_or(0)
+    }
+
+    /// How hard this bar was on one fixed scale, the same for every piece
+    /// and session (D10):
+    ///
+    /// - 0: no wrong notes, never given up in, and under [`CLEAN_PAUSE_US`]
+    ///   of pause per pass
+    /// - otherwise 1 to 4 by [`difficulty`](Bar::difficulty) against
+    ///   [`LEVELS`]: under 2 is 1, under 5 is 2, under 10 is 3, else 4.
+    ///
+    /// A description of what was played, whatever the passes; for a
+    /// judgement, see [`Bar::judged`].
+    #[must_use]
+    pub fn level(&self) -> u8 {
+        let clean = self.wrong == 0
+            && self.gave_up == 0
+            && self
+                .pause_us
+                .checked_div(u64::from(self.passes))
+                .unwrap_or(0)
+                < CLEAN_PAUSE_US;
+        if clean {
+            return 0;
+        }
+        let difficulty = self.difficulty();
+        1 + LEVELS
+            .iter()
+            .map(|&at| u8::from(difficulty >= at))
+            .sum::<u8>()
+    }
+
+    /// [`Bar::level`], when there is enough to judge by: at least two
+    /// passes. `None` is "not enough yet".
+    #[must_use]
+    pub fn judged(&self) -> Option<u8> {
+        (self.passes >= 2).then(|| self.level())
     }
 
     /// The tempo the bar was played at, in quarter notes per minute, if any
@@ -213,37 +250,39 @@ impl Bars {
         self.0.iter().map(|(measure, bar)| (*measure, bar))
     }
 
-    /// How hard each bar is next to the piece's others, 0 to 4: 0 for a bar
-    /// that gave no trouble worth noticing, then 1–4 by quarter among the
-    /// rest, hardest last. Bars passed fewer than twice say too little and
-    /// are left out.
+    /// Where each bar stands now, from per-session stats oldest first:
+    /// each bar's own last three sessions in which it was played, added up.
+    /// A bar left alone lately keeps its last three, however long ago.
     #[must_use]
-    pub fn levels(&self) -> BTreeMap<MeasureNumber, u8> {
-        let known = || self.0.iter().filter(|(_, bar)| bar.passes >= 2);
-        let mut hard: Vec<u64> = known()
-            .map(|(_, bar)| bar.difficulty())
-            .filter(|&difficulty| difficulty >= NOTICEABLE)
-            .collect();
-        hard.sort_unstable();
-        let level = |difficulty: u64| {
-            if difficulty < NOTICEABLE {
-                return 0;
+    pub fn now(per_session: &[Self]) -> Self {
+        let mut now = BTreeMap::<MeasureNumber, (u8, Bar)>::new();
+        for session in per_session.iter().rev() {
+            for (measure, bar) in session.iter().filter(|(_, bar)| bar.passes > 0) {
+                let (sessions, total) = now.entry(measure).or_default();
+                if *sessions < RECENT_SESSIONS {
+                    *sessions += 1;
+                    total.add(bar);
+                }
             }
-            // The share of weak bars this one is at least as hard as, in
-            // quarters rounded up: the hardest is always 4, and equal bars
-            // share a level.
-            let as_hard = hard.partition_point(|&other| other <= difficulty);
-            u8::try_from((as_hard * 4).div_ceil(hard.len())).unwrap_or(4)
-        };
-        known()
-            .map(|(measure, bar)| (*measure, level(bar.difficulty())))
-            .collect()
+        }
+        Self(
+            now.into_iter()
+                .map(|(measure, (_, bar))| (measure, bar))
+                .collect(),
+        )
     }
 }
 
-/// Below this `difficulty` (half a second of pause, or half a wrong note,
-/// per pass) a bar went fine.
-const NOTICEABLE: u64 = 500;
+/// Under this much pause per pass, with no wrong notes and no giving up, a
+/// bar went fine: level 0.
+const CLEAN_PAUSE_US: u64 = 500_000;
+
+/// The [`Bar::difficulty`] (thousandths per pass) at which levels 2, 3 and
+/// 4 begin. Provisional, calibrated 26 Oct 2026 on real history.
+const LEVELS: [u64; 3] = [2_000, 5_000, 10_000];
+
+/// How many of a bar's sessions say where it stands now.
+const RECENT_SESSIONS: u8 = 3;
 
 /// One attempt, step by step: what the coach and the bar stats are both
 /// worked out from.
@@ -445,7 +484,9 @@ fn gaps(
 mod tests {
     use hogwash_domain::MeasureNumber;
 
-    use crate::bars::Bars;
+    use hogwash_notation::ExpectedNotes;
+
+    use crate::bars::{Bar, Bars};
     use crate::fixtures::{minuet_in_time, played_in_time};
 
     const QUARTER_US: u64 = 600_000;
@@ -454,49 +495,118 @@ mod tests {
         MeasureNumber::new(number).expect("a bar number")
     }
 
-    // Two runs; the second stalls 3 s into one step. Only that bar is
-    // weak, so it alone is tinted, at the deepest level.
+    // Two runs; the second stalls 12 s into one step. The repeat plays
+    // that bar twice a run, so it is 3 s of pause per pass: level 2. Every
+    // other bar went fine.
     #[test]
     fn a_bar_stalled_in_is_the_weakest_and_the_rest_went_fine() {
         let reference = minuet_in_time();
         let all = 0..reference.len();
         let stalled = all.end / 2;
         let mut bars = Bars::default();
-        for late in [&[][..], &[(stalled, 3_000_000)]] {
+        for late in [&[][..], &[(stalled, 12_000_000)]] {
             let observed = played_in_time(&reference, all.clone(), QUARTER_US, late);
             bars.add(&Bars::of(&observed, &reference, all.clone(), false));
         }
         let weak = reference.at(stalled).expect("a step").measure();
 
-        let levels = bars.levels();
-
-        assert_eq!(levels.get(&weak), Some(&4));
-        assert!(
-            levels
-                .iter()
-                .all(|(measure, &level)| *measure == weak || level == 0)
+        assert_eq!(
+            bars.get(weak).map(|bar| (bar.passes, bar.judged())),
+            Some((4, Some(2)))
         );
-        assert_eq!(levels.len(), bars.iter().count());
+        assert!(
+            bars.iter()
+                .all(|(measure, bar)| measure == weak || bar.judged() == Some(0))
+        );
     }
 
     #[test]
-    fn a_bar_played_once_is_not_judged() {
+    fn a_bar_played_once_has_a_level_but_is_not_judged() {
         let reference = minuet_in_time();
-        let observed = played_in_time(
+        let all = 0..reference.len();
+        let steady = Bars::of(
+            &played_in_time(&reference, all.clone(), QUARTER_US, &[]),
             &reference,
-            0..reference.len(),
-            QUARTER_US,
-            &[(5, 3_000_000)],
+            all.clone(),
+            false,
         );
-
-        let bars = Bars::of(&observed, &reference, 0..reference.len(), false);
-
-        let levels = bars.levels();
-        let once = bars
+        let (once, _) = steady
             .iter()
             .find(|(_, bar)| bar.passes == 1)
             .expect("a bar played once");
-        assert!(!levels.contains_key(&once.0));
+        let stall = all
+            .clone()
+            .find(|&step| reference.at(step).map(ExpectedNotes::measure) == Some(once))
+            .expect("its first step");
+        let observed = played_in_time(&reference, all.clone(), QUARTER_US, &[(stall, 3_000_000)]);
+
+        let bars = Bars::of(&observed, &reference, all, false);
+
+        let bar = bars.get(once).expect("played");
+        assert!(bar.level() > 0);
+        assert_eq!(bar.judged(), None);
+    }
+
+    fn played(passes: u32, pause_ms: u64, wrong: u32, gave_up: u32) -> Bar {
+        Bar {
+            passes,
+            pause_us: pause_ms * 1000,
+            wrong,
+            gave_up,
+            ..Bar::default()
+        }
+    }
+
+    #[test]
+    fn levels_are_one_scale_for_every_bar() {
+        assert_eq!(played(1, 499, 0, 0).level(), 0);
+        assert_eq!(played(1, 500, 0, 0).level(), 1);
+        // One wrong note in four passes is little, but not clean.
+        assert_eq!(played(4, 0, 1, 0).level(), 1);
+        assert_eq!(played(1, 0, 0, 1).level(), 2);
+        for (pause_ms, level) in [
+            (1_999, 1),
+            (2_000, 2),
+            (4_999, 2),
+            (5_000, 3),
+            (9_999, 3),
+            (10_000, 4),
+        ] {
+            assert_eq!(played(1, pause_ms, 0, 0).level(), level, "{pause_ms} ms");
+        }
+        // Per pass: 12 s over 4 passes is 3 s each.
+        assert_eq!(played(4, 12_000, 0, 0).level(), 2);
+        assert_eq!(Bar::default().level(), 0);
+    }
+
+    // Bar 1 is played in sessions 1, 2 and 4; bar 2 in all five. Each
+    // bar's own last three count.
+    #[test]
+    fn now_is_each_bars_own_last_three_sessions() {
+        let session = |first: Option<Bar>, second: Bar| {
+            Bars(
+                first
+                    .map(|first| (bar(1), first))
+                    .into_iter()
+                    .chain([(bar(2), second)])
+                    .collect(),
+            )
+        };
+        let sessions = [
+            session(Some(played(1, 1_000, 0, 0)), played(1, 1, 0, 0)),
+            session(Some(played(1, 2_000, 0, 0)), played(1, 10, 0, 0)),
+            session(None, played(1, 100, 0, 0)),
+            session(Some(played(1, 4_000, 0, 0)), played(1, 1_000, 0, 0)),
+            session(None, played(1, 10_000, 0, 0)),
+        ];
+
+        let now = Bars::now(&sessions);
+
+        let first = now.get(bar(1)).expect("bar 1");
+        assert_eq!((first.passes, first.pause_us), (3, 7_000_000));
+        let second = now.get(bar(2)).expect("bar 2");
+        assert_eq!((second.passes, second.pause_us), (3, 11_100_000));
+        assert_eq!(Bars::now(&[]), Bars::default());
     }
 
     #[test]

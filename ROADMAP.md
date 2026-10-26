@@ -28,8 +28,9 @@ What used to be here (as-built notes, the 6 Oct inventory, the feature catalogue
 
 - [x] **M0.2 part 1** Personal `.mxl` scores untracked, kept in `test-scores/`; `resources` narrowed — 26 Oct
 - [ ] **M0.3** Swap the Prelude for the OpenWTC edition (D4).
-- [ ] **M2.9 + M2.10 + M2.11** D10 absolute weak levels, the per-piece Progress
-      page, and live marks while playing (see M2 below).
+- [x] **M2.9** D10 absolute weak levels from each bar's last 3 sessions — 26 Oct
+- [ ] **M2.10 + M2.11** The per-piece Progress page, and live marks while playing
+      (see M2 below).
 - [ ] **M1.3** Remember the keyboard; auto-detect one plugged in later (every 3 s,
       plus Rescan).
 - [ ] **D8** The name decided (keep "Hogwash" or rename).
@@ -106,12 +107,7 @@ passes, difficulty, levels) are owned by the doc comments in
 - [-] M2.6 History panel — 25 Oct, replaced by the Progress page
 - [-] M2.7 Per-bar trend — 25 Oct, replaced by the Progress page's bar detail
 - [x] M2.8 Library card shows the weakest bars and when last practised — 25 Oct
-- [ ] **M2.9 · M** D10: a bar's "Now" level comes from the last 3 sessions in which
-      that bar was played. Absolute thresholds, the same in every piece, calibrated on
-      real history: 0.5 s / 2 / 5 / 10 (provisional, 26 Oct). At least 2 passes, or
-      "not enough yet", for judgements only (Now, weakest bars, Work on next); grid cells
-      show their level from 1 pass. Also gives difficulty per session × per bar. Library
-      cards use it.
+- [x] M2.9 D10 absolute levels (0.5 s / 2 / 5 / 10, provisional) from each bar's own last 3 sessions; ≥ 2 passes for judgements; per-session cells; library cards and the tint use it — 26 Oct
 - [ ] **M2.10 · L** The per-piece Progress page.
       - Contents: header, "Work on next" (up to 3 passages), the session × bar grid,
         and bar detail on a column click.

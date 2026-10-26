@@ -230,7 +230,8 @@ STARTER · INTERMEDIATE — around Grades 1–4
   - a status line that appears only when it has something to say (keyboard lost,
     loop counts, "Join it back up")
 - **The score:** full width; the cursor; correct and wrong marks; the loop band
-  behind looped bars; the amber weak-bar tint when idle (removed with M2.10).
+  behind looped bars; the amber weak-bar tint when idle, by absolute level (D10, defined in
+  `crates/hogwash-analysis/src/bars.rs`; removed with M2.10).
 - **After a run, Results replace the score:**
   - a top line ("Bars 1–8 · 6 s") with accuracy, tempo and steadiness in small mono
   - up to 3 coach cards (each: a cut-out of the bars, what happened, why, how to fix
@@ -287,7 +288,7 @@ The **Progress page** (M2.10) will have:
 - Work on next: up to 3 passages, each with "⟲ Practise bars …" starting one bar
   before the trouble
 - the grid: bars × sessions, newest on top, a "Now" row of bar heights, amber cells
-  by absolute level
+  by absolute level (from 1 pass; blank = not played)
 - bar detail on a column click (now vs the earliest sessions)
 
 It is reached from the library card, Continue, Results and the practice screen,
