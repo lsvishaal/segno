@@ -1,11 +1,12 @@
-// Unplugging the keyboard mid-attempt: the banner, reconnecting, and giving up after a minute.
+// Unplugging the keyboard mid-attempt: the banner, and reconnecting. Giving up
+// after the one-minute window is `practice.rs`'s
+// a_keyboard_gone_for_the_whole_window_ends_the_attempt_and_keeps_it.
 import * as w from "../wd.mjs";
-import { check, log, sessions, newSessions, minuet, openPiece, chooseKeyboard, clickButton, waitForButton, cursorX, play, kb, shot } from "../lib.mjs";
+import { check, minuet, openPiece, chooseKeyboard, clickButton, waitForButton, cursorX, play, kb, shot } from "../lib.mjs";
 
 const BANNER = "const p=[...document.querySelectorAll('p')].find(p=>/stopped reporting/.test(p.textContent)); return p && p.textContent.trim()";
 
 export default async function unplug() {
-  const before = sessions();
   await openPiece("Minuet in G Major");
   await w.until("const s=document.querySelector('select[aria-label=\"Instrument\"]'); return s && s.options.length>0", "the picker", 10000);
   const picker = await w.run("const s=document.querySelector('select[aria-label=\"Instrument\"]'); return {options:[...s.options].map(o=>o.value), chosen:s.value}");
@@ -27,14 +28,4 @@ export default async function unplug() {
 
   await play(minuet.slice(4, 9));
   check("playing on after reconnecting advances the cursor", (await cursorX()) > x0);
-
-  kb("close");
-  log("    keyboard gone; waiting out the one-minute reconnect window...");
-  const ended = await w.until("return document.body.innerText.includes('did not reconnect')", "the attempt to end by itself", 90000).catch(() => null);
-  await shot("unplug-gave-up");
-  check("after a minute away the attempt ends by itself, with a reason", ended);
-  const saved = newSessions(before);
-  check("what was played is kept", saved.length === 1 && saved[0].attempts[0] === 9, JSON.stringify(saved));
-  kb("open");
-  await w.sleep(1000);
 }

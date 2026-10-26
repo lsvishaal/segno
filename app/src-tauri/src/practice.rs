@@ -1489,6 +1489,58 @@ mod tests {
         assert_eq!((running.from(), running.cursor().position()), (36, 36));
     }
 
+    // A keyboard gone for the whole reconnect window: the attempt ends by
+    // itself, says why, and what was played is kept. Backdated rather than
+    // waited for, so the real window is what's tested, in no time.
+    #[test]
+    #[ignore = "needs a real libverovio; run `just provided-test`"]
+    fn a_keyboard_gone_for_the_whole_window_ends_the_attempt_and_keeps_it() {
+        let (records, id, reference) = minuet("lost-window");
+        let mut session = Some(OpenSession {
+            piece_id: id.clone(),
+            id: "lost-window".to_owned(),
+            started: "0".to_owned(),
+            session: PracticeSession::open(Arc::clone(&reference)),
+            kept: Vec::new(),
+            from: 0,
+            looping: None,
+            run: crate::review::Run::default(),
+        });
+        let mut active = practising(&reference);
+        active.attempt.play(Pitch::new(74).expect("a key"));
+        active.lost_since = std::time::Instant::now().checked_sub(super::RECONNECT_WINDOW);
+        let mut ongoing = Some(active);
+        let heard = Arc::new(std::sync::Mutex::new(Vec::new()));
+        let sink: Sink = {
+            let heard = Arc::clone(&heard);
+            Box::new(move |event: &PracticeEvent| {
+                heard.lock().expect("unpoisoned").push(event.clone());
+            })
+        };
+
+        super::poll(
+            &mut super::MidiInstruments,
+            &mut session,
+            &mut ongoing,
+            &records,
+            &sink,
+        );
+
+        assert!(ongoing.is_none(), "the attempt is over");
+        let events = heard.lock().expect("unpoisoned");
+        let Some(PracticeEvent::Ended { summary }) = events.last() else {
+            panic!("no Ended event: {events:?}");
+        };
+        assert_eq!(
+            summary.reason.as_deref(),
+            Some("The instrument did not reconnect.")
+        );
+        let (kept, _) = records.sessions().expect("history reads");
+        let attempts = &kept.first().expect("one session").attempts;
+        assert_eq!(attempts.len(), 1);
+        assert_eq!(attempts[0].ended, Some(Ended::Lost));
+    }
+
     // The banner says the keyboard is gone; a click must change nothing.
     #[test]
     #[ignore = "needs a real libverovio; run `just provided-test`"]
