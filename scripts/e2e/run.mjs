@@ -3,10 +3,20 @@
 // which builds and extracts the AppImage first.
 //
 //   node scripts/e2e/run.mjs [scenario ...]     (default: all of them)
-import { spawn } from "node:child_process";
+import { spawn, spawnSync } from "node:child_process";
 import fs from "node:fs";
 import * as w from "./wd.mjs";
 import { ROOT, DIR, APP, SHOTS, log, results, resetData, useKeyboard } from "./lib.mjs";
+
+/** Waits until no copy of the app is running, so a closing app's last
+ * writes can't land while the next scenario clears its data folder. */
+async function appExited(ms = 15000) {
+  const until = Date.now() + ms;
+  while (spawnSync("pgrep", ["-f", `${DIR}/app/squashfs-root`]).status === 0) {
+    if (Date.now() > until) throw new Error(`the app was still running ${ms / 1000} s after its scenario ended`);
+    await w.sleep(100);
+  }
+}
 
 const ALL = ["practice", "whole-piece", "flash", "timing", "start-from-bar", "loop", "review", "heatmap", "settings", "library", "unplug"];
 const chosen = process.argv.slice(2).length ? process.argv.slice(2) : ALL;
@@ -43,6 +53,7 @@ try {
       log(`  FAIL  script error: ${error.message}`);
     } finally {
       await w.stop();
+      await appExited();
     }
     const mine = results.slice(first);
     summary.push(`${name.padEnd(12)} ${mine.filter((r) => r.ok).length}/${mine.length}`);

@@ -134,11 +134,20 @@ fn words(spot: &Spot) -> Words {
             ),
             "Starting from the top each time means the hard part gets the least practice."
                 .to_owned(),
-            vec![
-                format!("Start your practice at bar {n} instead of the beginning."),
-                format!("Play from bar {n} to the end of the next bar, 3 times."),
-                "Then start a few bars earlier and play through it.".to_owned(),
-            ],
+            {
+                let from = spot.drill.0.get();
+                vec![
+                    if from < n {
+                        format!(
+                            "Loop bars {from}–{n}: starting a bar early, you arrive in bar {n} already moving."
+                        )
+                    } else {
+                        format!("Loop bar {n} instead of starting from the beginning.")
+                    },
+                    "Play it 3 times in a row without stopping.".to_owned(),
+                    "Then start a few bars earlier and play through.".to_owned(),
+                ]
+            },
         ),
         Kind::BigStep => (
             "This piece is a big step".to_owned(),
@@ -281,10 +290,7 @@ fn wrong_notes(spot: &Spot, each: &str) -> Words {
 
 fn button(spot: &Spot) -> String {
     let (first, last) = spot.drill;
-    match spot.kind {
-        Kind::KeepsStopping => format!("Start at bar {}", spot.first.get()),
-        _ => format!("Practise {}", lower(&span(first, last))),
-    }
+    format!("Practise {}", lower(&span(first, last)))
 }
 
 /// Where a wrong key was, relative to the written note: a key has no
@@ -447,23 +453,30 @@ mod tests {
     }
 
     #[test]
-    fn stopping_again_and_again_starts_there() {
+    fn stopping_again_and_again_loops_it_with_the_bar_before() {
+        let mut stopping = spot(
+            Kind::KeepsStopping,
+            9,
+            9,
+            Facts {
+                passes: 2,
+                stops: 3,
+                ..Facts::default()
+            },
+        );
+        stopping.drill = (bar(8), bar(9));
+
         let text = card(&Card {
-            main: spot(
-                Kind::KeepsStopping,
-                9,
-                9,
-                Facts {
-                    passes: 2,
-                    stops: 3,
-                    ..Facts::default()
-                },
-            ),
+            main: stopping,
             also: None,
         });
 
         assert_eq!(text.what, "You stopped or started again in bar 9 3 times.");
-        assert_eq!(text.button, "Start at bar 9");
+        assert_eq!(text.button, "Practise bars 8–9");
+        assert_eq!(
+            text.steps[0],
+            "Loop bars 8–9: starting a bar early, you arrive in bar 9 already moving."
+        );
     }
 
     #[test]

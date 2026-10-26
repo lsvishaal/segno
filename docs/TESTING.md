@@ -37,6 +37,7 @@ skipped, with a note, when it's absent.
 - `run.mjs` starts a virtual MIDI keyboard (`hogwash-midi` example `vkbd`) and
   `tauri-driver`.
 - Each scenario runs with its own data folder, `target/e2e/data` via `XDG_DATA_HOME`.
+  The kit waits for the previous scenario's app to exit before clearing it.
   The real folder is never written; scenarios marked `mine` start from a copy of it.
 - Screenshots go to `target/e2e/shots/`.
 - `just expected` writes the Minuet's notes in cursor order for scenarios to play.

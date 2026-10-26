@@ -35,6 +35,7 @@ Everything so far, before the first preview (v0.1).
 - **History:**
   - every note saved with its timing and velocity
   - weak bars over time tinted on the score when not playing (W toggles)
+- **Coach cards:** every Practise button loops from one bar before the trouble; "You keep stopping at bar N" now loops bars N−1–N instead of starting at bar N.
 - **Weak bars:** each bar is judged on one fixed scale, the same for every piece, from its own last 3 sessions, so a piece played well has no weakest bars. A bar needs 2 passes before it's judged.
 - **Speed:** switching screens is a 120 ms cross-fade instead of about 0.4 s of fades.
 - **Settings:** MIDI input and output, note names, zoom, MusicXML export, About.

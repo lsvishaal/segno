@@ -168,7 +168,7 @@ impl Coach {
                     kind: Kind::KeepsStopping,
                     first: measure,
                     last: measure,
-                    drill: drill(reference, measure, measure),
+                    drill: practise_range(reference, measure, measure),
                     weight: 1500 * u64::from(bar.gave_up),
                     facts: Facts {
                         passes: bar.passes,
@@ -218,13 +218,13 @@ fn spots_in(
         kind,
         first: measure,
         last: measure,
-        drill: drill(reference, measure, measure),
+        drill: practise_range(reference, measure, measure),
         weight,
         facts,
     };
 
     if tally.into_us >= INTO_BAR_US * n64 && 2 * tally.into_us >= tally.pause_us {
-        let mut into = spot(
+        let into = spot(
             Kind::IntoBar,
             tally.into_us / 1000 / n64,
             Facts {
@@ -232,9 +232,6 @@ fn spots_in(
                 ..facts
             },
         );
-        into.drill = before(measure)
-            .filter(|&previous| reference.range_of(previous, measure).is_some())
-            .map_or(into.drill, |previous| (previous, measure));
         spots.push(into);
     }
     if tally.jump_us >= JUMP_PAUSE_US * n64 || tally.jump_wrong >= n {
@@ -440,7 +437,7 @@ fn join_neighbours(reference: &ReferencePerformance, spots: Vec<Spot>) -> Vec<Sp
                     kind => kind,
                 };
             }
-            other.drill = drill(reference, other.first, other.last);
+            other.drill = practise_range(reference, other.first, other.last);
         } else {
             joined.push(spot);
         }
@@ -493,7 +490,7 @@ fn big_step(reference: &ReferencePerformance, bars: &Bars, accuracy: Option<u32>
         kind: Kind::BigStep,
         first,
         last,
-        drill: drill(reference, first, last),
+        drill: practise_range(reference, first, last),
         weight: u64::MAX,
         facts: Facts {
             wrong: u32::try_from(trouble.len()).unwrap_or(u32::MAX),
@@ -571,17 +568,21 @@ fn most_common(offsets: &[i8], keep: impl Fn(&i8) -> bool) -> Option<i8> {
         .map(|(offset, _)| offset)
 }
 
-/// `first` to `last` if they can be looped in a row, or else `first` alone.
-fn drill(
+/// The bars to loop to practise trouble in `first` to `last`: from one bar
+/// before it (practise from a bar before the error, Duke, Simmons & Cash
+/// 2009), clamped at bar 1. If that can't be looped in a row (a repeat in
+/// the way), `first` to `last`; failing that, `first` alone.
+#[must_use]
+pub fn practise_range(
     reference: &ReferencePerformance,
     first: MeasureNumber,
     last: MeasureNumber,
 ) -> (MeasureNumber, MeasureNumber) {
-    if reference.range_of(first, last).is_some() {
-        (first, last)
-    } else {
-        (first, first)
-    }
+    let loopable = |from: MeasureNumber| reference.range_of(from, last).is_some();
+    [before(first).unwrap_or(first), first]
+        .into_iter()
+        .find(|&from| loopable(from))
+        .map_or((first, first), |from| (from, last))
 }
 
 fn before(bar: MeasureNumber) -> Option<MeasureNumber> {
@@ -600,7 +601,7 @@ mod tests {
     use hogwash_notation::ExpectedNotes;
 
     use crate::bars::Trace;
-    use crate::coach::{Coach, Kind, WentWell, broken_chord};
+    use crate::coach::{Coach, Kind, WentWell, broken_chord, practise_range};
     use crate::fixtures::{minuet_in_time, played_in_time};
 
     const QUARTER_US: u64 = 600_000;
@@ -624,6 +625,48 @@ mod tests {
             first: bar(1),
             last: bar(3),
         }));
+    }
+
+    // Played 1 2 1 2 3: every loop starts a bar before the trouble, bar 1
+    // can't, and bars the piece doesn't have are left as asked.
+    #[test]
+    fn practise_starts_one_bar_before_the_trouble() {
+        let reference = minuet_in_time();
+
+        assert_eq!(practise_range(&reference, bar(1), bar(1)), (bar(1), bar(1)));
+        assert_eq!(practise_range(&reference, bar(2), bar(2)), (bar(1), bar(2)));
+        assert_eq!(practise_range(&reference, bar(3), bar(3)), (bar(2), bar(3)));
+        assert_eq!(practise_range(&reference, bar(2), bar(3)), (bar(1), bar(3)));
+        assert_eq!(practise_range(&reference, bar(9), bar(9)), (bar(9), bar(9)));
+    }
+
+    // Two wrong notes in bar 3, every run: the card loops bars 2–3.
+    #[test]
+    fn a_wrong_notes_card_loops_from_the_bar_before() {
+        let reference = minuet_in_time();
+        let wrong = Pitch::new(40).expect("a key");
+        let mut observed = played_in_time(&reference, 0..16, QUARTER_US, &[]);
+        observed.record(wrong);
+        observed.record(wrong);
+        for step in 16..reference.len() {
+            for pitch in reference
+                .at(step)
+                .into_iter()
+                .flat_map(ExpectedNotes::sounding)
+            {
+                observed.record(pitch);
+            }
+        }
+        let traces = vec![Trace::of(&observed, &reference, 0..reference.len(), false)];
+
+        let coach = Coach::of(&reference, &traces, Some(100));
+
+        let card = coach
+            .cards
+            .iter()
+            .find(|card| card.main.kind == Kind::WrongNotes)
+            .expect("a wrong-notes card");
+        assert_eq!(card.main.drill, (bar(2), bar(3)));
     }
 
     // Step 16 is bar 3's first note: three seconds late is the change into it.

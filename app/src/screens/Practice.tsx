@@ -510,29 +510,18 @@ export function PracticeScreen({
     [begin, loopTo],
   );
 
-  // A card's button: start at its bar, or loop the bars it is about, and
+  // A card's button: loop the bars it is about (from one bar before), and
   // play.
   const practiseCard = useCallback(
     (card: ReviewCard, instrument: string) => {
       const { drillFirst: first, drillLast: last } = card;
       if (first === null || last === null) {
         begin(instrument);
-      } else if (card.kind === "keepsStopping") {
-        void (async () => {
-          try {
-            const point = await startAtBar(pieceId, first);
-            setStart(point);
-            setLoop(null);
-            begin(instrument, point.position);
-          } catch (error) {
-            setMoveRefusal(String(error));
-          }
-        })();
       } else {
         practise({ label: card.button ?? "", first, last }, instrument);
       }
     },
-    [begin, practise, pieceId],
+    [begin, practise],
   );
 
   // What the results ask of the drawn score.

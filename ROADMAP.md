@@ -113,8 +113,8 @@ passes, difficulty, levels) are owned by the doc comments in
         and bar detail on a column click.
       - Reached from: the library card, Continue, Results ("Progress →") and the
         practice screen. Results stays first after a run.
-      - Every "Practise bars …" loop, on coach cards and here, starts one bar before
-        the trouble (one shared function).
+      - [x] Every "Practise bars …" loop, on coach cards and here, starts one bar
+        before the trouble (`practise_range`); "You keep stopping" loops N−1–N — 26 Oct
       - Removes the on-score tint, its legend and W.
 - [ ] **M2.11 · M** Live marks while playing: correct notes stay green and wrong notes
       stay red with a ring, for the whole attempt. Cleared on a new attempt and on each

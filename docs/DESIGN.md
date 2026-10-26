@@ -254,6 +254,8 @@ STARTER · INTERMEDIATE — around Grades 1–4
   - **Clean run** or **Play a few bars more** when nothing qualifies.
   - Pauses are judged against your own pace and the written rhythm, and hunting
     for one note counts as at most 3 wrong notes (`bars.rs`).
+  - Every card's button loops its bars from one bar before the trouble, clamped at
+    bar 1 ("⟲ Practise bars 8–9" for bar 9; `practise_range` in `coach.rs`).
 - **Planned:**
   - a "Progress" button in the header (M2.10)
   - the one-row toolbar (M3.1)

@@ -538,20 +538,20 @@ describe("the results after a run", () => {
     expect(bridge.loopBars).toHaveBeenCalledWith("minuet", 8, 9, 3);
   });
 
-  it("stopping in the same bar starts there; a reading card can turn note names on", async () => {
-    await stopWith(
-      summary([card("keepsStopping", 9, 9, "Stopping at bar 9"), card("wrongNotes", 10, 10, "Wrong notes in bar 10")]),
-    );
+  it("stopping in the same bar loops it with the bar before; a reading card can turn note names on", async () => {
+    const stopping = { ...card("keepsStopping", 9, 9, "Stopping at bar 9"), drillFirst: 8, button: "Practise bars 8–9" };
+    bridge.loopBars.mockResolvedValue({ position: 32, first: 8, last: 9 });
+    await stopWith(summary([stopping, card("wrongNotes", 10, 10, "Wrong notes in bar 10")]));
     await act(async () => {
       fireEvent.click(screen.getByRole("button", { name: "Turn on note names" }));
     });
     expect(drawn.last?.showNoteNames).toBe(true);
 
     await act(async () => {
-      fireEvent.click(screen.getByRole("button", { name: "⟲ Practise bar 9" }));
+      fireEvent.click(screen.getByRole("button", { name: "⟲ Practise bars 8–9" }));
     });
-    expect(bridge.startAtBar).toHaveBeenCalledWith("minuet", 9);
-    expect(bridge.loopBars).not.toHaveBeenCalled();
+    expect(bridge.loopBars).toHaveBeenCalledWith("minuet", 8, 9, 3);
+    expect(bridge.startAtBar).not.toHaveBeenCalled();
     expect(bridge.startAttempt).toHaveBeenCalledTimes(2);
   });
 
