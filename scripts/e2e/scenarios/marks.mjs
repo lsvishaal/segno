@@ -4,7 +4,7 @@
 // (docs/DESIGN.md budget: < 30 ms, median).
 import fs from "node:fs";
 import * as w from "../wd.mjs";
-import { DIR, check, log, startPractising, flashed, kb, shot, sessionFiles } from "../lib.mjs";
+import { DIR, check, log, startPractising, flashed, kb, shot, sessionFiles, eventually } from "../lib.mjs";
 
 const prelude = JSON.parse(fs.readFileSync(`${DIR}/prelude.expected.json`, "utf8"));
 const bar1 = prelude.filter((e) => e.bar === 1).map((e) => e.pitch);
@@ -35,7 +35,7 @@ export default async function marks() {
   const marked = await w.run("return window.__marked");
   // R keeps the attempt: each key's MIDI timestamp, on the wall clock.
   await w.press("r");
-  await w.sleep(800);
+  await eventually(() => sessionFiles().at(-1)?.attempts.some((a) => a.notes?.length === timed.length));
   const attempt = sessionFiles().at(-1)?.attempts.find((a) => a.notes?.length === timed.length);
   const keys = (attempt?.notes ?? []).map((n) => attempt.began_ms + n.at_us / 1000);
   const delays = keys.map((at) => Math.round((marked.find((t) => t >= at) ?? Infinity) - at));
@@ -50,17 +50,18 @@ export default async function marks() {
   check("a wrong key stays, red and ringed", (await live()) === 1 && (await w.run("return !!document.querySelector('[data-live-wrong] [data-wrong-ring]')")));
 
   await w.press("r");
-  await w.sleep(600);
+  await w.settle();
   check("R clears them", (await flashed()) === 0 && (await live()) === 0);
 
   await w.press("l");
-  await w.sleep(700);
+  await w.settle();
   for (const pitch of bar1.slice(0, -1)) kb(`on ${pitch} 80`, "wait 40", `off ${pitch}`, "wait 60");
-  await w.sleep(bar1.length * 100 + 400);
+  await w.sleep(bar1.length * 100);
+  await w.settle();
   check("a loop of bar 1: marks while in the pass", (await flashed()) > 0);
   const last = bar1.at(-1);
   kb(`on ${last} 80`, "wait 40", `off ${last}`);
-  await w.sleep(600);
+  await w.settle();
   check("and none once the pass wraps", (await flashed()) === 0, String(await flashed()));
   await w.press("Escape");
 }

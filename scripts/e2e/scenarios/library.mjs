@@ -25,7 +25,7 @@ const sessionsOf = (id) => (fs.existsSync(HISTORY) ? fs.readdirSync(HISTORY).fil
 
 export default async function library() {
   await w.until("return document.querySelectorAll('li h3').length >= 6", "the library", 30000);
-  await w.sleep(1500);
+  await w.settle();
   await shot("library");
   const shelves = await w.run("return [...document.querySelectorAll('section[aria-label]')].map(s => s.getAttribute('aria-label'))");
   check("the library is in shelves: your pieces, then the starters by level", ["Your pieces", "Starter · Beginner", "Starter · Intermediate"].every((label) => shelves.includes(label)), JSON.stringify(shelves));
@@ -48,45 +48,45 @@ export default async function library() {
   check("imported pieces do", (await cardButtons(renamed.title)).join("|").includes("Rename"));
 
   await clickLabel(`Rename ${renamed.title}`);
-  await w.sleep(300);
+  await w.settle();
   await setInput("Should not stick");
   await w.press("Escape");
-  await w.sleep(400);
+  await w.settle();
   check("Esc cancels a rename", (await titles()).includes(renamed.title) && !(await titles()).includes("Should not stick"));
 
   await clickLabel(`Rename ${renamed.title}`);
-  await w.sleep(300);
+  await w.settle();
   await setInput("   ");
   await w.press("Enter");
-  await w.sleep(500);
+  await w.settle();
   check("a blank name is refused with a message", (await w.bodyText()).includes("A title cannot be blank."));
   await w.press("Escape");
-  await w.sleep(300);
+  await w.settle();
   check("and cancelling leaves the old name", (await titles()).includes(renamed.title));
 
   await clickLabel(`Rename ${renamed.title}`);
-  await w.sleep(300);
+  await w.settle();
   await setInput("Renamed by e2e");
   await w.press("Enter");
-  await w.sleep(800);
+  await w.settle();
   check("Enter saves the new name on the card", (await titles()).includes("Renamed by e2e"));
   check("a Renamed notice appears", (await w.bodyText()).includes("Renamed"));
   check("the name is stored on disk, marked renamed", stored(renamed.id).title === "Renamed by e2e" && stored(renamed.id).renamed === true);
 
   await clickLabel(`Delete ${deleted.title}`);
-  await w.sleep(500);
+  await w.settle();
   const confirm = await w.run("return document.querySelector('[role=alertdialog]')?.innerText ?? null");
   await shot("library-delete-confirm");
   const counted = deleted.sessions === 0 || new RegExp(`${deleted.sessions} session`).test(confirm ?? "");
   check("the delete confirmation names the piece and counts its (schema 1) sessions", confirm?.includes(deleted.title) && counted, String(confirm));
   await w.run("[...document.querySelectorAll('[role=alertdialog] button')].find(b=>b.textContent.trim()==='Cancel').click(); return 1");
-  await w.sleep(400);
+  await w.settle();
   check("Cancel keeps the piece", (await titles()).includes(deleted.title) && scoreIds().includes(deleted.id));
 
   await clickLabel(`Delete ${deleted.title}`);
-  await w.sleep(400);
+  await w.settle();
   await w.run("[...document.querySelectorAll('[role=alertdialog] button')].find(b=>b.textContent.trim()==='Delete').click(); return 1");
-  await w.sleep(900);
+  await w.settle();
   check("Delete removes the card", !(await titles()).includes(deleted.title));
   check("and its score files", !scoreIds().includes(deleted.id));
   check("and its practice history, nobody else's", sessionsOf(deleted.id) === 0);

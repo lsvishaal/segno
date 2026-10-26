@@ -3,7 +3,7 @@
 // puts the start back at bar 1.
 import fs from "node:fs";
 import * as w from "../wd.mjs";
-import { DIR, check, log, sessionFiles, openPiece, chooseKeyboard, clickButton, waitForButton, cursorX, kb, shot, barBox, hintOver, clickBar } from "../lib.mjs";
+import { DIR, check, log, sessionFiles, openPiece, chooseKeyboard, clickButton, waitForButton, cursorX, kb, shot, barBox, hintOver, clickBar, eventually } from "../lib.mjs";
 
 // The Minuet's expected notes with their bars, in played order.
 const expected = JSON.parse(fs.readFileSync(`${DIR}/minuet.expected.json`, "utf8"));
@@ -25,7 +25,8 @@ const marker = () => w.run("const m = document.querySelector('[data-start-marker
 const attempts = () => sessionFiles().flatMap((s) => s.attempts);
 async function play(notes) {
   for (const n of notes) kb(`on ${n} 80`, "wait 40", `off ${n}`);
-  await w.sleep(45 * notes.length + 500);
+  await w.sleep(45 * notes.length);
+  await w.settle();
 }
 
 export default async function startFromBar() {
@@ -63,7 +64,8 @@ export default async function startFromBar() {
 
   await play(firstPass(3).slice(0, 2));
   await w.press("r");
-  await w.sleep(800);
+  await eventually(() => attempts().length === 2);
+  await w.settle();
   check("R goes back to bar 3, the chosen start", await cursorIn(3));
   check("and keeps the attempt it ended (ended = restart)", attempts().length === 2 && attempts()[1].ended === "restart");
 
@@ -89,7 +91,6 @@ export default async function startFromBar() {
   check("Stop keeps the attempt (ended = stop)", attempts().at(-1)?.ended === "stop" && attempts().length === 3);
 
   await clickButton("← Library");
-  await w.sleep(800);
   await openPiece("Minuet in G Major");
   check("after leaving and reopening, the start is bar 1 again", (await marker()) === null);
   await chooseKeyboard();

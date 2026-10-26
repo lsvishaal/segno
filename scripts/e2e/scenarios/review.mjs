@@ -41,7 +41,8 @@ async function perform(notes, { pauseBefore = {}, wrongBefore = [] } = {}) {
     total += 45;
   }
   kb(...lines);
-  await w.sleep(total + 1500);
+  await w.sleep(total);
+  await w.settle();
 }
 
 export default async function review() {
@@ -54,7 +55,7 @@ export default async function review() {
   await perform(opening, { pauseBefore: { 6: 4000 }, wrongBefore: [5] });
   await clickButton("Stop");
   await untilResults();
-  await w.sleep(500);
+  await w.settle();
   await shot("results");
 
   const text = (await results()) ?? "";
@@ -80,17 +81,17 @@ export default async function review() {
   check("its button: Practise bars 5–6", await w.run("return [...document.querySelectorAll('button')].some(b => b.textContent.trim() === '⟲ Practise bars 5–6')"));
 
   await w.press("Escape");
-  await w.sleep(500);
+  await w.settle();
   await shot("results-on-the-score");
   check("Esc shows the score with the run marked", (await results()) === null && (await status()).includes("Your last run is marked on the score"));
   check("the run's marks stay: the wrong key ringed, right notes green, bars not reached faded", (await count("[data-live-wrong]")) >= 1 && (await flashed()) > 0 && (await count("[data-not-reached]")) >= 1);
   await w.press("Escape");
-  await w.sleep(500);
+  await w.settle();
   check("Esc again goes back to the results", (await results()) !== null);
 
   await w.press("Enter");
   await waitForButton("Stop");
-  await w.sleep(600);
+  await w.settle();
   check("Enter loops bars 5–6 and starts playing", (await loopButton()) === "⟲ Loop 5–6", String(await loopButton()));
   check("a new attempt starts with a clean score", (await results()) === null && (await count("[data-live-wrong]")) === 0 && (await flashed()) === 0);
 
@@ -101,7 +102,7 @@ export default async function review() {
   await perform([{ pitch: notesOf(5)[0], bar: 5 }]);
   await clickButton("Stop");
   await untilResults();
-  await w.sleep(500);
+  await w.settle();
   await shot("results-loop");
   const loopText = (await results()) ?? "";
   log("    loop results:", JSON.stringify(loopText));
@@ -113,12 +114,12 @@ export default async function review() {
   await clickButton("↻ Practice again");
   await waitForButton("Stop");
   await w.press("Escape");
-  await w.sleep(300);
+  await w.settle();
   await clickBar(1);
   await perform([{ pitch: notesOf(1)[0], bar: 1 }]);
   await clickButton("Stop");
   await untilResults();
-  await w.sleep(400);
+  await w.settle();
   await shot("results-too-short");
   check("too short: says so, and no cards", ((await results()) ?? "").includes("Play a few bars more to get feedback.") && (await count("section[aria-label=Results] article")) === 0);
 
@@ -126,6 +127,6 @@ export default async function review() {
   await waitForButton("Stop");
   await clickButton("Stop");
   await waitForButton("Start");
-  await w.sleep(400);
+  await w.settle();
   check("nothing played: no results, a quiet note, Start again", (await results()) === null && (await status()).includes("Nothing played."), JSON.stringify({ results: await results(), status: await status() }));
 }

@@ -29,7 +29,8 @@ const counter = () => w.run("return [...document.querySelectorAll('[role=status]
 const passes = () => sessionFiles().flatMap((s) => s.attempts).filter((a) => a.ended === "pass");
 async function play(notes) {
   for (const n of notes) kb(`on ${n} 80`, "wait 40", `off ${n}`);
-  await w.sleep(45 * notes.length + 600);
+  await w.sleep(45 * notes.length);
+  await w.settle();
 }
 
 export default async function loop() {
@@ -73,10 +74,10 @@ export default async function loop() {
   check("the spoiled pass kept its wrong note", kept[1]?.notes.some((n) => n.key === 73));
 
   await w.press("l");
-  await w.sleep(700);
+  await w.settle();
   check("L loops the bar the cursor is in (bar 9)", (await loopButton()) === "⟲ Loop 9", String(await loopButton()));
   await w.press("Escape");
-  await w.sleep(500);
+  await w.settle();
   check("Esc stops looping", (await loopButton()) === "⟲ Loop" && (await bands()) === 0, String(await loopButton()));
 
   // Bars 15-18 cross the repeat sign at the end of bar 16.

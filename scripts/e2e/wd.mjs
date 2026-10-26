@@ -45,6 +45,33 @@ export const run = (script, ...args) => call("POST", `/session/${sid}/execute/sy
 /** Runs `script` in the page until it calls its last argument with the result. */
 export const runAsync = (script, ...args) => call("POST", `/session/${sid}/execute/async`, { script, args });
 
+/**
+ * Waits until the page has stopped changing: no change to the document for
+ * `quiet` ms and no finite animation running (a fade-out keeps its element
+ * in the page without changing the document), at most `max` ms. The wait
+ * for "whatever that click set off has landed", instead of a guessed sleep.
+ * A change that only starts after a pause longer than `quiet` (a debounce)
+ * needs a longer `quiet`.
+ */
+export const settle = (quiet = 150, max = 3000) =>
+  runAsync(
+    `const [quiet, max, done] = arguments;
+     let timer;
+     const finish = () => { observer.disconnect(); clearTimeout(timer); clearTimeout(cap); done(true); };
+     const running = () => document.getAnimations().filter((a) => a.playState === "running" && a.effect?.getTiming().iterations !== Infinity);
+     const quietNow = () => {
+       const moving = running();
+       if (moving.length === 0) return finish();
+       Promise.allSettled(moving.map((a) => a.finished)).then(() => { clearTimeout(timer); timer = setTimeout(quietNow, quiet); });
+     };
+     const observer = new MutationObserver(() => { clearTimeout(timer); timer = setTimeout(quietNow, quiet); });
+     observer.observe(document.documentElement, { subtree: true, childList: true, attributes: true, characterData: true });
+     timer = setTimeout(quietNow, quiet);
+     const cap = setTimeout(finish, max);`,
+    quiet,
+    max,
+  );
+
 /** Waits until `script` returns something truthy, and returns it. */
 export async function until(script, what, ms = 15000) {
   const end = Date.now() + ms;

@@ -8,7 +8,6 @@ export default async function wholePiece() {
 
   log(`    playing all ${minuet.length} notes of the Minuet (repeats included)...`);
   await play(minuet, 22);
-  await w.sleep(500);
   await shot("whole-piece-end");
   check("reaching the end of the piece changes Stop to Finish", await buttonExists("Finish"));
 

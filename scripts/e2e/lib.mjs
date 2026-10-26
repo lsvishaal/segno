@@ -34,6 +34,16 @@ export function resetData({ withMine = false } = {}) {
 
 export const shot = (name) => w.shot(`${SHOTS}/${name}.png`);
 
+/** Waits until `test()` holds (read in node: the data folder, say), for at most `ms`; answers whether it did. */
+export async function eventually(test, ms = 5000) {
+  const end = Date.now() + ms;
+  while (Date.now() < end) {
+    if (await test()) return true;
+    await w.sleep(50);
+  }
+  return false;
+}
+
 /** Every saved session file, parsed, oldest name first. */
 export function sessionFiles() {
   if (!fs.existsSync(HISTORY)) return [];
@@ -53,14 +63,14 @@ export const minuet = JSON.parse(fs.readFileSync(`${DIR}/minuet.expected.json`, 
 
 export async function openPiece(title) {
   await w.until("return document.querySelectorAll('li h3').length >= 6", "the library", 30000);
-  await w.sleep(1000);
+  await w.settle();
   await w.run(
     "[...document.querySelectorAll('li button h3')].find(h=>h.textContent===arguments[0]).closest('button').click(); return 1",
     title,
   );
   await w.until("return document.body.innerText.includes('← Library')", "the practice screen", 20000);
   await w.until("return document.querySelector('.hw-page svg') && document.querySelectorAll('g.note').length > 0", "the score", 20000);
-  await w.sleep(500);
+  await w.settle();
 }
 
 export async function chooseKeyboard() {
@@ -99,7 +109,8 @@ export const flashed = () => w.run("return [...document.querySelectorAll('g.note
 /** Plays notes (MIDI numbers) one by one, quickly, then lets the app settle. */
 export async function play(notes, gap = 35) {
   for (const n of notes) kb(`on ${n} 80`, `wait ${gap}`, `off ${n}`);
-  await w.sleep(gap * notes.length + 400);
+  await w.sleep(gap * notes.length);
+  await w.settle();
 }
 
 /**
@@ -135,7 +146,7 @@ export async function hintOver(n) {
     box.right - 6,
     box.bottom - 6,
   );
-  await w.sleep(300);
+  await w.settle();
   return w.run("return document.querySelector('.hw-page').parentElement.parentElement.getAttribute('title')");
 }
 
@@ -143,5 +154,5 @@ export async function hintOver(n) {
 export async function clickBar(n, shift = false) {
   const box = await barBox(n);
   await w.clickAt(box.right - 6, box.bottom - 6, { shift });
-  await w.sleep(700);
+  await w.settle();
 }
