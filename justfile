@@ -31,7 +31,9 @@ release: _require-verovio
     cp -r "{{verovio_data}}" "$stage/verovio-data"
     cp "{{verovio_data}}/../COPYING" "{{verovio_data}}/../COPYING.LESSER" "$stage/"
     # NO_STRIP: the AppImage tool's bundled strip chokes on the newer ELF files of a rolling distro.
-    cd app && NO_STRIP=true npx tauri build --bundles appimage
+    # The staged files are named only in tauri.release.conf.json, merged here, so a plain
+    # `cargo build` (just run, just ci, a fresh clone) doesn't need them to exist.
+    cd app && NO_STRIP=true npx tauri build --bundles appimage --config src-tauri/tauri.release.conf.json
     ls -lh "{{justfile_directory()}}"/target/release/bundle/appimage/*.AppImage
 
 # drives the real AppImage with a virtual MIDI keyboard through every scenario in scripts/e2e (Linux; needs tauri-driver and WebKitWebDriver)
@@ -149,7 +151,7 @@ harness:
 [group('verovio')]
 verovio-build clone output=".verovio-build":
     cmake -S "{{clone}}/cmake" -B "{{output}}" -DBUILD_AS_LIBRARY=ON -DCMAKE_BUILD_TYPE=Release
-    cmake --build "{{output}}" -j
+    cmake --build "{{output}}" --parallel "$(nproc)"
     @echo
     @echo "Built. Point the recipes above at it:"
     @echo "  export HOGWASH_VEROVIO_LIB=$(realpath {{output}})/libverovio.so"

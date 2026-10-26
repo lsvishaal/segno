@@ -34,12 +34,6 @@
       "icons/128x128@2x.png",
       "icons/icon.icns",
       "icons/icon.ico"
-    ],
-    "resources": {
-      "bundle/libverovio.so": "libverovio.so",
-      "bundle/verovio-data": "verovio-data",
-      "bundle/COPYING": "verovio-licence/COPYING",
-      "bundle/COPYING.LESSER": "verovio-licence/COPYING.LESSER"
-    }
+    ]
   }
 }
