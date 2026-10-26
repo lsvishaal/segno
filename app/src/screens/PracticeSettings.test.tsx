@@ -76,14 +76,15 @@ describe("SettingsPanel", () => {
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
   });
 
-  it("shows the appearance, sound, and view/export controls when open", async () => {
-    await renderPanel();
+  // The dialog, the MIDI selects and Export are each used by a test below.
+  it("the zoom slider shows the zoom and changes it", async () => {
+    const { onScaleChange } = await renderPanel();
+    const slider = screen.getByRole("slider");
+    expect(slider).toHaveValue("150");
 
-    expect(screen.getByRole("dialog", { name: "Settings" })).toBeInTheDocument();
-    expect(screen.getByRole("slider")).toBeInTheDocument();
-    expect(screen.getByRole("combobox", { name: "MIDI input" })).toBeInTheDocument();
-    expect(screen.getByRole("combobox", { name: "MIDI output" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Export MusicXML" })).toBeInTheDocument();
+    fireEvent.change(slider, { target: { value: "175" } });
+
+    expect(onScaleChange).toHaveBeenCalledWith(175);
   });
 
   it("calls onExport when the export button is clicked", async () => {
