@@ -36,12 +36,37 @@ release: _require-verovio
     cd app && NO_STRIP=true npx tauri build --bundles appimage --config src-tauri/tauri.release.conf.json
     ls -lh "{{justfile_directory()}}"/target/release/bundle/appimage/*.AppImage
 
-# drives the real AppImage with a virtual MIDI keyboard through every scenario in scripts/e2e (Linux; needs tauri-driver and WebKitWebDriver)
+# drives the real AppImage with a virtual MIDI keyboard through every scenario in scripts/e2e (Linux; needs tauri-driver and WebKitWebDriver). Reuses the AppImage when nothing it's built from changed; --rebuild forces a build
 [group('check')]
-e2e *scenarios: release
+e2e *args: _require-verovio
     #!/usr/bin/env bash
     set -euo pipefail
     cd "{{justfile_directory()}}"
+    rebuild=false
+    scenarios=()
+    for arg in {{args}}; do
+        if [ "$arg" = --rebuild ]; then rebuild=true; else scenarios+=("$arg"); fi
+    done
+    # What the AppImage is made from: the app's and the crates' tracked files
+    # (their content hashes), any uncommitted or new files there, and the
+    # Verovio library and data it bundles. UI test files aren't in it.
+    paths=(app crates Cargo.toml Cargo.lock ':!*.test.ts' ':!*.test.tsx')
+    inputs=$({
+        git ls-files -s -- "${paths[@]}"
+        git diff HEAD -- "${paths[@]}"
+        git ls-files --others --exclude-standard -z -- "${paths[@]}" | xargs -0 -r sha256sum
+        sha256sum "{{verovio_lib}}"
+        find "{{verovio_data}}" -type f -printf '%P %s %T@\n' | sort
+    } | sha256sum | cut -c1-12)
+    stamp=target/release/bundle/appimage/.inputs
+    if ! $rebuild && [ "$(cat "$stamp" 2>/dev/null)" = "$inputs" ] && compgen -G "target/release/bundle/appimage/Hogwash_*.AppImage" >/dev/null; then
+        echo "reusing AppImage $inputs (nothing it is built from changed; just e2e --rebuild builds it anyway)"
+    else
+        rm -f "$stamp"
+        just release
+        echo "$inputs" > "$stamp"
+        echo "built AppImage $inputs"
+    fi
     rm -rf target/e2e/app && mkdir -p target/e2e/app
     (cd target/e2e/app && ../../release/bundle/appimage/Hogwash_*.AppImage --appimage-extract >/dev/null)
     HOGWASH_VEROVIO_LIB="{{verovio_lib}}" HOGWASH_VEROVIO_DATA="{{verovio_data}}" \
@@ -49,7 +74,7 @@ e2e *scenarios: release
     HOGWASH_VEROVIO_LIB="{{verovio_lib}}" HOGWASH_VEROVIO_DATA="{{verovio_data}}" \
         cargo run --quiet --package hogwash-cli -- expected app/src-tauri/library/prelude-in-c.musicxml > target/e2e/prelude.expected.json
     cargo build --quiet --package hogwash-midi --example vkbd
-    node scripts/e2e/run.mjs {{scenarios}}
+    node scripts/e2e/run.mjs "${scenarios[@]}"
 
 # alias for `run`
 [group('run')]

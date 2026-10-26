@@ -24,7 +24,7 @@ How Hogwash is tested.
 | `just ci` | fmt, clippy, all Rust unit tests, cargo-deny, licence gates, architecture guard, determinism, frontend lint and UI tests (vitest) | nothing extra. `cargo-deny` writes to `~/.cargo`, so run it outside a sandbox |
 | `just engraving-test` | ignored tests in `hogwash-engraving-verovio` and `hogwash-analysis` (coach on real scores) | a built Verovio |
 | `just provided-test` | ignored `hogwash-app` tests: the bundled pieces through the real engine, the practice thread, history | a built Verovio |
-| `just e2e [scenario …]` | builds the AppImage, then drives the real app through `scripts/e2e/scenarios/*.mjs` | `tauri-driver`, ALSA |
+| `just e2e [--rebuild] [scenario …]` | builds the AppImage (or reuses it, saying `reusing AppImage <hash>`, when nothing it's built from changed; `--rebuild` forces it), then drives the real app through `scripts/e2e/scenarios/*.mjs` | `tauri-driver`, ALSA |
 | `just midi-test` | ignored `hogwash-midi` tests: notes stamped in order, an unplug noticed, Thru forwarding to an output | ALSA (Linux) |
 | `just check-all` | every row above, `e2e` last | all of the above |
 
