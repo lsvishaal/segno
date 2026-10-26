@@ -25,6 +25,8 @@ How Hogwash is tested.
 | `just engraving-test` | ignored tests in `hogwash-engraving-verovio` and `hogwash-analysis` (coach on real scores) | a built Verovio |
 | `just provided-test` | ignored `hogwash-app` tests: the bundled pieces through the real engine, the practice thread, history | a built Verovio |
 | `just e2e [scenario …]` | builds the AppImage, then drives the real app through `scripts/e2e/scenarios/*.mjs` | `tauri-driver`, ALSA |
+| `just midi-test` | ignored `hogwash-midi` tests: notes stamped in order, an unplug noticed, Thru forwarding to an output | ALSA (Linux) |
+| `just check-all` | every row above, `e2e` last | all of the above |
 
 **Real pieces only.** Tests use the Minuet in G, the Prelude in C (both in
 `app/src-tauri/library/`), the fixtures in `app/src/components/__fixtures__`

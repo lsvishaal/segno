@@ -57,6 +57,15 @@ dev: run
 
 # --- check your work ---------------------------------------------------------
 
+# every tier, slowest last: the gate, the real-engine tests, real MIDI, then the real app
+[group('check')]
+check-all: ci provided-test engraving-test midi-test e2e
+
+# real MIDI through the ALSA sequencer: notes stamped in order, an unplug noticed, Thru forwarding (Linux)
+[group('check')]
+midi-test:
+    cargo test --package hogwash-midi -- --ignored
+
 # the full gate — if this passes locally it passes in CI
 [group('check')]
 ci: fmt-check lint test deny arch native-licences determinism ui
