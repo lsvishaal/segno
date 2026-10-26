@@ -106,23 +106,41 @@ fn zip_damage(source: &[u8]) -> Option<&'static str> {
 mod tests {
     use super::damage;
 
-    // The performer's real files.
-    const CANON: &[u8] = include_bytes!("../../../app/src-tauri/library/Canon_in_D.mxl");
+    // Real files: two shipped pieces, and the Minuet zipped the way MuseScore
+    // exports `.mxl` (`META-INF/container.xml` plus the score).
     const MINUET: &[u8] = include_bytes!("../../../app/src-tauri/library/minuet-in-g.musicxml");
-    const WHOLE: [&[u8]; 7] = [
-        CANON,
-        MINUET,
-        include_bytes!("../../../app/src-tauri/library/prelude-in-c.musicxml"),
-        include_bytes!("../../../app/src-tauri/library/Erik_Satie_-_Gymnopedie_No.1.mxl"),
-        include_bytes!("../../../app/src-tauri/library/Fur_Elise.mxl"),
-        include_bytes!("../../../app/src-tauri/library/Fur_Elise_Easy.mxl"),
-        include_bytes!("../../../app/src-tauri/library/Ode_to_Joy_Easy_variation.mxl"),
-    ];
+    const PRELUDE: &[u8] = include_bytes!("../../../app/src-tauri/library/prelude-in-c.musicxml");
+    const MINUET_MXL: &[u8] = include_bytes!("../tests/fixtures/minuet-in-g.mxl");
+
+    /// The owner's own `.mxl` exports, from the ignored `test-scores/` (or
+    /// `HOGWASH_TEST_SCORES`). They aren't redistributable, so they may be
+    /// absent; whatever is there is checked.
+    fn personal_scores() -> Vec<Vec<u8>> {
+        let folder = std::env::var_os("HOGWASH_TEST_SCORES").map_or_else(
+            || std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../test-scores"),
+            std::path::PathBuf::from,
+        );
+        let found: Vec<Vec<u8>> = std::fs::read_dir(&folder)
+            .into_iter()
+            .flatten()
+            .filter_map(Result::ok)
+            .map(|entry| entry.path())
+            .filter(|path| path.extension().is_some_and(|kind| kind == "mxl"))
+            .filter_map(|path| std::fs::read(path).ok())
+            .collect();
+        if found.is_empty() {
+            eprintln!("skipped: no personal test scores in {}", folder.display());
+        }
+        found
+    }
 
     #[test]
     fn every_real_file_is_whole() {
-        for file in WHOLE {
+        for file in [MINUET, PRELUDE, MINUET_MXL] {
             assert_eq!(damage(file), None);
+        }
+        for file in personal_scores() {
+            assert_eq!(damage(&file), None);
         }
     }
 
@@ -130,13 +148,13 @@ mod tests {
     #[test]
     fn a_zip_cut_short_anywhere_is_damaged() {
         for keep in (1..20)
-            .map(|twentieths| CANON.len() * twentieths / 20)
-            .chain([CANON.len() - 1])
+            .map(|twentieths| MINUET_MXL.len() * twentieths / 20)
+            .chain([MINUET_MXL.len() - 1])
         {
             assert!(
-                damage(&CANON[..keep]).is_some(),
+                damage(&MINUET_MXL[..keep]).is_some(),
                 "{keep} of {} bytes",
-                CANON.len()
+                MINUET_MXL.len()
             );
         }
     }

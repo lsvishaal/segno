@@ -54,7 +54,7 @@ Commands:
 5. **Tests use real pieces only:**
    - the Minuet in G or the Prelude in C (`app/src-tauri/library/`)
    - the fixtures in `app/src/components/__fixtures__`
-   - pieces the owner supplied
+   - pieces the owner supplied (`test-scores/`, ignored; tests skip when absent)
    - Never invented notes.
 6. **Never write to the real data folder** (`~/.local/share/com.hogwash.practice`)
    unless the owner explicitly asks. Use `target/e2e/data` or copies (e.g.
@@ -85,7 +85,8 @@ Commands:
    - **Code doc comments:** if a domain definition changed. They are the source of
      truth; docs link to them rather than restating numbers.
 3. **Every commit message ends with a trailer:** `Docs: <files updated>`, or
-   `Docs: none — <reason>` (e.g. "refactor, no behaviour change").
+   `Docs: none — <reason>` (e.g. "refactor, no behaviour change"; for a config-only
+   commit, `Docs: none — config` is enough).
    `scripts/hooks/commit-msg` rejects a commit without one (`just install-hooks`).
 4. **Decisions from Claude chat** arrive as a pasted `DECISIONS — …` block. The first
    step is to record them in `DECISIONS.md` (and apply ROADMAP status changes),

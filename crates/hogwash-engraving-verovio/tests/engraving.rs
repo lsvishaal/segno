@@ -31,7 +31,7 @@
     reason = "test helpers; clippy's allow-expect-in-tests cannot see a tests/ helper fn"
 )]
 
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 use hogwash_domain::{Location, MeasureNumber, Step};
 use hogwash_engraving::{EngravedScore, Engraver, EngravingFailure};
@@ -507,12 +507,25 @@ fn a_bar_inside_a_repeat_starts_at_its_first_occurrence_in_the_minuet() {
 
 // Satie's Gymnopédie No. 1, bar 10: its opening note is tied over from bar 9.
 // Played through, it is not struck again; starting at bar 10, it must be.
-// (One of the repository's test scores; see ROADMAP M0.2.)
+// The owner's own score, from the ignored `test-scores/` (or
+// `HOGWASH_TEST_SCORES`); skipped, with a note, when it isn't there.
 #[test]
 #[ignore = "needs a real libverovio; run `just engraving-test`"]
 fn a_note_tied_into_a_bar_is_required_when_starting_there_in_the_gymnopedie() {
-    let satie = include_bytes!("../../../app/src-tauri/library/Erik_Satie_-_Gymnopedie_No.1.mxl");
-    let engraved = engraver().engrave(satie).expect("the Gymnopédie engraves");
+    let path = std::env::var_os("HOGWASH_TEST_SCORES")
+        .map_or_else(
+            || PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../test-scores"),
+            PathBuf::from,
+        )
+        .join("Erik_Satie_-_Gymnopedie_No.1.mxl");
+    let Ok(satie) = std::fs::read(&path) else {
+        eprintln!(
+            "skipped: {} not found (personal test scores)",
+            path.display()
+        );
+        return;
+    };
+    let engraved = engraver().engrave(&satie).expect("the Gymnopédie engraves");
     let reference = hogwash_notation::ReferencePerformance::derived_from(engraved.score());
 
     let start = reference

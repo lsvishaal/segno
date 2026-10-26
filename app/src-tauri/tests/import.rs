@@ -129,8 +129,10 @@ fn an_unsupported_format_is_refused_with_a_route() {
 #[ignore = "needs a real libverovio; run `just provided-test`"]
 fn a_broken_file_is_refused_and_never_stored() {
     let root = temporary("broken");
+    let Some(canon) = personal_score("Canon_in_D.mxl") else {
+        return;
+    };
     let mut running = hogwash(&root);
-    let canon = library_file("Canon_in_D.mxl");
 
     let refusal = accept_offered(
         &canon[..canon.len() / 2],
@@ -157,9 +159,9 @@ fn a_real_compressed_musicxml_file_joins_the_library() {
     let root = temporary("real-mxl");
     let mut hogwash = hogwash(&root);
     let before = hogwash.library().count();
-    let material =
-        std::fs::read(PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("library/Fur_Elise_Easy.mxl"))
-            .expect("the file is in the library folder");
+    let Some(material) = personal_score("Fur_Elise_Easy.mxl") else {
+        return;
+    };
 
     let imported = accept_offered(&material, None, &mut hogwash).expect("a real .mxl is supported");
 
@@ -187,7 +189,10 @@ fn a_title_printed_only_on_the_page_is_read() {
             "Ludwig Van Beethoven",
         ),
     ] {
-        let imported = accept_offered(&library_file(file), None, &mut hogwash).expect("supported");
+        let Some(source) = personal_score(file) else {
+            return;
+        };
+        let imported = accept_offered(&source, None, &mut hogwash).expect("supported");
 
         assert_eq!(imported.piece.title, title);
         assert_eq!(imported.piece.composer.as_deref(), Some(composer));
@@ -200,18 +205,36 @@ fn a_title_printed_only_on_the_page_is_read() {
 #[ignore = "needs a real libverovio; run `just provided-test`"]
 fn an_imported_piece_survives_a_restart() {
     let root = temporary("restart");
-    let imported = accept_offered(
-        &library_file("Erik_Satie_-_Gymnopedie_No.1.mxl"),
-        None,
-        &mut hogwash(&root),
-    )
-    .expect("supported");
+    let Some(satie) = personal_score("Erik_Satie_-_Gymnopedie_No.1.mxl") else {
+        return;
+    };
+    let imported = accept_offered(&satie, None, &mut hogwash(&root)).expect("supported");
 
     let restarted = hogwash(&root);
 
     assert!(restarted.library().pieces().into_iter().any(|piece| {
         piece.id().as_str() == imported.piece.id && piece.title() == "Gymnopédie No.1"
     }));
+}
+
+/// One of the owner's own scores. They aren't redistributable, so they live in
+/// the ignored `test-scores/` folder (or `HOGWASH_TEST_SCORES`), not in git.
+/// `None`, said on stderr, when it isn't there: the test that wanted it is
+/// skipped, so a fresh clone still passes.
+fn personal_score(name: &str) -> Option<Vec<u8>> {
+    let folder = std::env::var_os("HOGWASH_TEST_SCORES").map_or_else(
+        || PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../test-scores"),
+        PathBuf::from,
+    );
+    let path = folder.join(name);
+    let bytes = std::fs::read(&path).ok();
+    if bytes.is_none() {
+        eprintln!(
+            "skipped: {} not found (personal test scores)",
+            path.display()
+        );
+    }
+    bytes
 }
 
 fn library_file(name: &str) -> Vec<u8> {
@@ -251,8 +274,10 @@ fn a_file_identical_to_a_bundled_piece_adds_nothing() {
 fn identical_stored_copies_collapse_at_startup() {
     let root = temporary("collapse");
     let before = hogwash(&root).library().count();
-    let imported = accept_offered(&library_file("Canon_in_D.mxl"), None, &mut hogwash(&root))
-        .expect("supported");
+    let Some(canon) = personal_score("Canon_in_D.mxl") else {
+        return;
+    };
+    let imported = accept_offered(&canon, None, &mut hogwash(&root)).expect("supported");
     let scores = root.join("scores");
     std::fs::copy(
         scores.join(format!("{}.musicxml", imported.piece.id)),
@@ -272,20 +297,18 @@ fn identical_stored_copies_collapse_at_startup() {
 #[ignore = "needs a real libverovio; run `just provided-test`"]
 fn two_real_fur_elise_files_are_two_pieces() {
     let root = temporary("two-fur-elise");
+    let (Some(full_source), Some(easy_source)) = (
+        personal_score("Fur_Elise.mxl"),
+        personal_score("Fur_Elise_Easy.mxl"),
+    ) else {
+        return;
+    };
     let mut hogwash = hogwash(&root);
     let before = hogwash.library().count();
 
-    let full = accept_offered(
-        &library_file("Fur_Elise.mxl"),
-        Some("Fur_Elise.mxl"),
-        &mut hogwash,
-    );
-    let easy = accept_offered(
-        &library_file("Fur_Elise_Easy.mxl"),
-        Some("Fur_Elise_Easy.mxl"),
-        &mut hogwash,
-    )
-    .expect("supported");
+    let full = accept_offered(&full_source, Some("Fur_Elise.mxl"), &mut hogwash);
+    let easy =
+        accept_offered(&easy_source, Some("Fur_Elise_Easy.mxl"), &mut hogwash).expect("supported");
 
     // Its pickup bar is numbered 0, which is refused until pickup bars are
     // supported; flip this when they are.
@@ -342,14 +365,13 @@ fn cut_all(text: &str, start: &str, end: &str) -> String {
 #[ignore = "needs a real libverovio; run `just provided-test`"]
 fn a_renamed_piece_keeps_its_title_after_a_restart() {
     let root = temporary("rename");
+    let Some(source) = personal_score("Canon_in_D.mxl") else {
+        return;
+    };
     let mut running = hogwash(&root);
-    let canon = accept_offered(
-        &library_file("Canon_in_D.mxl"),
-        Some("Canon_in_D.mxl"),
-        &mut running,
-    )
-    .expect("supported")
-    .piece;
+    let canon = accept_offered(&source, Some("Canon_in_D.mxl"), &mut running)
+        .expect("supported")
+        .piece;
     let minuet = running.library().pieces()[0].id().as_str().to_owned();
 
     let renamed = retitle(&mut running, &canon.id, "  Pachelbel's Canon ").expect("renames it");
@@ -379,9 +401,12 @@ fn a_renamed_piece_keeps_its_title_after_a_restart() {
 #[ignore = "needs a real libverovio; run `just provided-test`"]
 fn a_deleted_piece_and_its_history_are_gone_after_a_restart() {
     let root = temporary("delete");
+    let Some(canon_source) = personal_score("Canon_in_D.mxl") else {
+        return;
+    };
     let mut running = hogwash(&root);
     let before = running.library().count();
-    let canon = accept_offered(&library_file("Canon_in_D.mxl"), None, &mut running)
+    let canon = accept_offered(&canon_source, None, &mut running)
         .expect("supported")
         .piece;
     let canon_id = hogwash_domain::PieceId::new(&canon.id).expect("usable");

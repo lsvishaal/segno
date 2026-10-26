@@ -179,12 +179,20 @@ _require-verovio:
 # the engraving adapter, and the coach on real scores, against a real engine (everything else about them is tested without one)
 [group('verovio')]
 engraving-test: _require-verovio
+    #!/usr/bin/env bash
+    set -euo pipefail
+    scores="${HOGWASH_TEST_SCORES:-{{justfile_directory()}}/test-scores}"
+    [ -d "$scores" ] || echo "$scores not found: the personal-score Gymnopédie test is skipped."
     HOGWASH_VEROVIO_LIB="{{verovio_lib}}" HOGWASH_VEROVIO_DATA="{{verovio_data}}" \
         cargo test --package hogwash-engraving-verovio --package hogwash-analysis -- --ignored
 
-# the shipped practice pieces, against a real engine — guards that they actually load
+# the shipped practice pieces and importing, against a real engine (personal scores from test-scores/ or HOGWASH_TEST_SCORES, skipped when absent)
 [group('verovio')]
 provided-test: _require-verovio
+    #!/usr/bin/env bash
+    set -euo pipefail
+    scores="${HOGWASH_TEST_SCORES:-{{justfile_directory()}}/test-scores}"
+    [ -d "$scores" ] || echo "$scores not found: the 8 personal-score import tests are skipped."
     HOGWASH_VEROVIO_LIB="{{verovio_lib}}" HOGWASH_VEROVIO_DATA="{{verovio_data}}" \
         cargo test --package hogwash-app -- --ignored
 

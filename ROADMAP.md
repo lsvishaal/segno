@@ -26,10 +26,7 @@ What used to be here (as-built notes, the 6 Oct inventory, the feature catalogue
 
 ## v0.1 checklist (Sun 8 Nov)
 
-- [~] **M0.2** Purge the five unlicensed `.mxl` scores and narrow `resources`.
-      `resources` already lists only Verovio, and the AppImage holds no scores. Still
-      to do: the five files are still tracked in `app/src-tauri/library/`; remove
-      them, then purge history (`git filter-repo` + force-push), in its own session.
+- [x] **M0.2 part 1** Personal `.mxl` scores untracked, kept in `test-scores/`; `resources` narrowed — 26 Oct
 - [ ] **M0.3** Swap the Prelude for the OpenWTC edition (D4).
 - [ ] **M2.9 + M2.10 + M2.11** D10 absolute weak levels, the per-piece Progress
       page, and live marks while playing (see M2 below).
@@ -56,7 +53,7 @@ the on-score tint for v0.1 and ship the launch tasks instead.
 | 2 | 12–18 Oct | M1 practice loop | Loop bars 9–12 (done 22 Oct) |
 | 3 | 19–25 Oct | M1.4 results + coach, M2.1–M2.3, M2.8, library | Weak bars on the Minuet (done 25 Oct) |
 | 4 | 26 Oct – 1 Nov | Docs cleanup, CI, M2.9–M2.11, M1.3; **self-use week** | **Cut-check / deadline guard Sun 1 Nov** |
-| 5 | 2–8 Nov | M4.1–M4.3, M4.6, M4.8, M4.9, D8, M0.2 purge, M0.3 | **v0.1 preview Sun 8 Nov** |
+| 5 | 2–8 Nov | M4.1–M4.3, M4.6, M4.8, M4.9, D8, M0.3 | **v0.1 preview Sun 8 Nov** |
 | 6–10 | 9 Nov – 13 Dec | M3 polish and the v1.0 list | **v1.0 Sun 13 Dec** |
 
 **Self-use week (26 Oct – 1 Nov):** practise with Hogwash every day for at least
@@ -72,7 +69,8 @@ stats, weak bars over time (the Progress page), M4.1 release build.
 ## M0 — Housekeeping
 
 - [x] M0.1 Push to the remote — tracking fixed 25 Oct (`origin` over HTTPS, upstream set)
-- [~] M0.2 Remove unlicensed scores — see the v0.1 checklist
+- [x] M0.2 part 1 Personal `.mxl` scores untracked, kept in `test-scores/` — 26 Oct
+- [ ] M0.2 part 2 · S History purge (`git filter-repo`) + force-push, in its own session. **Blocker before the repo goes public**, not a v0.1 item
 - [ ] M0.3 Swap the Prelude for the OpenWTC edition (D4)
 - [x] M0.4 Update `CLAUDE.md`
 - [x] M0.5 `docs/` gone (re-created 25 Oct under the docs protocol: what is and what is decided, no specs)
@@ -221,3 +219,4 @@ _One dated line per idea. Reviewed between milestones; survivors move into a mil
 - 2026-10-18 · Drag to select a loop range, snapping to notes or bars
 - 2026-10-25 · Screen-switch fades (~0.4 s) may be the felt lag; consider shortening · done 26 Oct: a 120 ms cross-fade
 - 2026-10-25 · AppImage is 115 MB against a 60 MB budget (`docs/DESIGN.md`); look at what's in it · 26 Oct: WebKit 95 MB, JavaScriptCore 40 MB, ICU data 32 MB, plus AV1/JPEG-XL codecs (libaom, SvtAv1, rav1e, jxl, openraw, dav1d) pulled from this rolling distro; revisit with the CI build on Ubuntu (M4.1)
+- 2026-10-26 · Windows/macOS builds and an optional portable mode (data next to the app); macOS needs signing. After v1.0, with Next 6.

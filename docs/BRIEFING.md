@@ -166,8 +166,8 @@ tint on the idle score (W toggles). It is to be replaced by the Progress page.
   - "Practise my weak bars" (which should rotate between passages)
 
 ## v0.1 checklist (`ROADMAP.md`)
-- **M0.2:** purge the unlicensed scores. `resources` is done; the five files are
-  still tracked, and the history purge is pending.
+- **M0.2 part 1 (done):** the five personal scores are untracked, kept in the
+  ignored `test-scores/`. Part 2, the history purge, blocks going public, not v0.1.
 - **M0.3:** swap the Prelude for the OpenWTC edition.
 - **M2.9–M2.11:** D10, the Progress page, live marks.
 - **M1.3:** remember the keyboard and auto-detect it.

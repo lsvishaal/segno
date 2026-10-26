@@ -29,7 +29,9 @@ How Hogwash is tested.
 **Real pieces only.** Tests use the Minuet in G, the Prelude in C (both in
 `app/src-tauri/library/`), the fixtures in `app/src/components/__fixtures__`
 (made by `scripts/score-fixtures.py`), or pieces you supplied. Never invented
-notes.
+notes. Your own scores aren't redistributable: they live in the ignored
+`test-scores/` (or `HOGWASH_TEST_SCORES`), and the tests that read them are
+skipped, with a note, when it's absent.
 
 **The e2e kit** (`scripts/e2e/`):
 - `run.mjs` starts a virtual MIDI keyboard (`hogwash-midi` example `vkbd`) and
