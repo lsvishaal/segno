@@ -75,6 +75,13 @@ body,
   height: 100%;
 }
 
+/* One cell, so a leaving screen and an arriving one overlap during the
+   cross-fade (App.tsx) instead of stacking. */
+#root {
+  display: grid;
+  grid-template: 100% / 100%;
+}
+
 body {
   background: var(--color-paper);
   color: var(--color-ink);

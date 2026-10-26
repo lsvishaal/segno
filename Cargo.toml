@@ -41,3 +41,22 @@ indexing_slicing = "warn"
 cast_possible_truncation = "warn"
 cast_precision_loss = "warn"
 cast_sign_loss = "warn"
+
+# `just run` is a debug build. Dependencies (Tauri, serde, the XML parser) are
+# optimised once and cached, so the app runs near release speed while our own
+# crates still rebuild fast. The two engine crates that replay history and
+# parse scores get the same, since they do the heavy lifting on every open.
+[profile.dev.package."*"]
+opt-level = 2
+
+[profile.dev.package.hogwash-analysis]
+opt-level = 2
+
+[profile.dev.package.hogwash-notation]
+opt-level = 2
+
+# What ships: no symbol table, 13.9 MB -> 9.2 MB. Panic messages keep their
+# file and line. LTO was measured (7.3 MB fat, 9.3 MB thin) and left off:
+# no measurable run-time gain, and fat LTO made a release rebuild 17 s -> 83 s.
+[profile.release]
+strip = true

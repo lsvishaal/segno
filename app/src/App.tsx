@@ -18,7 +18,10 @@ import { PracticeScreen } from "./screens/Practice";
 import { UnavailableScreen } from "./screens/Unavailable";
 
 /**
- * A cross-fade between screens, never a hard cut.
+ * A cross-fade between screens, never a hard cut: the old screen fades out
+ * while the new one fades in, in the same grid cell of `#root`, so a switch
+ * costs 120 ms rather than an exit followed by an entrance. The leaving screen
+ * stops taking the pointer at once, so a click lands on the new one.
  *
  * The `key` that makes `AnimatePresence` treat one screen as leaving and the
  * next as entering belongs on this component itself at each call site, not
@@ -30,9 +33,9 @@ function Transitioned({ children }: { readonly children: ReactNode }) {
     <motion.div
       initial={{ opacity: 0, scale: 0.98 }}
       animate={{ opacity: 1, scale: 1 }}
-      exit={{ opacity: 0, scale: 0.98 }}
-      transition={{ duration: 0.2, ease: "easeOut" }}
-      className="h-full"
+      exit={{ opacity: 0, scale: 0.98, pointerEvents: "none" }}
+      transition={{ duration: 0.12, ease: "easeOut" }}
+      className="h-full [grid-area:1/1]"
     >
       {children}
     </motion.div>
@@ -212,13 +215,13 @@ export function App() {
   // component checking it independently.
   return (
     <MotionConfig reducedMotion="user">
-      <AnimatePresence mode="wait">
+      <AnimatePresence>
         {(() => {
           switch (screen.kind) {
             case "starting":
               // Deliberately blank. Startup is milliseconds, and a spinner
               // that flashes for one frame is worse than nothing.
-              return <main key="starting" className="min-h-full" />;
+              return <main key="starting" className="min-h-full [grid-area:1/1]" />;
 
             case "unavailable":
               return (

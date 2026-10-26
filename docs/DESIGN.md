@@ -172,7 +172,8 @@ Only the scale in `index.css` is allowed. No one-off sizes.
 
 ### 16.5 Motion
 
-- Durations: 120 ms (hover, press), 160 ms (panels), 200 ms (screens).
+- Durations: 120 ms (hover, press, screens), 160 ms (panels). Screens cross-fade: the old
+  one fades out while the new one fades in.
 - One easing: ease-out. No spring bounce, no stagger longer than 50 ms.
 - Score never animates position on reflow (it's hidden until fitted, as now).
 - Reduced motion: all transitions become fades or instant.
@@ -426,5 +427,18 @@ Vite dev server.
 | `library` command, 10 pieces, 6 sessions | 3 ms | 46 ms | 46 ms | — |
 | 50 Minuet sessions replayed | < 100 ms (test) | ~104 ms | — | < 100 ms ✓ (release) |
 | AppImage size | 115 MB | — | — | **< 60 MB ✗ over budget** |
+
+26 Oct, after the build settings (`Cargo.toml` profiles) and the 120 ms cross-fade,
+measured in-process (median of 5, the same data copy):
+
+| What | Debug before | Debug after | Release |
+|---|---|---|---|
+| Engrave the Prelude | 155 ms | 97 ms | 91 ms |
+| Startup (engrave 6 pieces, read history) | 991 ms | 709 ms | 660 ms |
+| Library summaries, 10 pieces | 2.8 ms | 1.4 ms | 0.5 ms |
+| Screen switch fades | 400 ms | 120 ms | 120 ms |
+
+The `library` row above (46 ms in debug) is mostly the trip across the webview
+boundary, not the work. Release binary: 9.2 MB stripped (was 13.9 MB).
 
 Not measured yet: idle CPU.

@@ -35,4 +35,5 @@ Everything so far, before the first preview (v0.1).
 - **History:**
   - every note saved with its timing and velocity
   - weak bars over time tinted on the score when not playing (W toggles)
+- **Speed:** switching screens is a 120 ms cross-fade instead of about 0.4 s of fades.
 - **Settings:** MIDI input and output, note names, zoom, MusicXML export, About.

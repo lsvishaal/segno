@@ -218,5 +218,5 @@ _One dated line per idea. Reviewed between milestones; survivors move into a mil
 - 2026-10-18 · Highlight a held note for its real written length
 - 2026-10-18 · Layout modes (page / continuous / single line)
 - 2026-10-18 · Drag to select a loop range, snapping to notes or bars
-- 2026-10-25 · Screen-switch fades (~0.4 s) may be the felt lag; consider shortening
-- 2026-10-25 · AppImage is 115 MB against a 60 MB budget (`docs/DESIGN.md`); look at what's in it
+- 2026-10-25 · Screen-switch fades (~0.4 s) may be the felt lag; consider shortening · done 26 Oct: a 120 ms cross-fade
+- 2026-10-25 · AppImage is 115 MB against a 60 MB budget (`docs/DESIGN.md`); look at what's in it · 26 Oct: WebKit 95 MB, JavaScriptCore 40 MB, ICU data 32 MB, plus AV1/JPEG-XL codecs (libaom, SvtAv1, rav1e, jxl, openraw, dav1d) pulled from this rolling distro; revisit with the CI build on Ubuntu (M4.1)
