@@ -56,6 +56,10 @@ Commands:
    - the fixtures in `app/src/components/__fixtures__`
    - pieces the owner supplied (`test-scores/`, ignored; tests skip when absent)
    - Never invented notes.
+   - **Each test at the cheapest tier that fails when the behaviour breaks**
+     (Rust unit → real engine → ALSA → UI → e2e; tiers in `docs/TESTING.md`).
+     e2e only for real MIDI, engraving and layout, files the running app
+     writes, and timing.
 6. **Never write to the real data folder** (`~/.local/share/com.hogwash.practice`)
    unless the owner explicitly asks. Use `target/e2e/data` or copies (e.g.
    `target/m21-data`).
