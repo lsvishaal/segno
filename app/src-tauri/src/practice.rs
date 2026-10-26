@@ -64,7 +64,7 @@ type Sink = Box<dyn Fn(&PracticeEvent) + Send>;
 
 /// How often the loop drains the keyboard while an attempt is running.
 ///
-/// Comfortably inside Amendment A's proposed 100 ms budget.
+/// Comfortably inside a 100 ms budget.
 const CONNECTED_POLL: Duration = Duration::from_millis(25);
 
 /// How long the loop waits when nothing is running — no keyboard to drain.

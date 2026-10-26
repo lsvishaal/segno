@@ -2,8 +2,8 @@
 //!
 //! Verovio exposes 60 plain `extern "C"` functions over an opaque handle
 //! (`tools/c_wrapper.h`). No C++ ABI crosses the boundary, so no `bindgen`
-//! and no `cxx` — the integration really is a declaration list, which `S0`
-//! Q1 measured. Ten of the sixty are used.
+//! and no `cxx` — the integration really is a declaration list, as the
+//! Verovio spike measured. Ten of the sixty are used.
 //!
 //! # Why the library is opened at run time
 //!
@@ -111,7 +111,7 @@ impl Toolkit {
     /// Opens `library` and creates a toolkit that finds its fonts in
     /// `resources`.
     ///
-    /// `resources` is Verovio's `data/` directory. `S0` Q1 found it is not
+    /// `resources` is Verovio's `data/` directory. It is not
     /// compiled in: without it the engine loads but draws nothing legible.
     pub(crate) fn open(library: &Path, resources: &Path) -> Result<Self, ToolkitError> {
         // SAFETY (fact 1): opening a shared library runs its initialisers,
@@ -190,11 +190,10 @@ impl Toolkit {
     /// Loads uncompressed `source` — `MusicXML` or MEI.
     ///
     /// Seeds the identifier generator **first**, and that ordering is not
-    /// stylistic. `S0` Q3 measured that unseeded identifiers differ between
-    /// two loads in one process, and that `resetXmlIdSeed` after `loadData`
-    /// is too late because identifiers are assigned during parsing. The requirement
-    /// and the requirement requires identical results across restarts, and the design
-    /// makes that release-blocking, so an unseeded load would fail the
+    /// stylistic. Measured: unseeded identifiers differ between two loads in
+    /// one process, and `resetXmlIdSeed` after `loadData` is too late because
+    /// identifiers are assigned during parsing. The requirement is identical
+    /// results across restarts, and the design makes that release-blocking, so an unseeded load would fail the
     /// release criteria on the first restart.
     pub(crate) fn load(&mut self, source: &str) -> Result<(), ToolkitError> {
         self.seed();
@@ -258,7 +257,7 @@ impl Toolkit {
     /// Fixes the identifier generator before parsing. See [`Self::load`].
     fn seed(&mut self) {
         // SAFETY (facts 1 and 2): resolved signature, own handle.
-        #[expect(unsafe_code, reason = "seeding before parsing; see S0 Q3")]
+        #[expect(unsafe_code, reason = "seeds before parsing assigns identifiers")]
         unsafe {
             (self.functions.reset_xml_id_seed)(self.handle.0, ID_SEED);
         }
@@ -266,7 +265,7 @@ impl Toolkit {
 
     /// The loaded music as MEI, which is where the written spellings are.
     ///
-    /// `S0` Q2b found that `getElementAttr` does **not** report accidentals,
+    /// `getElementAttr` does **not** report accidentals,
     /// because MEI models an accidental as a child element rather than an
     /// attribute of the note. So the spelling a performer reads is only
     /// available from the document itself, and this is how it is obtained.
@@ -276,7 +275,7 @@ impl Toolkit {
 
     /// Builds the MIDI timemap.
     ///
-    /// Called for its side effect. `S0` Q2a found that without it every MIDI
+    /// Called for its side effect. Without it every MIDI
     /// query returns `{}` while logging a warning — a failure quiet enough to
     /// look like "this note has no pitch".
     pub(crate) fn build_timemap(&mut self) -> Result<(), ToolkitError> {
@@ -386,7 +385,7 @@ impl Drop for Toolkit {
 
 /// The seed handed to Verovio before every load.
 ///
-/// Any fixed value would do; what matters is that it is fixed. `S0` Q3.
+/// Any fixed value would do; what matters is that it is fixed.
 const ID_SEED: c_int = 1;
 
 /// Resolves one symbol, turning a missing one into a stated failure.

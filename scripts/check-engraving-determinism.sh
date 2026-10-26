@@ -3,7 +3,7 @@
 # The engraving half of the determinism criterion, proven across processes.
 #
 # scripts/check-determinism.sh covers the pure chain — score in, feedback out.
-# This covers the part that is not pure, and that S0 measured to be random by
+# This covers the part that is not pure, and that was measured to be random by
 # default: Verovio generates a fresh set of element identifiers on every
 # render, and they differ even between two loads inside one process. Seeding
 # the generator before loading makes them reproducible, and the adapter does
@@ -49,7 +49,7 @@ if ! cmp -s "$workdir/first" "$workdir/second"; then
     echo
     diff "$workdir/first" "$workdir/second" || true
     echo
-    echo "S0 Q3: verovio's identifiers are random unless resetXmlIdSeed is called"
+    echo "verovio's identifiers are random unless resetXmlIdSeed is called"
     echo "BEFORE loadData. Check Toolkit::seed still runs on every load."
     exit 1
 fi

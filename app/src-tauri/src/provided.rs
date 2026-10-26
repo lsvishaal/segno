@@ -1,8 +1,8 @@
 //! The practice material that ships with the application.
 //!
-//! Compiled in rather than read from disk. The requirement requires material to be
-//! available "without any import having been performed", and the requirement requires
-//! the Library never to be empty — both of which a file on disk cannot
+//! Compiled in rather than read from disk. The requirements are material
+//! available "without any import having been performed", and a Library that
+//! is never empty — both of which a file on disk cannot
 //! guarantee, because a file on disk can be missing.
 //!
 //! `Library::opened_with` takes its first Piece **by value**, so emptiness is

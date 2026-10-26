@@ -67,7 +67,7 @@ jobs:
         with:
           tool: just
 
-      # Pinned by commit, not by tag: S0 found the repository's tag and the
+      # Pinned by commit, not by tag: the repository's tag and the
       # toolkit's own reported version disagree, and the toolkit is right.
       - name: Clone Verovio
         run: |

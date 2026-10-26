@@ -4,11 +4,10 @@
 //! ships. `scripts/check-engraving-determinism.sh` runs it **twice in
 //! separate processes** and diffs the bytes.
 //!
-//! That separation is the whole point. `S0` Q3 measured that Verovio's
+//! That separation is the whole point. The Verovio spike measured that its
 //! element identifiers are random per render, and that seeding the generator
-//! before loading makes them reproducible — including across restarts. The requirement
-//! and the requirement requires exactly that, and the design makes it
-//! release-blocking. A comparison made inside one process cannot show it.
+//! before loading makes them reproducible — including across restarts. The
+//! requirement is exactly that, and the design makes it release-blocking. A comparison made inside one process cannot show it.
 
 use hogwash_engraving::Engraver;
 use hogwash_engraving_verovio::VerovioEngraver;

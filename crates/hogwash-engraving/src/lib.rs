@@ -24,7 +24,7 @@
 //!
 //! # Why identifiers do not leave the adapter
 //!
-//! The Verovio spike (`S0` Q3) measured that engraving identifiers are
+//! The Verovio spike measured that engraving identifiers are
 //! regenerated on every render, differ between two renders in one process,
 //! and may be renumbered by an engine upgrade. An [`ElementId`] is therefore
 //! **per-render ephemera**: valid for the [`EngravedScore`] that produced it

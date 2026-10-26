@@ -50,7 +50,7 @@ gates, tracked alongside the check of the provided library before each release.
 
 Pinned by commit rather than by version string, because the two disagree:
 the repository tag reads `version-2.7.1-…` while the toolkit itself reports
-`6.3.0-dev-fb5c4db` (`S0`). The toolkit's own answer is the true one.
+`6.3.0-dev-fb5c4db`. The toolkit's own answer is the true one.
 
 ```
 commit fb5c4db7e

@@ -40,7 +40,7 @@ impl MeasureNumber {
 /// exist; what was missing was a single value carrying them together.
 ///
 /// It is also the project's **only durable anchor into a score**. The Verovio
-/// spike (`S0` Q3) found that engraving identifiers are regenerated on every
+/// spike found that engraving identifiers are regenerated on every
 /// render and may be renumbered by an upgrade, so nothing outside the
 /// engraving adapter may hold one. A bar number and a position survive both.
 ///
@@ -122,7 +122,7 @@ mod tests {
     }
 
     // The order is reading order, and it must be, because Location is the key
-    // the engraving adapter maps to a drawn glyph (S0) and the anchor a
+    // the engraving adapter maps to a drawn glyph and the anchor a
     // Practice Record stores. A set of Locations iterated in any other order
     // would report bar 10 before bar 2.
     #[test]

@@ -426,7 +426,7 @@ mod tests {
     }
 
     // MEI writes an accidental as a child <accid> element, not an attribute
-    // of the note (S0 Q2b). A reader that only looked at attributes would
+    // of the note. A reader that only looked at attributes would
     // silently turn every F sharp into an F.
     #[test]
     fn a_written_accidental_reaches_the_spelling() {

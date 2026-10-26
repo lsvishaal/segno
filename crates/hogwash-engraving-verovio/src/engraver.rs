@@ -182,7 +182,7 @@ impl Engraver for VerovioEngraver {
             self.toolkit.load(text).map_err(refused)?;
         }
 
-        // Before any of the reading below. `S0` Q2a found that without it
+        // Before any of the reading below. Without it,
         // every timing query returns an empty object while merely *logging* a
         // warning — which would look like a score where nothing sounds, and
         // would produce a Score with no positions at all.

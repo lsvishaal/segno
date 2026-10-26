@@ -96,7 +96,13 @@ Commands:
    `docs/BRIEFING.md` from the other docs (≤ 250 lines, no claim they don't make),
    and say it's ready to paste.
 7. **Weekly, or on "docs check":** look for contradictions between the docs and the
-   code, and report them.
+   code, and report them. References to documents that no longer exist must return
+   nothing:
+   ```sh
+   git grep -nE '(00[34] §|MVP §|ADR-[0-9]|\bN?FR-[0-9]|\bC-[0-9]{3}\b|\bS0\b|Amendment [A-Z])' \
+     -- ':!docs/archive' ':!*.svg' ':!CLAUDE.md'
+   ```
+   (SVG path data such as `C-432` would match, hence `:!*.svg`.)
 8. **An idea mid-task:** one dated line in the ROADMAP Parking lot. Nothing else.
 
 ## Product principles (detail in `docs/PRODUCT.md`)

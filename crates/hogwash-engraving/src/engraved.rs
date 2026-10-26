@@ -8,7 +8,7 @@ use hogwash_notation::Score;
 
 /// A drawn element's identifier, as the engraving engine names it.
 ///
-/// **Ephemeral.** `S0` Q3 measured that Verovio regenerates these on every
+/// **Ephemeral.** Measured: Verovio regenerates these on every
 /// render — they differ between two renders in the same process, and an
 /// engine upgrade may renumber them all. One is meaningful only for the
 /// [`EngravedScore`] it came from.

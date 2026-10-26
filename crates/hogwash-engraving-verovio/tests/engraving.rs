@@ -134,7 +134,7 @@ fn every_position_points_at_something_that_was_drawn() {
     }
 }
 
-// S0 Q3 is the reason `resetXmlIdSeed` is called before every load: unseeded
+// This is why `resetXmlIdSeed` is called before every load: unseeded
 // identifiers differ between two loads *in one process*. So loading twice and
 // comparing is enough to catch a missing seed here; whether they also survive
 // a restart is checked across processes by `just engraving-determinism`,
