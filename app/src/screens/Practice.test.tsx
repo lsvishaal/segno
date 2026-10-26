@@ -2,7 +2,7 @@ import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testi
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { AttemptSummary, OpenedPiece, PracticeEvent, ReviewBar, ReviewCard } from "../bridge";
-import type { CursorState, ScoreReview } from "../components/Score";
+import type { CursorState, Dot, ScoreHandle, ScoreReview } from "../components/Score";
 import { PracticeScreen } from "./Practice";
 
 // The score itself is drawn from Verovio's SVG and has its own tests; here
@@ -16,11 +16,21 @@ interface ScoreProps {
   readonly weak?: ReadonlyMap<number, number> | null;
   readonly showNoteNames?: boolean;
   readonly cursor: CursorState;
+  readonly dot: Dot | null;
+  readonly ref?: { current: ScoreHandle | null };
 }
 const drawn = vi.hoisted(() => ({ last: null as ScoreProps | null }));
+/** What the screen asks of the drawn score: the live marks. */
+const score = vi.hoisted(() => ({
+  cutOut: vi.fn(() => null),
+  showBar: vi.fn(),
+  markPlayed: vi.fn(),
+  clearMarks: vi.fn(),
+}));
 vi.mock("../components/Score", () => ({
   Score: (props: ScoreProps) => {
     drawn.last = props;
+    if (props.ref) props.ref.current = score;
     return null;
   },
 }));
@@ -586,7 +596,8 @@ describe("the results after a run", () => {
     // The results fade out before they go.
     await waitFor(() => expect(screen.queryByRole("region", { name: "Results" })).not.toBeInTheDocument());
     expect(screen.getByRole("status")).toHaveTextContent("Your last run is marked on the score");
-    expect(drawn.last?.review?.marks).toEqual([{ position: 36, correct: true, wrong: 2 }]);
+    // The run's own marks are still drawn: cleared only on opening the piece and at Start.
+    expect(score.clearMarks).toHaveBeenCalledTimes(2);
 
     await press("Escape");
     expect(screen.getByRole("region", { name: "Results" })).toBeInTheDocument();
@@ -678,5 +689,58 @@ describe("weak bars over time", () => {
     bridge.weakBars.mockResolvedValue({ runs: 0, bars: [] });
     await renderScreen();
     expect(screen.queryByText(/weak bars/i)).toBeNull();
+  });
+});
+
+describe("live marks", () => {
+  const played = (correct: boolean): PracticeEvent => ({ kind: "played", position: 36, pitch: 67, correct });
+
+  it("each note played is marked on the score and stays; no flash", async () => {
+    await renderScreen();
+    await startPracticing();
+    await act(async () => {
+      hear(played(true));
+      hear(played(false));
+    });
+
+    expect(score.markPlayed).toHaveBeenNthCalledWith(1, { kind: "correct", position: 36, pitch: 67 });
+    expect(score.markPlayed).toHaveBeenNthCalledWith(2, { kind: "wrong", position: 36, pitch: 67 });
+    expect(drawn.last?.dot).toBeNull();
+  });
+
+  it("clear on a new attempt, a loop pass and a click on a bar", async () => {
+    await renderScreen();
+    await startPracticing();
+    expect(score.clearMarks).toHaveBeenCalled();
+    score.clearMarks.mockClear();
+
+    await act(async () => {
+      fireEvent.keyDown(window, { key: "r" });
+    });
+    expect(score.clearMarks).toHaveBeenCalledTimes(1);
+
+    await act(async () => {
+      hear({ kind: "looped", position: 36, cleanInARow: 0 });
+    });
+    expect(score.clearMarks).toHaveBeenCalledTimes(2);
+
+    await act(async () => {
+      drawn.last?.onBarClick?.(9, { shift: false });
+    });
+    expect(score.clearMarks).toHaveBeenCalledTimes(3);
+  });
+
+  it("turned off in Settings: the brief flash instead, remembered", async () => {
+    const stored = new Map<string, string>([["hogwash.marks", "off"]]);
+    vi.stubGlobal("localStorage", { getItem: (key: string) => stored.get(key) ?? null, setItem: (key: string, value: string) => stored.set(key, value) });
+    await renderScreen();
+    await startPracticing();
+    await act(async () => {
+      hear(played(true));
+    });
+
+    expect(score.markPlayed).not.toHaveBeenCalled();
+    expect(drawn.last?.dot).toEqual({ kind: "correct", position: 36, pitch: 67 });
+    expect(stored.get("hogwash.marks")).toBe("off");
   });
 });

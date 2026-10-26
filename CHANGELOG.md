@@ -35,6 +35,8 @@ Everything so far, before the first preview (v0.1).
 - **History:**
   - every note saved with its timing and velocity
   - weak bars over time tinted on the score when not playing (W toggles)
+- **Marks while playing:** each right key's note turns green and stays; a wrong key stays as a red note with a ring (at most 3 in one place). They clear on a new attempt and on each pass of a loop, and stay on the score after Results until the next Start. Settings › Marks while playing turns them back into a brief flash. The ✕ counts the score used to show after a run are gone.
+- **Speed:** a key reaches the screen in about 15 ms (it was about 27): the keyboard is read every 5 ms while playing, not every 25 ms.
 - **Coach cards:** every Practise button loops from one bar before the trouble; "You keep stopping at bar N" now loops bars N−1–N instead of starting at bar N.
 - **Weak bars:** each bar is judged on one fixed scale, the same for every piece, from its own last 3 sessions, so a piece played well has no weakest bars. A bar needs 2 passes before it's judged.
 - **Speed:** switching screens is a 120 ms cross-fade instead of about 0.4 s of fades.

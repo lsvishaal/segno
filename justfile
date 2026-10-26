@@ -46,6 +46,8 @@ e2e *scenarios: release
     (cd target/e2e/app && ../../release/bundle/appimage/Hogwash_*.AppImage --appimage-extract >/dev/null)
     HOGWASH_VEROVIO_LIB="{{verovio_lib}}" HOGWASH_VEROVIO_DATA="{{verovio_data}}" \
         cargo run --quiet --package hogwash-cli -- expected app/src-tauri/library/minuet-in-g.musicxml > target/e2e/minuet.expected.json
+    HOGWASH_VEROVIO_LIB="{{verovio_lib}}" HOGWASH_VEROVIO_DATA="{{verovio_data}}" \
+        cargo run --quiet --package hogwash-cli -- expected app/src-tauri/library/prelude-in-c.musicxml > target/e2e/prelude.expected.json
     cargo build --quiet --package hogwash-midi --example vkbd
     node scripts/e2e/run.mjs {{scenarios}}
 

@@ -2,7 +2,7 @@ import { useCallback, useEffect, useImperativeHandle, useMemo, useRef, useState 
 import type { Ref } from "react";
 import { createPortal } from "react-dom";
 
-import type { Bar, DrawnNote, Mark, ReviewMark } from "../bridge";
+import type { Bar, DrawnNote, Mark } from "../bridge";
 import { SCORE_MAX_WIDTH } from "../screens/zoom";
 import { NoteNames } from "./NoteNames";
 import { cutOut } from "./scoreCutout";
@@ -18,11 +18,11 @@ export interface CursorState {
   readonly position: number;
 }
 
-/** One flash of feedback on a played note. */
+/** One played note's feedback: a flash, or a mark that stays. */
 export interface Dot {
   readonly kind: "correct" | "wrong";
   readonly position: number;
-  /** The chromatic pitch actually played — only used for the wrong case. */
+  /** The key actually played: which of a chord's notes turns green, or where a wrong one is drawn. */
   readonly pitch: number;
 }
 
@@ -40,6 +40,15 @@ export interface ScoreHandle {
   readonly cutOut: (request: CutOutRequest) => SVGSVGElement | null;
   /** Scrolls bar `measure` into view. */
   readonly showBar: (measure: number) => void;
+  /**
+   * Marks a played note until `clearMarks`: the written note of that pitch
+   * turns green, or a wrong key is drawn in red with a ring (at most
+   * `WRONG_PER_STEP` at one place). Drawn straight into the score, so
+   * nothing re-renders; drawn again if the score is re-engraved.
+   */
+  readonly markPlayed: (dot: Dot) => void;
+  /** Takes every mark away: a new attempt, or a new pass of a loop. */
+  readonly clearMarks: () => void;
 }
 
 /**
@@ -70,9 +79,8 @@ export interface ScoreHandle {
  * spelling, so there is nothing to recolor. It is drawn where it would be
  * written instead (`staffGeometry.ts`).
  */
-/** What to leave drawn once an attempt has ended. */
+/** What to leave drawn once an attempt has ended, besides its marks. */
 export interface ScoreReview {
-  readonly marks: readonly ReviewMark[];
   /** Bars after where the attempt stopped, faded. */
   readonly notReached: readonly number[];
 }
@@ -109,7 +117,7 @@ export function Score({
   readonly onBarClick?: ((measure: number, how: { readonly shift: boolean }) => void) | undefined;
   /** The bars being looped, drawn as a band behind them. */
   readonly loop?: { readonly first: number; readonly last: number } | null;
-  /** After an attempt: right notes left green, wrong ones crossed, bars not reached faded. */
+  /** After an attempt: the bars not reached, faded. */
   readonly review?: ScoreReview | null;
   /** Bar number → how hard it has been over time, 1–4, tinted behind it. */
   readonly weak?: ReadonlyMap<number, number> | null;
@@ -129,8 +137,9 @@ export function Score({
   // Per page: its geometry, a layer behind the ink (the cursor), one above
   // it (the wrong-note mark), and the id of the page's black notehead glyph.
   const [surfaces, setSurfaces] = useState<readonly Surface[]>([]);
-  const [wrong, setWrong] = useState<{ id: number; mark: WrongNoteMark; surface: Surface } | null>(null);
-  const wrongCount = useRef(0);
+  // This attempt's marks: every note played, and what was drawn for them.
+  const played = useRef<Dot[]>([]);
+  const drawn = useRef<{ green: SVGElement[]; wrong: SVGGElement[] }>({ green: [], wrong: [] });
   const [noteLabels, setNoteLabels] = useState<readonly { elementId: string; step: string; box: Box }[]>([]);
   // Bumped by the `ResizeObserver` below — its value is never read, only its
   // identity change matters, to force every measurement effect to re-run.
@@ -141,7 +150,6 @@ export function Score({
   const [loopBoxes, setLoopBoxes] = useState<readonly Box[]>([]);
   const [fadedBoxes, setFadedBoxes] = useState<readonly Box[]>([]);
   const [weakBoxes, setWeakBoxes] = useState<readonly { readonly box: Box; readonly level: number }[]>([]);
-  const [crosses, setCrosses] = useState<readonly { readonly box: Box; readonly wrong: number }[]>([]);
 
   /** Bar element id → its number. */
   const barOf = useMemo(() => new Map(bars.map((bar) => [bar.elementId, bar.measure])), [bars]);
@@ -208,6 +216,39 @@ export function Score({
     return index;
   }, [marks]);
 
+  /** Draws one played note's mark; the caller keeps it in `played`. */
+  const drawMark = useCallback(
+    (dot: Dot) => {
+      const root = wrapper.current;
+      if (!root) return;
+      const notes = notesAt.get(dot.position) ?? [];
+      if (dot.kind === "correct") {
+        for (const element of noteElements(root, notes.filter((note) => note.pitch === dot.pitch))) {
+          element.style.color = "var(--hw-correct)";
+          drawn.current.green.push(element);
+        }
+        return;
+      }
+      const here = played.current.filter((other) => other.kind === "wrong" && other.position === dot.position);
+      if (here.indexOf(dot) >= WRONG_PER_STEP) return;
+      for (const surface of surfaces) {
+        const mark = wrongNoteMark(surface.geometry, notes, marks, dot.pitch);
+        if (!mark) continue;
+        const element = drawWrongNote(mark, surface.notehead, true);
+        surface.over.append(element);
+        drawn.current.wrong.push(element);
+        return;
+      }
+    },
+    [notesAt, surfaces, marks],
+  );
+
+  const eraseMarks = useCallback(() => {
+    for (const element of drawn.current.green) element.style.color = "";
+    for (const element of drawn.current.wrong) element.remove();
+    drawn.current = { green: [], wrong: [] };
+  }, []);
+
   useImperativeHandle(
     ref,
     () => ({
@@ -216,9 +257,24 @@ export function Score({
         wrapper.current
           ?.querySelector(`[data-bar="${measure}"]`)
           ?.scrollIntoView({ behavior: "smooth", block: "center" }),
+      markPlayed: (dot) => {
+        played.current.push(dot);
+        drawMark(dot);
+      },
+      clearMarks: () => {
+        played.current = [];
+        eraseMarks();
+      },
     }),
-    [notesAt],
+    [notesAt, drawMark, eraseMarks],
   );
+
+  // A re-engraved score (zoom, resize) is new ink: this attempt's marks are
+  // drawn on it again.
+  useEffect(() => {
+    eraseMarks();
+    for (const dot of played.current) drawMark(dot);
+  }, [drawMark, eraseMarks]);
 
   // Every stored box is a snapshot of `getBoundingClientRect()`, which goes
   // stale the instant the container's actual on-screen size changes — a
@@ -301,9 +357,10 @@ export function Score({
     .map((surface) => ({ layer: surface.under, line: cursorLine(surface.geometry, cursorIds) }))
     .find((candidate) => candidate.line);
 
-  // A correct note recolors the real notehead. A wrong note is drawn where
-  // it would be written, and retired on its own timer; the next one
-  // replaces it, so there is never more than one.
+  // The flash, when marks don't stay: a correct note recolors the real
+  // notehead for a moment. A wrong note is drawn where it would be written,
+  // and retired on its own timer; the next one replaces it, so there is
+  // never more than one.
   useEffect(() => {
     if (!dot) return;
 
@@ -313,10 +370,7 @@ export function Score({
     const notes = notesAt.get(dot.position);
 
     if (dot.kind === "correct") {
-      const elements = (notes ?? []).flatMap((note) => {
-        const element = root.querySelector(`#${CSS.escape(note.elementId)}`);
-        return element instanceof SVGElement ? [element] : [];
-      });
+      const elements = noteElements(root, notes ?? []);
 
       for (const element of elements) {
         element.style.color = "var(--hw-correct)";
@@ -342,10 +396,13 @@ export function Score({
       const mark = wrongNoteMark(surface.geometry, notes ?? [], marks, dot.pitch);
       if (!mark) continue;
 
-      wrongCount.current += 1;
-      setWrong({ id: wrongCount.current, mark, surface });
-      const timeout = window.setTimeout(() => setWrong(null), WRONG_NOTE_MS);
-      return () => window.clearTimeout(timeout);
+      const element = drawWrongNote(mark, surface.notehead, false);
+      surface.over.append(element);
+      const timeout = window.setTimeout(() => element.remove(), WRONG_NOTE_MS);
+      return () => {
+        window.clearTimeout(timeout);
+        element.remove();
+      };
     }
     // `dot` is a fresh object per event even when its fields repeat, so a
     // second wrong note in a row still restarts the fade.
@@ -428,14 +485,12 @@ export function Score({
     );
   }, [weak, barOf, pages, layoutTick]);
 
-  // The review: right notes stay green, a red ✕ above each note waited on
-  // through wrong ones (a repeated bar's two passes add up), and the bars
-  // not reached faded behind a wash of paper.
+  // After an attempt, the bars it didn't reach are faded behind a wash of
+  // paper; its marks stay as they were drawn.
   useEffect(() => {
     const root = wrapper.current;
     if (!review || !root) {
       setFadedBoxes([]);
-      setCrosses([]);
       return;
     }
 
@@ -448,34 +503,7 @@ export function Score({
         return box ? [box] : [];
       }),
     );
-
-    const green: SVGElement[] = [];
-    const wrongAt = new Map<string, number>();
-    for (const mark of review.marks) {
-      const notes = notesAt.get(mark.position) ?? [];
-      if (mark.correct) {
-        for (const note of notes) {
-          const element = root.querySelector(`#${CSS.escape(note.elementId)}`);
-          if (element instanceof SVGElement) green.push(element);
-        }
-      }
-      const first = notes[0];
-      if (mark.wrong > 0 && first) {
-        wrongAt.set(first.elementId, (wrongAt.get(first.elementId) ?? 0) + mark.wrong);
-      }
-    }
-    for (const element of green) element.style.color = "var(--hw-correct)";
-    setCrosses(
-      [...wrongAt].flatMap(([elementId, wrong]) => {
-        const box = boxOf(root, elementId);
-        return box ? [{ box, wrong }] : [];
-      }),
-    );
-
-    return () => {
-      for (const element of green) element.style.color = "";
-    };
-  }, [review, barOf, notesAt, pages, layoutTick]);
+  }, [review, barOf, pages, layoutTick]);
 
   // Keep the cursor's line of music in view: scrolled to when the cursor
   // reaches a new line, or the music reflows, and not on every note. The
@@ -534,17 +562,6 @@ export function Score({
           />
         ))}
 
-        {crosses.map(({ box, wrong }) => (
-          <span
-            key={`cross-${box.left},${box.top}`}
-            data-wrong-mark
-            className="absolute -translate-x-1/2 text-xs leading-none font-semibold text-wrong"
-            style={{ left: box.left + box.width / 2, top: box.top - 16 }}
-          >
-            ✕{wrong > 1 ? <sub className="ml-px text-[9px]">{wrong}</sub> : null}
-          </span>
-        ))}
-
         {hovered && (
           <div
             data-bar-hover
@@ -583,11 +600,6 @@ export function Score({
             cursorOn.layer,
           )}
 
-        {wrong &&
-          createPortal(
-            <WrongNote key={wrong.id} mark={wrong.mark} notehead={wrong.surface.notehead} />,
-            wrong.surface.over,
-          )}
       </div>
     </div>
   );
@@ -610,8 +622,10 @@ export function boxOf(root: HTMLElement, elementId: string): Box | null {
 }
 
 const SVG = "http://www.w3.org/2000/svg";
-/** How long a wrong-note mark stays; keep in step with `hw-wrong-fade`. */
+/** How long a flashed wrong note stays; keep in step with `hw-wrong-fade`. */
 const WRONG_NOTE_MS = 1000;
+/** Wrong keys marked at one place in the music: hunting for a note is one problem. */
+const WRONG_PER_STEP = 3;
 const ACCIDENTALS = { sharp: "♯", flat: "♭", natural: "♮" } as const;
 
 interface Surface {
@@ -621,51 +635,79 @@ interface Surface {
   readonly geometry: PageGeometry;
 }
 
-/** A wrong note, drawn as it would be written: notehead, ledger lines, accidental, name. */
-function WrongNote({ mark, notehead }: { readonly mark: WrongNoteMark; readonly notehead: string | null }) {
+/** The drawn notes among `notes`, as elements whose colour can be set. */
+function noteElements(root: HTMLElement, notes: readonly DrawnNote[]): SVGElement[] {
+  return notes.flatMap((note) => {
+    const element = root.querySelector(`#${CSS.escape(note.elementId)}`);
+    return element instanceof SVGElement ? [element] : [];
+  });
+}
+
+/**
+ * A wrong note, drawn as it would be written: notehead, ledger lines,
+ * accidental, name. A `live` one stays, ringed; otherwise it fades.
+ */
+function drawWrongNote(mark: WrongNoteMark, notehead: string | null, live: boolean): SVGGElement {
+  const element = <K extends keyof SVGElementTagNameMap>(name: K, attributes: Record<string, string | number>) => {
+    const created = document.createElementNS(SVG, name);
+    for (const [key, value] of Object.entries(attributes)) created.setAttribute(key, String(value));
+    return created;
+  };
   const left = mark.x - mark.width / 2;
   // SMuFL glyphs are 1000 units to four staff spaces.
   const glyphScale = (mark.spacing * 4) / 1000;
 
-  return (
-    <g className="hw-wrong">
-      {mark.ledgers.map((y) => (
-        <line
-          key={y}
-          className="hw-wrong-ledger"
-          x1={mark.x - mark.ledgerWidth / 2}
-          x2={mark.x + mark.ledgerWidth / 2}
-          y1={y}
-          y2={y}
-          strokeWidth={mark.spacing * 0.12}
-        />
-      ))}
-      {notehead ? (
-        <use href={`#${notehead}`} transform={`translate(${left}, ${mark.y}) scale(${glyphScale})`} />
-      ) : (
-        <ellipse cx={mark.x} cy={mark.y} rx={mark.width / 2} ry={mark.spacing / 2} />
-      )}
-      {mark.accidental && (
-        <text
-          x={left - mark.spacing * 0.25}
-          y={mark.y}
-          fontSize={mark.spacing * 2.2}
-          textAnchor="end"
-          dominantBaseline="central"
-        >
-          {ACCIDENTALS[mark.accidental]}
-        </text>
-      )}
-      <text
-        className="hw-wrong-label"
-        x={mark.x + mark.width / 2 + mark.spacing * 0.4}
-        y={mark.y - mark.spacing * 0.6}
-        fontSize={mark.spacing * 1.3}
-      >
-        {mark.label}
-      </text>
-    </g>
+  const group = element("g", { class: live ? "hw-wrong hw-wrong-live" : "hw-wrong" });
+  if (live) group.setAttribute("data-live-wrong", "");
+  for (const y of mark.ledgers) {
+    group.append(
+      element("line", {
+        class: "hw-wrong-ledger",
+        x1: mark.x - mark.ledgerWidth / 2,
+        x2: mark.x + mark.ledgerWidth / 2,
+        y1: y,
+        y2: y,
+        "stroke-width": mark.spacing * 0.12,
+      }),
+    );
+  }
+  group.append(
+    notehead
+      ? element("use", { href: `#${notehead}`, transform: `translate(${left}, ${mark.y}) scale(${glyphScale})` })
+      : element("ellipse", { cx: mark.x, cy: mark.y, rx: mark.width / 2, ry: mark.spacing / 2 }),
   );
+  if (mark.accidental) {
+    const accidental = element("text", {
+      x: left - mark.spacing * 0.25,
+      y: mark.y,
+      "font-size": mark.spacing * 2.2,
+      "text-anchor": "end",
+      "dominant-baseline": "central",
+    });
+    accidental.textContent = ACCIDENTALS[mark.accidental];
+    group.append(accidental);
+  }
+  const label = element("text", {
+    class: "hw-wrong-label",
+    x: mark.x + mark.width / 2 + mark.spacing * 0.4,
+    y: mark.y - mark.spacing * 0.6,
+    "font-size": mark.spacing * 1.3,
+  });
+  label.textContent = mark.label;
+  group.append(label);
+  if (live) {
+    group.append(
+      element("circle", {
+        class: "hw-wrong-ring",
+        cx: mark.x,
+        cy: mark.y,
+        r: mark.width * 0.95,
+        "stroke-width": mark.spacing * 0.15,
+        "data-wrong-ring": "",
+      }),
+    );
+  }
+  return group;
 }
 
 /**

@@ -169,3 +169,14 @@
 .hw-cutout g.notehead use {
   fill: currentColor;
 }
+
+/* A wrong key marked for the whole attempt: it stays, ringed. */
+.hw-wrong-live {
+  animation: none;
+  opacity: 0.9;
+}
+
+.hw-wrong-ring {
+  fill: none;
+  stroke: var(--hw-wrong);
+}

@@ -29,8 +29,8 @@ What used to be here (as-built notes, the 6 Oct inventory, the feature catalogue
 - [x] **M0.2 part 1** Personal `.mxl` scores untracked, kept in `test-scores/`; `resources` narrowed — 26 Oct
 - [ ] **M0.3** Swap the Prelude for the OpenWTC edition (D4).
 - [x] **M2.9** D10 absolute weak levels from each bar's last 3 sessions — 26 Oct
-- [ ] **M2.10 + M2.11** The per-piece Progress page, and live marks while playing
-      (see M2 below).
+- [x] **M2.11** Live marks while playing; key → mark 15 ms median on the Prelude — 26 Oct
+- [ ] **M2.10** The per-piece Progress page (see M2 below).
 - [ ] **M1.3** Remember the keyboard; auto-detect one plugged in later (every 3 s,
       plus Rescan).
 - [ ] **D8** The name decided (keep "Hogwash" or rename).
@@ -116,10 +116,7 @@ passes, difficulty, levels) are owned by the doc comments in
       - [x] Every "Practise bars …" loop, on coach cards and here, starts one bar
         before the trouble (`practise_range`); "You keep stopping" loops N−1–N — 26 Oct
       - Removes the on-score tint, its legend and W.
-- [ ] **M2.11 · M** Live marks while playing: correct notes stay green and wrong notes
-      stay red with a ring, for the whole attempt. Cleared on a new attempt and on each
-      loop pass. Esc after Results shows them until the next Start. Setting "Marks while
-      playing" (default on). Key press → mark under 30 ms.
+- [x] M2.11 Live marks while playing (per key in a chord, wrong keys ringed, at most 3 at one place), cleared on a new attempt and each loop pass, kept after Results until the next Start; setting "Marks while playing"; key → mark 15 ms median — 26 Oct
 
 ## M4 — Preview release v0.1
 

@@ -91,6 +91,9 @@ export function PracticeScreen({
   const [showNoteNames, setShowNoteNames] = useState(false);
   // A developer view: what the geometry layer reads from the page.
   const [showGeometry, setShowGeometry] = useState(false);
+  // Marks that stay for the whole attempt, or a brief flash (Settings).
+  const [marksWhilePlaying, setMarksWhilePlaying] = useState(loadMarks);
+  const marksOn = useRef(marksWhilePlaying);
   const [phase, setPhase] = useState<Phase>({ kind: "choosing", refusal: null });
   // The bars that have been hard over time, tinted while not playing; W hides them.
   const [weak, setWeak] = useState<WeakBars | null>(null);
@@ -134,6 +137,7 @@ export function PracticeScreen({
   const [width, setWidth] = useState<number | null>(null);
   const scoreRef = useRef<HTMLDivElement>(null);
   const scoreApi = useRef<ScoreHandle>(null);
+  const clearMarks = useCallback(() => scoreApi.current?.clearMarks(), []);
 
   // A refusal is transient — it says its piece and then gets out of the way.
   useEffect(() => {
@@ -169,12 +173,17 @@ export function PracticeScreen({
     setLoop(null);
     setTarget(LOOP_TARGET);
     setDot(null);
+    clearMarks();
     setLost(null);
     setEngraving({ pages: piece.pages, marks: piece.marks, bars: piece.bars });
     setFitted(false);
-  }, [pieceId, piece.pages, piece.marks, piece.bars]);
+  }, [pieceId, piece.pages, piece.marks, piece.bars, clearMarks]);
 
   useEffect(() => saveZoom(scale), [scale]);
+  useEffect(() => {
+    marksOn.current = marksWhilePlaying;
+    saveMarks(marksWhilePlaying);
+  }, [marksWhilePlaying]);
 
   // The room the score has. Small changes (a scrollbar coming and going) are
   // ignored, or they could re-engrave back and forth.
@@ -277,6 +286,8 @@ export function PracticeScreen({
       setCursor((current) => cursorFor(event, current));
 
       const next = dotFor(event);
+      // Drawn straight into the score, before any state: nothing re-renders for a mark.
+      if (next && marksOn.current) scoreApi.current?.markPlayed(next);
       if (next) setDot(next);
 
       switch (event.kind) {
@@ -299,8 +310,12 @@ export function PracticeScreen({
         case "instrumentRestored":
           setLost(null);
           break;
-        case "loopCount":
         case "looped":
+          // Each pass of a loop starts with a clean score.
+          scoreApi.current?.clearMarks();
+          setCleanInARow(event.cleanInARow);
+          break;
+        case "loopCount":
           setCleanInARow(event.cleanInARow);
           break;
         case "loopDone":
@@ -310,7 +325,7 @@ export function PracticeScreen({
           break;
         case "ended":
           setLost(null);
-          // The review colours the notes now; a flash still fading would undo one.
+          // The run's marks stay on the score; a flash still fading would be stale.
           setDot(null);
           setShowingScore(false);
           setPlaying(false);
@@ -341,6 +356,7 @@ export function PracticeScreen({
       void (async () => {
         try {
           await startAttempt(pieceId, instrument);
+          clearMarks();
           setCursor({ position: from });
           setDot(null);
           setPhase({ kind: "practicing", instrument, reachedEnd: false });
@@ -349,7 +365,7 @@ export function PracticeScreen({
         }
       })();
     },
-    [pieceId, start.position],
+    [pieceId, start.position, clearMarks],
   );
 
   // A bar clicked: the practice thread moves the start there, and, while
@@ -361,6 +377,7 @@ export function PracticeScreen({
           const point = await startAtBar(pieceId, measure);
           setStart(point);
           setLoop(null);
+          clearMarks();
           setCursor({ position: point.position });
           setDot(null);
           setPhase((current) =>
@@ -371,7 +388,7 @@ export function PracticeScreen({
         }
       })();
     },
-    [pieceId],
+    [pieceId, clearMarks],
   );
 
   // Loops bars `first` to `last`; while practising, the first pass begins.
@@ -383,6 +400,7 @@ export function PracticeScreen({
         setStart({ position: range.position, measure: range.first });
         setLoop({ first: range.first, last: range.last });
         setCleanInARow(0);
+        clearMarks();
         setCursor({ position: range.position });
         setDot(null);
         setWiden(null);
@@ -395,7 +413,7 @@ export function PracticeScreen({
         return null;
       }
     },
-    [pieceId, target],
+    [pieceId, target, clearMarks],
   );
 
   // A click starts there; Shift+click loops from the start bar to there.
@@ -578,7 +596,6 @@ export function PracticeScreen({
   const scoreReview = useMemo<ScoreReview | null>(
     () =>
       review && {
-        marks: review.marks,
         notReached: review.bars.filter((bar) => bar.state === "notReached").map((bar) => bar.measure),
       },
     [review],
@@ -732,6 +749,8 @@ export function PracticeScreen({
             onShowNoteNamesChange={setShowNoteNames}
             showGeometry={showGeometry}
             onShowGeometryChange={setShowGeometry}
+            marksWhilePlaying={marksWhilePlaying}
+            onMarksWhilePlayingChange={setMarksWhilePlaying}
             scale={scale}
             onScaleChange={(next) => setScale(clampScale(next))}
             zoomError={zoomError}
@@ -778,7 +797,7 @@ export function PracticeScreen({
             review={scoreReview}
             weak={weakShown ? weakLevels : null}
             cursor={cursor}
-            dot={dot}
+            dot={marksWhilePlaying ? null : dot}
             showNoteNames={showNoteNames}
             showGeometry={showGeometry}
           />
@@ -975,4 +994,23 @@ function WeakLegend({ weak, hasWeak }: { readonly weak: WeakBars; readonly hasWe
       )}
     </motion.div>
   );
+}
+
+const MARKS = "hogwash.marks";
+
+/** Whether marks stay while playing: on unless turned off. */
+function loadMarks(): boolean {
+  try {
+    return localStorage.getItem(MARKS) !== "off";
+  } catch {
+    return true;
+  }
+}
+
+function saveMarks(on: boolean): void {
+  try {
+    localStorage.setItem(MARKS, on ? "on" : "off");
+  } catch {
+    // Not remembered this time; nothing else depends on it.
+  }
 }

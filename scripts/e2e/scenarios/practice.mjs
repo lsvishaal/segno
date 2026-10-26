@@ -27,7 +27,7 @@ export default async function practice() {
   check("a wrong note (E5) draws the red mark", marks === 1, `marks=${marks}`);
   check("and the cursor stays put", (await cursorX()) === x1);
   await w.sleep(1300);
-  check("the red mark fades away", (await wrongMarks()) === 0);
+  check("the red mark stays for the attempt", (await wrongMarks()) === 1);
 
   await play(minuet.slice(4, 9));
   check("correct notes after a wrong one carry on", (await cursorX()) > x1);

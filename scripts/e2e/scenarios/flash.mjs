@@ -1,8 +1,11 @@
-// A correct note's green flash: noteheads too, and it always fades, even at tempo.
+// With "Marks while playing" off: a correct note's green flash, noteheads
+// too, and it always fades, even at tempo.
 import * as w from "../wd.mjs";
 import { check, minuet, startPractising, flashed, kb, shot } from "../lib.mjs";
 
 export default async function flash() {
+  // Read when the practice screen opens.
+  await w.run("localStorage.setItem('hogwash.marks', 'off'); return 1");
   await startPractising();
 
   for (const n of minuet.slice(0, 4)) kb(`on ${n} 80`, "wait 15", `off ${n}`);

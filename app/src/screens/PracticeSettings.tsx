@@ -26,6 +26,8 @@ export function SettingsPanel({
   onShowNoteNamesChange,
   showGeometry,
   onShowGeometryChange,
+  marksWhilePlaying,
+  onMarksWhilePlayingChange,
   scale,
   onScaleChange,
   zoomError,
@@ -39,6 +41,8 @@ export function SettingsPanel({
   readonly onShowNoteNamesChange: (value: boolean) => void;
   readonly showGeometry: boolean;
   readonly onShowGeometryChange: (value: boolean) => void;
+  readonly marksWhilePlaying: boolean;
+  readonly onMarksWhilePlayingChange: (value: boolean) => void;
   readonly scale: number;
   readonly onScaleChange: (scale: number) => void;
   readonly zoomError: string | null;
@@ -135,7 +139,22 @@ export function SettingsPanel({
           View &amp; export
         </h3>
 
-        <div className="mt-4 flex items-center gap-2">
+        <div className="mt-4 flex items-center justify-between">
+          <span className="text-ink-muted">Marks while playing</span>
+          <button
+            type="button"
+            aria-pressed={marksWhilePlaying}
+            aria-label="Marks while playing"
+            onClick={() => onMarksWhilePlayingChange(!marksWhilePlaying)}
+            className={`cursor-pointer rounded-full border border-rule-strong px-3 py-1 text-xs font-medium transition-colors focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-accent ${
+              marksWhilePlaying ? "bg-ink text-paper" : "text-ink-muted hover:text-ink"
+            }`}
+          >
+            {marksWhilePlaying ? "On" : "Off"}
+          </button>
+        </div>
+
+        <div className="mt-3 flex items-center gap-2">
           <label htmlFor="zoom" className="text-ink-muted">
             Zoom
           </label>

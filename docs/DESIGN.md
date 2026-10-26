@@ -73,7 +73,7 @@ next action.
 | State | What you see | Obvious next action |
 |---|---|---|
 | **Ready** | Score, cursor at the start point; the instrument picker until M1.3 | Start, or play the first note (planned) |
-| **Playing** | Cursor; correct notes green, wrong notes as a red head where they'd be written (today they fade after 1.5 s; from M2.11 they stay for the attempt) | Keep playing |
+| **Playing** | Cursor; each right key's note turns green, a wrong key is a red head with a ring where it would be written; both stay for the attempt (Settings › Marks while playing; off = a brief flash) and clear on a new attempt or loop pass | Keep playing |
 | **Looping** | Loop band behind the bars, "2 clean in a row" in the status line | Keep playing; Esc or L to stop |
 | **Loop done** | "3 clean passes · bars 9–12", and "Join it back up · loop bars 8–13" | Widen the loop, or stop |
 | **Device lost** | Status line with a 60 s countdown; cursor frozen | Plug the keyboard back in |
@@ -136,14 +136,14 @@ H hands, N note names, + / − / 0 zoom, Ctrl+O add a piece, Ctrl+F search.
 | `rule` / `rule-strong` | `#dde1e7` / `#c7ccd6` | `#2c2e36` / `#3a3d47` | Hairlines |
 | `accent` | `#16a34a` | `#22c55e` | Focus, primary action, selected |
 | `correct` | `#2f6f4e` | `#4ade80` | Correct-note marks |
-| `wrong` | `#dc2626` | `#f87171` | Wrong-note marks (today they fade after 1.5 s; from M2.11 they stay for the attempt, with a ring) |
+| `wrong` | `#dc2626` | `#f87171` | Wrong-note marks: a red head with a ring, kept for the attempt (at most 3 at one place) |
 | `cursor` | accent at 70% | accent at 70% | Cursor line |
 | `position-band` | accent at 8% | accent at 12% | Current position band |
 | `loop-band` | `#2563eb` at 8% | at 14% | Selected loop range |
 | `heat-1…5` | `#fef3c7` → `#f59e0b` → `#b45309` | same hues, lower lightness | Weak bars over time (Progress page, M2.10); `--color-pause` amber is also the pause mark on Results |
 
 Rules:
-- **Never encode meaning in colour alone.** Wrong notes also get an ✕ shape;
+- **Never encode meaning in colour alone.** Wrong notes also get a ring and their key's name;
   weak-bar levels on the Progress page are also drawn as bar heights and listed as facts; correct notes are a filled
   dot, wrong an outlined cross.
 - Heat colours are a **single amber hue**, so the score never looks covered
@@ -440,6 +440,11 @@ measured in-process (median of 5, the same data copy):
 | Startup (engrave 6 pieces, read history) | 991 ms | 709 ms | 660 ms |
 | Library summaries, 10 pieces | 2.8 ms | 1.4 ms | 0.5 ms |
 | Screen switch fades | 400 ms | 120 ms | 120 ms |
+
+Key press → mark painted on the Prelude, 26 Oct (release AppImage, `just e2e marks`: 40
+presses, from each key's MIDI timestamp to the frame its mark is painted in): 25–30 ms
+median while the practice thread checked the keyboard every 25 ms; **14–15 ms median
+(max 32–56)** at every 5 ms. Budget < 30 ms ✓.
 
 The `library` row above (46 ms in debug) is mostly the trip across the webview
 boundary, not the work. Release binary: 9.2 MB stripped (was 13.9 MB).

@@ -62,10 +62,11 @@ use crate::startup::Unavailable;
 /// Where every [`PracticeEvent`] this loop produces goes.
 type Sink = Box<dyn Fn(&PracticeEvent) + Send>;
 
-/// How often the loop drains the keyboard while an attempt is running.
-///
-/// Comfortably inside a 100 ms budget.
-const CONNECTED_POLL: Duration = Duration::from_millis(25);
+/// How often the loop drains the keyboard while an attempt is running: a
+/// key waits 2.5 ms on average to be heard, inside the 30 ms key → mark
+/// budget (`docs/DESIGN.md`). Each drain is a non-blocking channel read,
+/// so waking this often costs next to nothing, and only while playing.
+const CONNECTED_POLL: Duration = Duration::from_millis(5);
 
 /// How long the loop waits when nothing is running — no keyboard to drain.
 const IDLE_POLL: Duration = Duration::from_millis(500);

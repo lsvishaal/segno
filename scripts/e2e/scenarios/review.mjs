@@ -83,7 +83,7 @@ export default async function review() {
   await w.sleep(500);
   await shot("results-on-the-score");
   check("Esc shows the score with the run marked", (await results()) === null && (await status()).includes("Your last run is marked on the score"));
-  check("the wrong note crossed, right notes green, bars not reached faded", (await count("[data-wrong-mark]")) >= 1 && (await flashed()) > 0 && (await count("[data-not-reached]")) >= 1);
+  check("the run's marks stay: the wrong key ringed, right notes green, bars not reached faded", (await count("[data-live-wrong]")) >= 1 && (await flashed()) > 0 && (await count("[data-not-reached]")) >= 1);
   await w.press("Escape");
   await w.sleep(500);
   check("Esc again goes back to the results", (await results()) !== null);
@@ -92,7 +92,7 @@ export default async function review() {
   await waitForButton("Stop");
   await w.sleep(600);
   check("Enter loops bars 5–6 and starts playing", (await loopButton()) === "⟲ Loop 5–6", String(await loopButton()));
-  check("nothing sits above the score", (await results()) === null && (await count("[data-wrong-mark]")) === 0);
+  check("a new attempt starts with a clean score", (await results()) === null && (await count("[data-live-wrong]")) === 0 && (await flashed()) === 0);
 
   // Two clean passes of bars 5-6, then Stop part way into a third.
   const loopNotes = [...opening.filter((e) => e.bar === 5), ...opening.filter((e) => e.bar === 6)];

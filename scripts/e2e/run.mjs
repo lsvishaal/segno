@@ -18,7 +18,7 @@ async function appExited(ms = 15000) {
   }
 }
 
-const ALL = ["practice", "whole-piece", "flash", "timing", "start-from-bar", "loop", "review", "heatmap", "settings", "library", "unplug"];
+const ALL = ["practice", "whole-piece", "flash", "marks", "timing", "start-from-bar", "loop", "review", "heatmap", "settings", "library", "unplug"];
 const chosen = process.argv.slice(2).length ? process.argv.slice(2) : ALL;
 fs.mkdirSync(SHOTS, { recursive: true });
 

@@ -28,8 +28,8 @@
    - wait-mode practice; start from any bar; loop bars
    - Results after each run with up to 3 coach cards
    - weak bars over time
-6. **Next:** a per-piece **Progress page** and live marks that stay for the whole
-   attempt (M2.10–M2.11). Absolute weak-bar levels (D10, M2.9) are built.
+6. **Next:** a per-piece **Progress page** (M2.10). Absolute weak-bar levels (M2.9) and
+   live marks that stay for the whole attempt (M2.11) are built.
 7. **v0.1 preview:** Sun 8 Nov 2026. **v1.0:** Sun 13 Dec 2026. The active milestone
    is the v0.1 checklist below.
 8. **Deadline guard:** if the Progress page isn't done by Sun 1 Nov, ship v0.1 with
@@ -102,8 +102,10 @@
 - R restarts; zoom (Ctrl+wheel); note names; MIDI Thru
 - a 60 s grace period when the keyboard disconnects
 - auto-finish 1.5 s after the last note
-- wrong notes are drawn as a red head where they'd be written; today they fade after
-  1.5 s
+- **marks while playing:** each right key's note turns green, a wrong key is a red head
+  with a ring where it would be written; they stay for the attempt (clear on a new
+  attempt and each loop pass); Settings › Marks while playing (off = a brief flash).
+  Key → mark 15 ms median on the Prelude
 
 **Results** (they replace the score after a run, Monkeytype-style):
 - a top line "Bars 1–8 · 6 s" with accuracy, tempo and steadiness
@@ -160,11 +162,8 @@ written rhythm, and hunting for one note counts as at most 3 wrong notes.
   - It removes the on-score tint and W.
 - **One shared rule:** every "Practise bars …" loop starts one bar before the trouble,
   including "You keep stopping".
-- **M2.11, live marks:**
-  - Correct notes stay green and wrong notes stay red with a ring, for the whole
-    attempt.
-  - Cleared on a new attempt and on each loop pass.
-  - Setting "Marks while playing" (default on). Under 30 ms.
+- **M2.11, live marks:** built 26 Oct (see Practice above). After Results, bars not
+  reached stay faded with the marks until the next Start.
 - **Moved to v1.0:**
   - hands separately
   - per-piece state
@@ -176,7 +175,7 @@ written rhythm, and hunting for one note counts as at most 3 wrong notes.
 - **M0.2 part 1 (done):** the five personal scores are untracked, kept in the
   ignored `test-scores/`. Part 2, the history purge, blocks going public, not v0.1.
 - **M0.3:** swap the Prelude for the OpenWTC edition.
-- **M2.9 (done):** D10 absolute levels. **M2.10–M2.11:** the Progress page, live marks.
+- **M2.9, M2.11 (done):** D10 absolute levels, live marks. **M2.10:** the Progress page.
 - **M1.3:** remember the keyboard and auto-detect it.
 - **D8:** the name.
 - **M4.1:** a release build made by CI from a tag.

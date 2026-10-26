@@ -1,3 +1,5 @@
+import { createRef } from "react";
+
 import { act, fireEvent, render } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
@@ -5,6 +7,7 @@ import type { Bar, Mark } from "../bridge";
 import minuet from "./__fixtures__/minuet-in-g.page1.svg?raw";
 import { marksOf } from "./__fixtures__/pages";
 import { Score } from "./Score";
+import type { ScoreHandle } from "./Score";
 
 /**
  * The mechanism the design rests on.
@@ -441,22 +444,16 @@ describe("bars, on a two-bar page", () => {
     expect(container.querySelectorAll("[data-loop-band]")).toHaveLength(2);
   });
 
-  // Bar 1's note was played (after two wrong notes); bar 2 was never reached.
-  it("after an attempt, leaves right notes green, crosses wrong ones, and fades bars not reached", () => {
-    const review = { marks: [{ position: 0, correct: true, wrong: 2 }], notReached: [2] };
+  // Bar 2 was never reached: it is faded until the next attempt.
+  it("after an attempt, fades the bars not reached", () => {
     const { container, rerender } = render(
       <Score pages={[PAGE]} marks={MARKS} bars={BARS} cursor={{ position: 0 }} dot={null} followCursor={false} />,
     );
     layOut(container);
     rerender(
-      <Score pages={[PAGE]} marks={MARKS} bars={BARS} review={review} cursor={{ position: 0 }} dot={null} followCursor={false} />,
+      <Score pages={[PAGE]} marks={MARKS} bars={BARS} review={{ notReached: [2] }} cursor={{ position: 0 }} dot={null} followCursor={false} />,
     );
 
-    const note = container.querySelector<SVGElement>("#note-a");
-    expect(note?.style.color).toBe("var(--hw-correct)");
-    const cross = container.querySelector<HTMLElement>("[data-wrong-mark]");
-    expect(cross).toHaveTextContent("✕2");
-    expect(cross?.style.left).toBe("40px");
     const faded = container.querySelectorAll<HTMLElement>("[data-not-reached]");
     expect(faded).toHaveLength(1);
     expect(faded[0]?.style.left).toBe("200px");
@@ -464,8 +461,81 @@ describe("bars, on a two-bar page", () => {
     rerender(
       <Score pages={[PAGE]} marks={MARKS} bars={BARS} review={null} cursor={{ position: 0 }} dot={null} followCursor={false} />,
     );
-    expect(note?.style.color).toBe("");
-    expect(container.querySelector("[data-wrong-mark]")).toBeNull();
     expect(container.querySelector("[data-not-reached]")).toBeNull();
+  });
+});
+
+describe("live marks", () => {
+  // A C major chord, then a D.
+  const PAGE = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 100">
+    <g id="c4" class="note"><ellipse cx="40" cy="60" rx="8" ry="6"/></g>
+    <g id="e4" class="note"><ellipse cx="40" cy="50" rx="8" ry="6"/></g>
+    <g id="g4" class="note"><ellipse cx="40" cy="40" rx="8" ry="6"/></g>
+    <g id="d4" class="note"><ellipse cx="80" cy="55" rx="8" ry="6"/></g>
+  </svg>`;
+  const MARKS: readonly Mark[] = [
+    {
+      measure: 1,
+      position: 0,
+      page: 0,
+      notes: [
+        { elementId: "c4", step: "C", octave: 4, pitch: 60 },
+        { elementId: "e4", step: "E", octave: 4, pitch: 64 },
+        { elementId: "g4", step: "G", octave: 4, pitch: 67 },
+      ],
+    },
+    { measure: 1, position: 1, page: 0, notes: [{ elementId: "d4", step: "D", octave: 4, pitch: 62 }] },
+  ];
+  const green = (container: HTMLElement) =>
+    [...container.querySelectorAll<SVGElement>("g.note")].filter((note) => note.style.color === "var(--hw-correct)").map((note) => note.id);
+
+  it("turn green only the chord notes whose keys were played, and stay", () => {
+    const handle = createRef<ScoreHandle>();
+    const { container } = render(
+      <Score ref={handle} pages={[PAGE]} marks={MARKS} cursor={{ position: 0 }} dot={null} followCursor={false} />,
+    );
+
+    act(() => {
+      handle.current?.markPlayed({ kind: "correct", position: 0, pitch: 60 });
+      handle.current?.markPlayed({ kind: "correct", position: 0, pitch: 67 });
+    });
+    expect(green(container)).toEqual(["c4", "g4"]);
+
+    act(() => handle.current?.markPlayed({ kind: "correct", position: 1, pitch: 62 }));
+    expect(green(container)).toEqual(["c4", "g4", "d4"]);
+
+    act(() => handle.current?.clearMarks());
+    expect(green(container)).toEqual([]);
+  });
+
+  it("are drawn again on a re-engraved score", () => {
+    const handle = createRef<ScoreHandle>();
+    const { container, rerender } = render(
+      <Score ref={handle} pages={[PAGE]} marks={MARKS} cursor={{ position: 0 }} dot={null} followCursor={false} />,
+    );
+    act(() => handle.current?.markPlayed({ kind: "correct", position: 0, pitch: 64 }));
+
+    rerender(<Score ref={handle} pages={[PAGE.replace("400 100", "400 101")]} marks={MARKS} cursor={{ position: 0 }} dot={null} followCursor={false} />);
+
+    expect(green(container)).toEqual(["e4"]);
+  });
+
+  it("ring a wrong key in red and keep it, at most three at one place", () => {
+    const handle = createRef<ScoreHandle>();
+    const { container } = render(
+      <Score ref={handle} pages={[minuet]} marks={marksOf("minuet-in-g")} cursor={{ position: 0 }} dot={null} followCursor={false} />,
+    );
+
+    act(() => {
+      for (const pitch of [76, 72, 71, 69]) handle.current?.markPlayed({ kind: "wrong", position: 0, pitch });
+    });
+
+    const wrong = container.querySelectorAll("[data-live-wrong]");
+    expect(wrong).toHaveLength(3);
+    expect([...wrong].every((mark) => mark.querySelector("[data-wrong-ring]"))).toBe(true);
+    expect(container.querySelector("[data-live-wrong] .hw-wrong-label")?.textContent).toBe("E5");
+
+    act(() => handle.current?.clearMarks());
+    expect(container.querySelector("[data-live-wrong]")).toBeNull();
   });
 });

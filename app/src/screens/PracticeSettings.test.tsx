@@ -26,6 +26,7 @@ async function renderPanel(overrides: Partial<Parameters<typeof SettingsPanel>[0
   const onClose = vi.fn();
   const onShowNoteNamesChange = vi.fn();
   const onShowGeometryChange = vi.fn();
+  const onMarksWhilePlayingChange = vi.fn();
   const onScaleChange = vi.fn();
   const onExport = vi.fn();
 
@@ -43,6 +44,8 @@ async function renderPanel(overrides: Partial<Parameters<typeof SettingsPanel>[0
           onShowNoteNamesChange={onShowNoteNamesChange}
           showGeometry={false}
           onShowGeometryChange={onShowGeometryChange}
+          marksWhilePlaying={true}
+          onMarksWhilePlayingChange={onMarksWhilePlayingChange}
           scale={150}
           onScaleChange={onScaleChange}
           zoomError={null}
@@ -54,10 +57,20 @@ async function renderPanel(overrides: Partial<Parameters<typeof SettingsPanel>[0
     );
   });
 
-  return { onClose, onShowNoteNamesChange, onShowGeometryChange, onScaleChange, onExport };
+  return { onClose, onShowNoteNamesChange, onShowGeometryChange, onMarksWhilePlayingChange, onScaleChange, onExport };
 }
 
 describe("SettingsPanel", () => {
+  it("Marks while playing is on, and turns off", async () => {
+    const { onMarksWhilePlayingChange } = await renderPanel();
+    const toggle = screen.getByRole("button", { name: "Marks while playing" });
+    expect(toggle).toHaveAttribute("aria-pressed", "true");
+
+    fireEvent.click(toggle);
+
+    expect(onMarksWhilePlayingChange).toHaveBeenCalledWith(false);
+  });
+
   it("renders nothing when closed", async () => {
     await renderPanel({ open: false });
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
