@@ -172,12 +172,50 @@ export interface AttemptSummary {
   readonly review: Review;
 }
 
-/** Which bars of a piece have been hard over every attempt kept for it. */
-export interface WeakBars {
-  /** How many attempts (runs and loop passes) this is from. */
-  readonly runs: number;
-  /** Bars played at least twice: 0 went fine, 1–4 lighter to deeper. */
-  readonly bars: readonly { readonly measure: number; readonly level: number }[];
+/** One bar in one session, from 1 pass: 0 went fine, 1–4 lighter to deeper. */
+export interface ProgressCell {
+  readonly measure: number;
+  readonly passes: number;
+  readonly pauseUs: number;
+  readonly wrong: number;
+  readonly stops: number;
+  readonly level: number;
+}
+
+/** Bars next to each other to practise together, looped from `from` to `to`. */
+export interface Passage {
+  readonly first: number;
+  readonly last: number;
+  readonly from: number;
+  readonly to: number;
+  /** "avg pause 3.1 s · 1 wrong note per pass". */
+  readonly facts: string;
+}
+
+/** Everything the Progress page shows for one piece; the words come from Rust. */
+export interface ProgressView {
+  readonly id: string;
+  readonly title: string;
+  readonly composer: string | null;
+  readonly bars: number;
+  /** Newest first; a bar not played that session has no cell. */
+  readonly sessions: readonly {
+    readonly startedMs: number;
+    readonly playedUs: number;
+    readonly bars: readonly ProgressCell[];
+  }[];
+  readonly playedUs: number;
+  readonly lastPractisedMs: number | null;
+  /** Each bar played: its level now, or null when it needs another pass. */
+  readonly now: readonly { readonly measure: number; readonly level: number | null }[];
+  readonly workOnNext: readonly Passage[];
+  /** Every bar: its line after "Bar N · ", and the loop its Practise button plays. */
+  readonly details: readonly {
+    readonly measure: number;
+    readonly line: string;
+    readonly from: number;
+    readonly to: number;
+  }[];
 }
 
 /** The results after a run (Start to stopping): every number and sentence comes from Rust. */

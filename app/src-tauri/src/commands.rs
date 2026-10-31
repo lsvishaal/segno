@@ -110,28 +110,29 @@ pub fn history_count(id: String, state: State<'_, Shared>) -> Result<usize, Refu
     Ok(hogwash.records().sessions_of(&piece_id))
 }
 
-/// Which bars of a piece have been hard over every attempt kept for it.
+/// A piece's Progress page: its sessions bar by bar, where each bar stands
+/// now, and what to work on next.
 ///
 /// # Errors
 ///
 /// If the state is unreadable, or there is no such piece.
 #[tauri::command]
-pub fn weak_bars(
+pub fn progress(
     id: String,
     state: State<'_, Shared>,
-) -> Result<crate::history::WeakBars, Refused> {
+) -> Result<crate::history::ProgressView, Refused> {
     let hogwash = state.inner().0.lock().map_err(|_| POISONED.to_owned())?;
     let pieces = hogwash.library().pieces();
     let piece = pieces
         .iter()
         .find(|piece| piece.id().as_str() == id)
         .ok_or_else(|| format!("There is no piece called `{id}` in the library."))?;
+    let sessions = crate::history::sessions(hogwash.records());
 
-    Ok(crate::history::weak_bars(
-        hogwash.records(),
-        piece.id(),
-        piece.reference(),
-    ))
+    Ok(
+        crate::history::progress_in(&sessions, piece.id(), piece.reference())
+            .view(piece, crate::history::last_practised(&sessions, piece.id())),
+    )
 }
 
 /// Deletes an imported Piece: its copy of the file, and every practice
@@ -652,7 +653,7 @@ fn summarise(
         file_name: record.and_then(|record| record.file_name),
         level: crate::provided::level_of(piece.id()),
         last_practised_ms: crate::history::last_practised(sessions, piece.id()),
-        weakest: crate::history::weak_bars_in(sessions, piece.id(), piece.reference()).weakest(),
+        weakest: crate::history::progress_in(sessions, piece.id(), piece.reference()).weakest(),
     }
 }
 

@@ -13,7 +13,6 @@ import {
   loopTarget,
   startAtBar,
   startAttempt,
-  weakBars,
 } from "../bridge";
 import type {
   AttemptSummary,
@@ -25,7 +24,6 @@ import type {
   ReviewCard,
   StartPoint,
   Suggested,
-  WeakBars,
 } from "../bridge";
 import { DeviceSelect } from "../components/DeviceSelect";
 import { Results } from "../components/Results";
@@ -34,6 +32,7 @@ import type { CursorState, Dot, ScoreHandle, ScoreReview } from "../components/S
 import type { CutOutRequest } from "../components/scoreCutout";
 import { BEFORE_STARTING, cursorFor, dotFor } from "./overlayEvents";
 import { SettingsPanel } from "./PracticeSettings";
+import { ProgressScreen, type PractiseRange } from "./Progress";
 import { REFLOW_THRESHOLD, clampScale, loadZoom, saveZoom, scoreWidth, stepScale } from "./zoom";
 
 /** How long to wait after the last zoom or width change before re-engraving —
@@ -83,9 +82,12 @@ const PANEL = {
  */
 export function PracticeScreen({
   piece,
+  practise: practiseOnOpen,
   onLeave,
 }: {
   readonly piece: OpenedPiece;
+  /** From the Progress page: loop this (null: from bar 1) and start at once. */
+  readonly practise?: PractiseRange | undefined;
   readonly onLeave: () => void;
 }) {
   const [showNoteNames, setShowNoteNames] = useState(false);
@@ -95,9 +97,6 @@ export function PracticeScreen({
   const [marksWhilePlaying, setMarksWhilePlaying] = useState(loadMarks);
   const marksOn = useRef(marksWhilePlaying);
   const [phase, setPhase] = useState<Phase>({ kind: "choosing", refusal: null });
-  // The bars that have been hard over time, tinted while not playing; W hides them.
-  const [weak, setWeak] = useState<WeakBars | null>(null);
-  const [showWeak, setShowWeak] = useState(true);
   const [playing, setPlaying] = useState(false);
   const [available, setAvailable] = useState<readonly InstrumentSummary[]>([]);
   const [cursor, setCursor] = useState<CursorState>(BEFORE_STARTING);
@@ -120,6 +119,8 @@ export function PracticeScreen({
   const [exportError, setExportError] = useState<string | null>(null);
   const [zoomError, setZoomError] = useState<string | null>(null);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  // The piece's Progress page, shown in place of the score or the results.
+  const [progressOpen, setProgressOpen] = useState(false);
   const gearRef = useRef<HTMLButtonElement>(null);
   // Zoom, remembered across pieces and restarts.
   const [scale, setScale] = useState(loadZoom);
@@ -274,11 +275,6 @@ export function PracticeScreen({
     // was plugged in since the last time it was asked.
   }, [phase.kind === "choosing"]);
 
-  const refreshWeak = useCallback(() => {
-    weakBars(piece.id).then(setWeak, () => setWeak(null));
-  }, [piece.id]);
-  useEffect(refreshWeak, [refreshWeak]);
-
   useEffect(() => {
     let unlisten: (() => void) | undefined;
 
@@ -329,7 +325,6 @@ export function PracticeScreen({
           setDot(null);
           setShowingScore(false);
           setPlaying(false);
-          refreshWeak();
           if (event.summary.review.bars.length === 0) {
             setMoveRefusal(event.summary.reason ?? "Nothing played.");
             setPhase((current) =>
@@ -349,13 +344,14 @@ export function PracticeScreen({
     });
 
     return () => unlisten?.();
-  }, [refreshWeak]);
+  }, []);
 
   const begin = useCallback(
     (instrument: string, from: number = start.position) => {
       void (async () => {
         try {
           await startAttempt(pieceId, instrument);
+          saveKeyboard(instrument);
           clearMarks();
           setCursor({ position: from });
           setDot(null);
@@ -456,8 +452,6 @@ export function PracticeScreen({
       if (event.key.toLowerCase() === "l" && !keyboardLost) {
         event.preventDefault();
         toggleLoop();
-      } else if (event.key.toLowerCase() === "w") {
-        setShowWeak((shown) => !shown);
       } else if (event.key === "Escape" && loop && !settingsOpen && phase.kind !== "ended") {
         stopLooping();
       }
@@ -542,6 +536,46 @@ export function PracticeScreen({
     [begin, practise],
   );
 
+  // From the Progress page: loop `range` (or go back to bar 1) and start at
+  // once, on the keyboard in use, else the one last started on, else the
+  // first connected. With none, the loop is set and the picker says so.
+  const practiseNow = useCallback(
+    async (range: PractiseRange, inUse: string | null) => {
+      setProgressOpen(false);
+      let instrument = inUse;
+      if (!instrument) {
+        const found = await fetchInstruments().catch(() => []);
+        setAvailable(found);
+        instrument = pickKeyboard(found);
+      }
+      if (range) {
+        const at = await loopTo(range.from, range.to);
+        if (at !== null && instrument) begin(instrument, at);
+        return;
+      }
+      try {
+        const point = await startAtBar(pieceId, 1);
+        setStart(point);
+        setLoop(null);
+        clearMarks();
+        setCursor({ position: point.position });
+        if (instrument) begin(instrument, point.position);
+      } catch (error) {
+        setMoveRefusal(String(error));
+      }
+    },
+    [begin, loopTo, pieceId, clearMarks],
+  );
+
+  // Opened from the Progress page: once the score is laid out for the window.
+  const pendingPractise = useRef(practiseOnOpen);
+  useEffect(() => {
+    if (!fitted || pendingPractise.current === undefined) return;
+    const range = pendingPractise.current;
+    pendingPractise.current = undefined;
+    void practiseNow(range, null);
+  }, [fitted, practiseNow]);
+
   // What the results ask of the drawn score.
   const cutOut = useCallback(
     (request: CutOutRequest) => scoreApi.current?.cutOut(request) ?? null,
@@ -599,14 +633,6 @@ export function PracticeScreen({
         notReached: review.bars.filter((bar) => bar.state === "notReached").map((bar) => bar.measure),
       },
     [review],
-  );
-
-  // Off while playing and while this run's marks are on the score: the
-  // amber is "hard over time", the marks "this run", never both at once.
-  const weakShown = showWeak && !playing && !review && weak !== null && weak.runs > 0;
-  const weakLevels = useMemo(
-    () => new Map(weak?.bars.filter((bar) => bar.level > 0).map((bar) => [bar.measure, bar.level])),
-    [weak],
   );
 
   const chooseAnother = useCallback(() => {
@@ -707,6 +733,17 @@ export function PracticeScreen({
           )}
         </div>
 
+        {phase.kind !== "practicing" && (
+          <button
+            type="button"
+            onClick={() => setProgressOpen((open) => !open)}
+            aria-pressed={progressOpen}
+            className="cursor-pointer rounded-md px-3 py-1.5 text-xs font-medium text-ink-muted transition-colors hover:bg-ink/5 hover:text-accent focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-accent"
+          >
+            Progress
+          </button>
+        )}
+
         {phase.kind === "practicing" && (
           <button
             type="button"
@@ -781,8 +818,8 @@ export function PracticeScreen({
         <div
           ref={scoreRef}
           className="hw-score absolute inset-0 px-4 py-6 sm:px-8 sm:py-8 lg:px-12 lg:py-10"
-          style={{ visibility: resultsShown ? "hidden" : undefined }}
-          aria-hidden={resultsShown || undefined}
+          style={{ visibility: resultsShown || progressOpen ? "hidden" : undefined }}
+          aria-hidden={resultsShown || progressOpen || undefined}
         >
           <Score
             ref={scoreApi}
@@ -795,7 +832,6 @@ export function PracticeScreen({
             startPosition={start.position}
             loop={loop}
             review={scoreReview}
-            weak={weakShown ? weakLevels : null}
             cursor={cursor}
             dot={marksWhilePlaying ? null : dot}
             showNoteNames={showNoteNames}
@@ -804,11 +840,7 @@ export function PracticeScreen({
         </div>
 
         <AnimatePresence>
-          {weakShown && <WeakLegend weak={weak} hasWeak={weakLevels.size > 0} />}
-        </AnimatePresence>
-
-        <AnimatePresence>
-          {resultsShown && (
+          {resultsShown && !progressOpen && (
             <motion.div
               key="results"
               initial={{ opacity: 0 }}
@@ -827,12 +859,26 @@ export function PracticeScreen({
                   onNoteNames={() => setShowNoteNames(true)}
                   onAgain={() => again(phase.instrument)}
                   onShowScore={showScore}
+                  onProgress={() => setProgressOpen(true)}
                   onLibrary={leave}
                 />
               </div>
             </motion.div>
           )}
         </AnimatePresence>
+
+        {progressOpen && (
+          <div className="absolute inset-0 overflow-y-auto">
+            <ProgressScreen
+              id={pieceId}
+              backLabel={resultsShown ? "Results" : "Score"}
+              onBack={() => setProgressOpen(false)}
+              onPractise={(range) =>
+                void practiseNow(range, phase.kind === "ended" ? phase.instrument : null)
+              }
+            />
+          </div>
+        )}
       </div>
     </div>
   );
@@ -919,13 +965,13 @@ function InstrumentPicker({
   readonly refusal: string | null;
   readonly onChoose: (instrument: string) => void;
 }) {
-  const [chosen, setChosen] = useState<string | null>(available[0]?.name ?? null);
+  const [chosen, setChosen] = useState<string | null>(() => pickKeyboard(available));
 
   useEffect(() => {
     setChosen((current) =>
       current && available.some((instrument) => instrument.name === current)
         ? current
-        : (available[0]?.name ?? null),
+        : pickKeyboard(available),
     );
   }, [available]);
 
@@ -966,36 +1012,6 @@ function InstrumentPicker({
   );
 }
 
-/** What the amber on the score means, in the corner while it shows. */
-function WeakLegend({ weak, hasWeak }: { readonly weak: WeakBars; readonly hasWeak: boolean }) {
-  const runs = `from ${weak.runs} ${weak.runs === 1 ? "run" : "runs"}`;
-  return (
-    <motion.div
-      data-weak-legend
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      exit={{ opacity: 0 }}
-      transition={{ duration: 0.16, ease: "easeOut" }}
-      className="pointer-events-none absolute right-4 bottom-3 flex items-center gap-2 rounded-md border border-rule bg-paper-raised/90 px-3 py-1.5 text-xs text-ink-muted"
-    >
-      {hasWeak ? (
-        <>
-          <span className="flex gap-0.5" aria-hidden="true">
-            {["bg-pause/8", "bg-pause/16", "bg-pause/26", "bg-pause/38"].map((tint) => (
-              <span key={tint} className={`h-3 w-3 rounded-sm ${tint}`} />
-            ))}
-          </span>
-          <span>
-            Weak bars {runs} · lighter = easier for you, deeper = harder · <kbd>W</kbd> to hide
-          </span>
-        </>
-      ) : (
-        <span>No weak bars yet ({runs})</span>
-      )}
-    </motion.div>
-  );
-}
-
 const MARKS = "hogwash.marks";
 
 /** Whether marks stay while playing: on unless turned off. */
@@ -1012,5 +1028,26 @@ function saveMarks(on: boolean): void {
     localStorage.setItem(MARKS, on ? "on" : "off");
   } catch {
     // Not remembered this time; nothing else depends on it.
+  }
+}
+
+const KEYBOARD = "hogwash.keyboard";
+
+/** The keyboard last started on, if connected; else the first connected one. */
+function pickKeyboard(available: readonly InstrumentSummary[]): string | null {
+  let last: string | null = null;
+  try {
+    last = localStorage.getItem(KEYBOARD);
+  } catch {
+    // Nothing remembered: the first one will do.
+  }
+  return available.find((instrument) => instrument.name === last)?.name ?? available[0]?.name ?? null;
+}
+
+function saveKeyboard(name: string): void {
+  try {
+    localStorage.setItem(KEYBOARD, name);
+  } catch {
+    // Not remembered this time; the first connected one is used instead.
   }
 }

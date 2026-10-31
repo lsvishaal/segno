@@ -93,7 +93,6 @@ Built:
 | Esc | Stop looping; on Results, show the score and back |
 | Enter | On Results: the first card's button (or practise again) |
 | Ctrl+wheel | Zoom |
-| W | Weak-bar tint on/off (removed with M2.10) |
 
 Planned (M3.6 with a `?` overlay): Space start/stop, ← / → move a bar, Home bar 1,
 H hands, N note names, + / − / 0 zoom, Ctrl+O add a piece, Ctrl+F search.
@@ -140,7 +139,7 @@ H hands, N note names, + / − / 0 zoom, Ctrl+O add a piece, Ctrl+F search.
 | `cursor` | accent at 70% | accent at 70% | Cursor line |
 | `position-band` | accent at 8% | accent at 12% | Current position band |
 | `loop-band` | `#2563eb` at 8% | at 14% | Selected loop range |
-| `heat-1…5` | `#fef3c7` → `#f59e0b` → `#b45309` | same hues, lower lightness | Weak bars over time (Progress page, M2.10); `--color-pause` amber is also the pause mark on Results |
+| `heat-1…5` | `#fef3c7` → `#f59e0b` → `#b45309` | same hues, lower lightness | Weak bars over time on the Progress page (`--color-pause` at 22 / 42 / 66 / 92% for levels 1–4); the same amber is the pause mark on Results |
 
 Rules:
 - **Never encode meaning in colour alone.** Wrong notes also get a ring and their key's name;
@@ -198,11 +197,11 @@ Hogwash
 CONTINUE
 ┌────────────────────────────────────────────────────────────┐
 │ CHRISTIAN PETZOLD                                          │
-│ Minuet in G Major                                [Continue]│
+│ Minuet in G Major                     Progress   [Continue]│
 │ Practised today · weakest bars 3, 7                        │
 └────────────────────────────────────────────────────────────┘
 YOUR PIECES                                     [+ Add a piece]
-  cards: COMPOSER · Title · 32 bars · 274 notes · "Last practised 2 days ago · weakest bar 9"
+  cards: COMPOSER · Title · 32 bars · 274 notes · "Last practised 2 days ago · weakest bar 9"   Progress
 STARTER · BEGINNER — single lines and first two-hand pieces
 STARTER · INTERMEDIATE — around Grades 1–4
 ```
@@ -212,10 +211,10 @@ STARTER · INTERMEDIATE — around Grades 1–4
   add appear here. Hogwash reads MusicXML — export it from MuseScore Studio or
   download from OpenScore."*
 - **Cards:** composer in small caps, title in serif italic, size in mono, footer
-  "Last practised … · weakest bar(s) …" or "Not practised yet". Rename and Delete
-  (imports only) appear on hover or focus.
+  "Last practised … · weakest bar(s) …" or "Not practised yet", and a "Progress"
+  link at the footer's right, always visible (on Continue too, beside its button).
+  Rename and Delete (imports only) appear on hover or focus.
 - **Planned:**
-  - a visible "Progress" link on every card and next to Continue (M2.10)
   - cream "sheet-music cover" paper and a one-line musical hook (M3.8)
   - search (M3.9)
   - a device indicator (M1.3)
@@ -225,13 +224,13 @@ STARTER · INTERMEDIATE — around Grades 1–4
 
 - **Header:**
   - ← Library, title + composer
-  - Loop, Restart and Stop/Finish while playing
+  - Loop; Progress when not playing; Restart and Stop/Finish while playing
   - the settings gear
   - a status line that appears only when it has something to say (keyboard lost,
     loop counts, "Join it back up")
 - **The score:** full width; the cursor; correct and wrong marks; the loop band
-  behind looped bars; the amber weak-bar tint when idle, by absolute level (D10, defined in
-  `crates/hogwash-analysis/src/bars.rs`; removed with M2.10).
+  behind looped bars. Nothing about past sessions is drawn on the score: that is the
+  Progress page.
 - **After a run, Results replace the score:**
   - a top line ("Bars 1–8 · 6 s") with accuracy, tempo and steadiness in small mono
   - up to 3 coach cards (each: a cut-out of the bars, what happened, why, how to fix
@@ -281,20 +280,38 @@ History and the bar card are no longer panels. They live on the Progress page (M
   start there."* · *"Shift-click a second bar to loop between them."*
 - No tour, no modal walkthrough, no lessons.
 
-### 17.5 Results (as built) and the Progress page (planned)
+### 17.5 Results (as built) and the Progress page (as built)
 
 Results are described in 17.2.
 
-The **Progress page** (M2.10) will have:
-- a header: composer, title, "N sessions · total time · last practised …"
-- Work on next: up to 3 passages, each with "⟲ Practise bars …" starting one bar
-  before the trouble
-- the grid: bars × sessions, newest on top, a "Now" row of bar heights, amber cells
-  by absolute level (from 1 pass; blank = not played)
-- bar detail on a column click (now vs the earliest sessions)
+The **Progress page** (M2.10; levels and words from `app/src-tauri/src/history.rs`):
+- **Header:** composer (small caps), title (serif italic), and a mono line
+  "3 sessions · 4 min · last practised today".
+- **Work on next:** up to 3 rows, "Bars 6–7 · avg pause 3.1 s · 1 wrong note per
+  pass" with "⟲ Practise bars 5–7" (from one bar before, clamped at bar 1). Judged
+  bars at level ≥ 1, worst first, neighbours merged. None: "Every bar is clean in
+  your recent sessions." and "Play it through".
+- **Every session:** one column per bar (a number at bar 1 and every 4th), one row
+  per session (newest on top, the last 12, then "Show all N sessions"), and a
+  "Now" row above them drawn as heights: taller and deeper amber is harder, a
+  flat grey line is fine, a dotted stub is "played once, not enough to judge".
+  Cells are amber by level from 1 pass, a thin outline for level 0, blank when not
+  played. A caption under it says what height and dots mean. No red.
+- **Bar detail:** a click (or Enter) on a column outlines it in ink and bolds its
+  number, and shows "Bar 6 · avg pause 6.2 s → 3.1 s over 4 sessions · wrong notes
+  2 → 0 per pass" with "⟲ Practise bars 5–6". The earliest are the bar's first
+  sessions, at most 3 and at most half; one session gives no arrow; one pass gives
+  "Play this bar twice to see stats."
+- **Never played:** "Play this piece once and your progress shows here." and
+  Practise; no grid.
+- **Practise** from a page opened from the library opens the piece and starts at
+  once (the loop set) on the keyboard last started on, else the first connected;
+  with none, the loop is set and the picker says no keyboard is connected. From the
+  practice screen it uses the keyboard in use.
 
-It is reached from the library card, Continue, Results and the practice screen,
-and never opens by itself.
+It is reached from the library card, Continue, Results ("Progress →") and the
+practice screen's header (shown in place of the score, "← Score" / "← Results"
+back), and never opens by itself.
 
 **What history holds** (all of it recomputed from the raw notes, D5):
 - **Per session:** start time, attempts, how each ended, bars covered, time
@@ -373,7 +390,7 @@ and never opens by itself.
 
 - No pieces imported yet (library section)
 - Piece never practised (Progress page: one line and a Practise button)
-- Not enough data for a bar (bar card: "Play this bar twice to see stats.")
+- Not enough data for a bar (Progress page bar detail: "Play this bar twice to see stats.")
 - No keyboard connected (header + practice status line)
 - Progress page with one session: the grid with one row, no trend text
 

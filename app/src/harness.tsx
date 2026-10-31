@@ -37,6 +37,7 @@ if (query.get("screen") === "library") {
     <LibraryScreen
       pieces={SHELF}
       onOpen={() => {}}
+      onProgress={() => {}}
       onRename={async () => null}
       onCountHistory={async () => 3}
       onDelete={async () => null}

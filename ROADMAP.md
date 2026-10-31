@@ -115,7 +115,7 @@ passes, difficulty, levels) are owned by the doc comments in
         practice screen. Results stays first after a run.
       - [x] Every "Practise bars …" loop, on coach cards and here, starts one bar
         before the trouble (`practise_range`); "You keep stopping" loops N−1–N — 26 Oct
-      - Removes the on-score tint, its legend and W.
+      - [x] The page, its entry points and remembering the keyboard; the on-score tint, its legend and W removed — 31 Oct
 - [x] M2.11 Live marks while playing (per key in a chord, wrong keys ringed, at most 3 at one place), cleared on a new attempt and each loop pass, kept after Results until the next Start; setting "Marks while playing"; key → mark 15 ms median — 26 Oct
 
 ## M4 — Preview release v0.1

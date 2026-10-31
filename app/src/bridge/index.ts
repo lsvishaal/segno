@@ -28,6 +28,8 @@ import type {
   PieceSummary,
   PracticeEvent,
   Numbers,
+  Passage,
+  ProgressView,
   Review,
   ReviewBar,
   ReviewCard,
@@ -38,7 +40,6 @@ import type {
   Step,
   Suggested,
   Unavailable,
-  WeakBars,
 } from "./types";
 
 export type {
@@ -54,6 +55,8 @@ export type {
   PieceSummary,
   PracticeEvent,
   Numbers,
+  Passage,
+  ProgressView,
   Review,
   ReviewBar,
   ReviewCard,
@@ -64,7 +67,6 @@ export type {
   Step,
   Suggested,
   Unavailable,
-  WeakBars,
 };
 
 /** The Pieces available to practise. Never empty. */
@@ -92,9 +94,9 @@ export function renamePiece(id: string, title: string): Promise<PieceSummary> {
   return invoke<PieceSummary>("rename_piece", { id, title });
 }
 
-/** Which bars of a Piece have been hard, over every attempt kept for it. */
-export function weakBars(id: string): Promise<WeakBars> {
-  return invoke<WeakBars>("weak_bars", { id });
+/** A piece's Progress page: sessions bar by bar, each bar now, what to work on next. */
+export function progress(id: string): Promise<ProgressView> {
+  return invoke<ProgressView>("progress", { id });
 }
 
 /** How many practice sessions are kept for a Piece. */

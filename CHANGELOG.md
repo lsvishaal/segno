@@ -34,7 +34,12 @@ Everything so far, before the first preview (v0.1).
   - a per-bar chart
 - **History:**
   - every note saved with its timing and velocity
-  - weak bars over time tinted on the score when not playing (W toggles)
+  - **a Progress page per piece** (from each card, Continue, Results and the
+    practice screen): what to work on next with a button that loops it, every
+    session bar by bar with where each bar stands now, and a bar's story on a
+    click. It replaces the amber tint on the score, its legend and the W key.
+  - Practise on the Progress page starts at once on the keyboard you last
+    started on, which Hogwash now remembers
 - **Marks while playing:** each right key's note turns green and stays; a wrong key stays as a red note with a ring (at most 3 in one place). They clear on a new attempt and on each pass of a loop, and stay on the score after Results until the next Start. Settings › Marks while playing turns them back into a brief flash. The ✕ counts the score used to show after a run are gone.
 - **Speed:** a key reaches the screen in about 15 ms (it was about 27): the keyboard is read every 5 ms while playing, not every 25 ms.
 - **Coach cards:** every Practise button loops from one bar before the trouble; "You keep stopping at bar N" now loops bars N−1–N instead of starting at bar N.

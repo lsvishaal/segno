@@ -13,7 +13,6 @@ interface ScoreProps {
   readonly startPosition?: number;
   readonly loop?: { readonly first: number; readonly last: number } | null;
   readonly review?: ScoreReview | null;
-  readonly weak?: ReadonlyMap<number, number> | null;
   readonly showNoteNames?: boolean;
   readonly cursor: CursorState;
   readonly dot: Dot | null;
@@ -46,7 +45,7 @@ const bridge = vi.hoisted(() => ({
   loopTarget: vi.fn(),
   startAtBar: vi.fn(),
   startAttempt: vi.fn(),
-  weakBars: vi.fn(),
+  progress: vi.fn(),
 }));
 
 /** What the practice thread says, delivered as it would be. */
@@ -60,6 +59,19 @@ const PIECE: OpenedPiece = {
   pages: [],
   marks: [],
   bars: [],
+};
+
+const NEVER_PLAYED = {
+  id: "minuet",
+  title: "Minuet in G Major",
+  composer: "Petzold",
+  bars: 32,
+  sessions: [],
+  playedUs: 0,
+  lastPractisedMs: null,
+  now: [],
+  workOnNext: [],
+  details: [],
 };
 
 class QuietResizeObserver {
@@ -85,7 +97,7 @@ beforeEach(() => {
   bridge.loopTarget.mockResolvedValue(undefined);
   bridge.endAttempt.mockResolvedValue({});
   bridge.engravePiece.mockResolvedValue(PIECE);
-  bridge.weakBars.mockResolvedValue({ runs: 0, bars: [] });
+  bridge.progress.mockResolvedValue(NEVER_PLAYED);
 });
 
 afterEach(() => {
@@ -633,62 +645,96 @@ describe("the results after a run", () => {
   });
 });
 
-describe("weak bars over time", () => {
-  const history = { runs: 3, bars: [{ measure: 6, level: 4 }, { measure: 2, level: 0 }] };
-  const press = async (key: string) => {
+describe("practising from the Progress page", () => {
+  /** The score gets a width at once, so it is engraved and fitted. */
+  class SizedResizeObserver {
+    constructor(private readonly callback: ResizeObserverCallback) {}
+    observe() {
+      this.callback([{ contentRect: { width: 1000 } } as ResizeObserverEntry], this as never);
+    }
+    unobserve() {}
+    disconnect() {}
+  }
+  const remembering = (name: string | null) => {
+    const setItem = vi.fn();
+    vi.stubGlobal("localStorage", {
+      getItem: (key: string) => (key === "hogwash.keyboard" ? name : null),
+      setItem,
+    });
+    return setItem;
+  };
+  const openWith = async (practise: { from: number; to: number } | null) => {
+    vi.stubGlobal("ResizeObserver", SizedResizeObserver);
     await act(async () => {
-      fireEvent.keyDown(window, { key });
+      render(<PracticeScreen piece={PIECE} practise={practise} onLeave={vi.fn()} />);
     });
   };
 
-  it("tints the bars that have been hard, with a legend saying what it means", async () => {
-    bridge.weakBars.mockResolvedValue(history);
-    await renderScreen();
+  it("loops the bars and starts at once on the keyboard last started on", async () => {
+    remembering("Stage Piano");
+    bridge.instruments.mockResolvedValue([{ name: "Digital Piano" }, { name: "Stage Piano" }]);
 
-    expect(bridge.weakBars).toHaveBeenCalledWith("minuet");
-    expect([...(drawn.last?.weak ?? [])]).toEqual([[6, 4]]);
-    expect(screen.getByText(/Weak bars from 3 runs/)).toBeTruthy();
+    await openWith({ from: 5, to: 6 });
+
+    await waitFor(() => expect(bridge.startAttempt).toHaveBeenCalledWith("minuet", "Stage Piano"));
+    expect(bridge.loopBars).toHaveBeenCalledWith("minuet", 5, 6, 3);
+    expect(bridge.loopBars.mock.invocationCallOrder[0]!).toBeLessThan(
+      bridge.startAttempt.mock.invocationCallOrder[0]!,
+    );
   });
 
-  it("W hides them and shows them again", async () => {
-    bridge.weakBars.mockResolvedValue(history);
-    await renderScreen();
+  it("uses the first keyboard when the remembered one isn't connected", async () => {
+    remembering("Stage Piano");
 
-    await press("w");
-    expect(drawn.last?.weak).toBeNull();
-    // The legend fades out before it goes.
-    await waitFor(() => expect(screen.queryByText(/Weak bars/)).toBeNull());
+    await openWith({ from: 5, to: 6 });
 
-    await press("W");
-    expect(drawn.last?.weak?.get(6)).toBe(4);
+    await waitFor(() => expect(bridge.startAttempt).toHaveBeenCalledWith("minuet", "Digital Piano"));
   });
 
-  it("are off while playing, and come back up to date once the run ends", async () => {
-    bridge.weakBars.mockResolvedValue(history);
+  it("with no keyboard, sets the loop and asks for one instead of starting", async () => {
+    remembering(null);
+    bridge.instruments.mockResolvedValue([]);
+
+    await openWith({ from: 5, to: 6 });
+
+    await waitFor(() => expect(bridge.loopBars).toHaveBeenCalledWith("minuet", 5, 6, 3));
+    expect(bridge.startAttempt).not.toHaveBeenCalled();
+    expect(screen.getByText(/No MIDI keyboard is connected/)).toBeTruthy();
+  });
+
+  it("Play it through starts from bar 1 with no loop", async () => {
+    remembering(null);
+    bridge.startAtBar.mockResolvedValue({ position: 0, measure: 1 });
+
+    await openWith(null);
+
+    await waitFor(() => expect(bridge.startAttempt).toHaveBeenCalledWith("minuet", "Digital Piano"));
+    expect(bridge.startAtBar).toHaveBeenCalledWith("minuet", 1);
+    expect(bridge.loopBars).not.toHaveBeenCalled();
+  });
+
+  it("remembers the keyboard started on", async () => {
+    const setItem = remembering(null);
     await renderScreen();
+
     await startPracticing();
-    await act(async () => {
-      hear({ kind: "played", position: 0, pitch: 67, correct: true });
-    });
-    expect(drawn.last?.weak).toBeNull();
 
-    // Nothing worth reviewing: back to the start, with the history re-read.
-    await act(async () => {
-      hear({ kind: "ended", summary: { review: { bars: [] }, reason: null } as unknown as AttemptSummary });
-    });
-    expect(bridge.weakBars).toHaveBeenCalledTimes(2);
-    expect(drawn.last?.weak?.get(6)).toBe(4);
+    expect(setItem).toHaveBeenCalledWith("hogwash.keyboard", "Digital Piano");
   });
 
-  it("says so when every bar has gone fine, and shows nothing for a piece never played", async () => {
-    bridge.weakBars.mockResolvedValue({ runs: 2, bars: [{ measure: 1, level: 0 }] });
-    const { unmount } = await renderScreen();
-    expect(screen.getByText("No weak bars yet (from 2 runs)")).toBeTruthy();
-    unmount();
-
-    bridge.weakBars.mockResolvedValue({ runs: 0, bars: [] });
+  it("the header's Progress shows the page in place of the score, and back again", async () => {
     await renderScreen();
-    expect(screen.queryByText(/weak bars/i)).toBeNull();
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: "Progress" }));
+    });
+
+    expect(bridge.progress).toHaveBeenCalledWith("minuet");
+    expect(await screen.findByText("Play this piece once and your progress shows here.")).toBeTruthy();
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: "← Score" }));
+    });
+    expect(screen.queryByRole("region", { name: "Progress" })).toBeNull();
   });
 });
 

@@ -15,6 +15,7 @@ import {
 import type { ImportedPiece, OpenedPiece, PieceSummary, Unavailable } from "./bridge";
 import { LibraryScreen } from "./screens/Library";
 import { PracticeScreen } from "./screens/Practice";
+import { ProgressScreen, type PractiseRange } from "./screens/Progress";
 import { UnavailableScreen } from "./screens/Unavailable";
 
 /**
@@ -52,10 +53,13 @@ type Screen =
   | { readonly kind: "starting" }
   | { readonly kind: "unavailable"; readonly failure: Unavailable }
   | { readonly kind: "library"; readonly pieces: readonly PieceSummary[] }
+  | { readonly kind: "progress"; readonly pieces: readonly PieceSummary[]; readonly id: string }
   | {
       readonly kind: "practice";
       readonly pieces: readonly PieceSummary[];
       readonly piece: OpenedPiece;
+      /** From the Progress page: loop this (null: from bar 1) and start at once. */
+      readonly practise?: PractiseRange | undefined;
     };
 
 /** How long a notice stays before it fades. */
@@ -114,14 +118,14 @@ export function App() {
   }, []);
 
   const open = useCallback(
-    (id: string) => {
+    (id: string, practise?: PractiseRange) => {
       void (async () => {
         try {
           const piece = await openPiece(id);
 
           setScreen((current) =>
-            current.kind === "library" || current.kind === "practice"
-              ? { kind: "practice", pieces: current.pieces, piece }
+            current.kind === "library" || current.kind === "practice" || current.kind === "progress"
+              ? { kind: "practice", pieces: current.pieces, piece, practise }
               : current,
           );
         } catch (error) {
@@ -134,9 +138,15 @@ export function App() {
 
   const leave = useCallback(() => {
     setScreen((current) =>
-      current.kind === "practice"
+      current.kind === "practice" || current.kind === "progress"
         ? { kind: "library", pieces: current.pieces }
         : current,
+    );
+  }, []);
+
+  const showProgress = useCallback((id: string) => {
+    setScreen((current) =>
+      current.kind === "library" ? { kind: "progress", pieces: current.pieces, id } : current,
     );
   }, []);
 
@@ -236,6 +246,7 @@ export function App() {
                   <LibraryScreen
                     pieces={screen.pieces}
                     onOpen={open}
+                    onProgress={showProgress}
                     onRename={rename}
                     onCountHistory={historyCount}
                     onDelete={remove}
@@ -247,10 +258,22 @@ export function App() {
                 </Transitioned>
               );
 
+            case "progress":
+              return (
+                <Transitioned key={`progress-${screen.id}`}>
+                  <ProgressScreen
+                    id={screen.id}
+                    backLabel="Library"
+                    onBack={leave}
+                    onPractise={(range) => open(screen.id, range)}
+                  />
+                </Transitioned>
+              );
+
             case "practice":
               return (
                 <Transitioned key={`practice-${screen.piece.id}`}>
-                  <PracticeScreen piece={screen.piece} onLeave={leave} />
+                  <PracticeScreen piece={screen.piece} practise={screen.practise} onLeave={leave} />
                 </Transitioned>
               );
           }

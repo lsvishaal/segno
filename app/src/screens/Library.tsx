@@ -93,6 +93,7 @@ const STARTERS = [
 export function LibraryScreen({
   pieces,
   onOpen,
+  onProgress,
   onRename,
   onCountHistory,
   onDelete,
@@ -104,6 +105,7 @@ export function LibraryScreen({
 }: {
   readonly pieces: readonly PieceSummary[];
   readonly onOpen: (id: string) => void;
+  readonly onProgress: (id: string) => void;
   readonly onRename: (id: string, title: string) => Promise<string | null>;
   readonly onCountHistory: (id: string) => Promise<number>;
   readonly onDelete: (id: string) => Promise<string | null>;
@@ -139,6 +141,7 @@ export function LibraryScreen({
           note={notes.get(piece.id)}
           now={now}
           onOpen={onOpen}
+          onProgress={onProgress}
           onRename={onRename}
           onCountHistory={onCountHistory}
           onDelete={onDelete}
@@ -156,31 +159,52 @@ export function LibraryScreen({
 
       {latest?.lastPractisedMs != null && (
         <Shelf label="Continue">
-          <motion.button
-            type="button"
+          <motion.div
             initial={{ opacity: 0, y: 6 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.2, ease: "easeOut" }}
-            onClick={() => onOpen(latest.id)}
-            aria-label={`Continue ${latest.title}`}
-            data-continue
-            className="group mt-4 flex w-full cursor-pointer items-center justify-between gap-6 rounded-xl border border-rule bg-paper-raised px-6 py-5 text-left transition duration-[120ms] ease-out hover:border-ink/20 hover:shadow-[0_8px_24px_-12px_rgb(28_26_23/0.18)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
+            className="relative mt-4"
           >
-            <span className="min-w-0">
-              {latest.composer && (
-                <span className="block text-label text-ink-muted uppercase">{latest.composer}</span>
-              )}
-              <span className="mt-1 block truncate font-serif text-title italic">{latest.title}</span>
-              <span className="mt-2 block text-xs text-ink-muted">
-                {[`Practised ${practisedWhen(latest.lastPractisedMs, now)}`, weakestLine(latest.weakest)]
-                  .filter(Boolean)
-                  .join(" · ")}
+            <button
+              type="button"
+              onClick={() => onOpen(latest.id)}
+              aria-label={`Continue ${latest.title}`}
+              data-continue
+              className="flex w-full cursor-pointer items-center rounded-xl border border-rule bg-paper-raised py-5 pr-56 pl-6 text-left transition duration-[120ms] ease-out hover:border-ink/20 hover:shadow-[0_8px_24px_-12px_rgb(28_26_23/0.18)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
+            >
+              <span className="min-w-0">
+                {latest.composer && (
+                  <span className="block text-label text-ink-muted uppercase">{latest.composer}</span>
+                )}
+                <span className="mt-1 block truncate font-serif text-title italic">{latest.title}</span>
+                <span className="mt-2 block text-xs text-ink-muted">
+                  {[`Practised ${practisedWhen(latest.lastPractisedMs, now)}`, weakestLine(latest.weakest)]
+                    .filter(Boolean)
+                    .join(" · ")}
+                </span>
               </span>
-            </span>
-            <span className="shrink-0 rounded-full bg-ink px-4 py-1.5 text-xs font-medium text-paper transition-opacity group-hover:opacity-90">
-              Continue
-            </span>
-          </motion.button>
+            </button>
+            {/* Beside the card's button, not inside it: a button cannot hold another. */}
+            <div className="absolute top-1/2 right-6 flex -translate-y-1/2 items-center gap-3">
+              <button
+                type="button"
+                onClick={() => onProgress(latest.id)}
+                aria-label={`Progress for ${latest.title}`}
+                className="cursor-pointer rounded-full px-3 py-1.5 text-xs font-medium text-ink-muted underline decoration-rule underline-offset-4 transition-colors hover:text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
+              >
+                Progress
+              </button>
+              <button
+                type="button"
+                tabIndex={-1}
+                aria-hidden="true"
+                onClick={() => onOpen(latest.id)}
+                className="cursor-pointer rounded-full bg-ink px-4 py-1.5 text-xs font-medium text-paper transition-opacity hover:opacity-90"
+              >
+                Continue
+              </button>
+            </div>
+          </motion.div>
         </Shelf>
       )}
 

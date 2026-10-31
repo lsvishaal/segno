@@ -10,6 +10,7 @@ const PIECES: PieceSummary[] = [
 
 function renderScreen(overrides: Partial<Parameters<typeof LibraryScreen>[0]> = {}) {
   const onOpen = vi.fn();
+  const onProgress = vi.fn();
   const onImport = vi.fn();
   const onDismissError = vi.fn();
   const onRename = vi.fn(async () => null as string | null);
@@ -20,6 +21,7 @@ function renderScreen(overrides: Partial<Parameters<typeof LibraryScreen>[0]> = 
     <LibraryScreen
       pieces={PIECES}
       onOpen={onOpen}
+      onProgress={onProgress}
       onRename={onRename}
       onCountHistory={onCountHistory}
       onDelete={onDelete}
@@ -31,7 +33,7 @@ function renderScreen(overrides: Partial<Parameters<typeof LibraryScreen>[0]> = 
     />,
   );
 
-  return { onOpen, onImport, onDismissError, onRename, onCountHistory, onDelete };
+  return { onOpen, onProgress, onImport, onDismissError, onRename, onCountHistory, onDelete };
 }
 
 describe("LibraryScreen import", () => {
@@ -222,6 +224,17 @@ describe("the shelves", () => {
     expect(button.textContent).toContain("2 days ago · weakest bars 6, 14");
     fireEvent.click(button);
     expect(onOpen).toHaveBeenCalledWith("mn");
+  });
+
+  // Not hidden until hover: the way in to what to practise next.
+  it("offers Progress on every card and beside Continue, always visible", () => {
+    const { onProgress } = renderScreen({ pieces: shelfPieces, now: NOW });
+
+    const links = screen.getAllByRole("button", { name: /^Progress for / });
+    expect(links).toHaveLength(shelfPieces.length + 1);
+    for (const link of links) expect(link.closest(".opacity-0")).toBeNull();
+    fireEvent.click(screen.getAllByRole("button", { name: "Progress for Minuet in G Major" })[0]!);
+    expect(onProgress).toHaveBeenCalledWith("mn");
   });
 
   it("says on each card when it was last practised, or that it hasn't been", () => {

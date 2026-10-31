@@ -31,8 +31,8 @@
   /* The band behind looped bars, always used faint. */
   --color-loop-band: #2563eb;
 
-  /* A pause, marked on the results' bar cut-outs: the amber of the heatmap
-     scale (docs/DESIGN.md), never red, so a pause reads as "slow here", not
+  /* A pause, marked on the results' bar cut-outs, and the amber of the
+     Progress page's levels (docs/DESIGN.md), never red, so a pause reads as "slow here", not
      "wrong". */
   --color-pause: #d97706;
 

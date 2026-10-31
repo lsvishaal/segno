@@ -40,8 +40,8 @@ What works today:
 - **History:**
   - every attempt is saved locally with timings, so analysis improves without
     losing old sessions
-  - weak bars over time are shown on the score for now; a per-piece Progress
-    page is next
+  - a Progress page per piece: what to work on next (with a loop button),
+    every session bar by bar, and how each bar has changed
 
 ## Principles
 

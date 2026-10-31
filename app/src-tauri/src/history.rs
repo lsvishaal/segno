@@ -1,32 +1,21 @@
 //! A piece's history: every attempt ever kept for it, bar by bar and
 //! session by session, to say which bars are hard for this performer now.
 
+use std::cmp::Reverse;
+use std::collections::BTreeSet;
+
+use hogwash_analysis::coach::practise_range;
 use hogwash_analysis::{Bar, Bars};
-use hogwash_domain::PieceId;
+use hogwash_domain::{MeasureNumber, PieceId};
 use hogwash_notation::ReferencePerformance;
 use hogwash_records::{Ended, Records, SessionRecord};
 use serde::Serialize;
 
-/// Which bars of a piece are hard now (D10, see [`Bar::level`]).
-#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize)]
-#[serde(rename_all = "camelCase")]
-pub struct WeakBars {
-    /// How many attempts (runs and loop passes) this is from.
-    pub runs: usize,
-    /// Each bar with enough of its last three sessions to judge (two
-    /// passes), and its level: 0 went fine, 1–4 lighter to deeper.
-    pub bars: Vec<WeakBar>,
-}
+/// How many passages "Work on next" lists, at most.
+const WORK_ON_NEXT: usize = 3;
 
-impl WeakBars {
-    /// Up to two of the hardest bars (level 3 or 4), hardest first.
-    #[must_use]
-    pub fn weakest(&self) -> Vec<u32> {
-        let mut hard: Vec<&WeakBar> = self.bars.iter().filter(|bar| bar.level >= 3).collect();
-        hard.sort_by_key(|bar| (std::cmp::Reverse((bar.level, bar.difficulty)), bar.measure));
-        hard.iter().take(2).map(|bar| bar.measure).collect()
-    }
-}
+/// How many of a bar's first sessions its trend starts from, at most.
+const EARLIEST: usize = 3;
 
 /// When `piece` was last practised, in Unix milliseconds.
 #[must_use]
@@ -38,27 +27,14 @@ pub fn last_practised(sessions: &[SessionRecord], piece: &PieceId) -> Option<u64
         .max()
 }
 
-/// One bar's place on the scale.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
-#[serde(rename_all = "camelCase")]
-pub struct WeakBar {
-    pub measure: u32,
-    pub level: u8,
-    /// Only to order bars of one level, hardest first.
-    #[serde(skip)]
-    pub difficulty: u64,
-}
-
 /// A piece's sessions, oldest first, each bar by bar, and where each bar
 /// stands now. One replay of every attempt.
-#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize)]
-#[serde(rename_all = "camelCase")]
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct Progress {
     /// How many attempts (runs and loop passes) this is from.
     pub runs: usize,
     pub sessions: Vec<SessionBars>,
     /// Each bar's own last three sessions in which it was played, added up.
-    #[serde(skip)]
     pub now: Bars,
 }
 
@@ -87,20 +63,231 @@ pub struct Cell {
     pub level: u8,
 }
 
+/// Bars next to each other worth practising together, and the loop that
+/// practises them (from one bar before, [`practise_range`]).
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct Passage {
+    pub first: u32,
+    pub last: u32,
+    pub from: u32,
+    pub to: u32,
+    /// "avg pause 3.1 s · 1 wrong note per pass", over the bars' Now.
+    pub facts: String,
+}
+
+/// A bar's level now: `None` when it hasn't had the two passes a judgement needs.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct NowBar {
+    pub measure: u32,
+    pub level: Option<u8>,
+}
+
+/// A bar's line on the Progress page, after "Bar N · ", and the loop its
+/// Practise button plays ([`practise_range`]).
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct Detail {
+    pub measure: u32,
+    pub line: String,
+    pub from: u32,
+    pub to: u32,
+}
+
+/// Everything the Progress page shows for one piece.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ProgressView {
+    pub id: String,
+    pub title: String,
+    pub composer: Option<String>,
+    /// How many bars the piece has: the grid's columns.
+    pub bars: usize,
+    /// Newest first.
+    pub sessions: Vec<SessionBars>,
+    pub played_us: u64,
+    pub last_practised_ms: Option<u64>,
+    /// Every bar played, in bar order.
+    pub now: Vec<NowBar>,
+    pub work_on_next: Vec<Passage>,
+    /// Every bar, in bar order.
+    pub details: Vec<Detail>,
+}
+
 impl Progress {
-    /// The bars there is enough to judge, with their levels now.
+    /// The bars judged (two passes) at level `min` or more, worst first:
+    /// by level, then difficulty, then bar.
+    fn worst(&self, min: u8) -> Vec<u32> {
+        let mut bars: Vec<(u32, u8, u64)> = self
+            .now
+            .iter()
+            .filter_map(|(measure, bar)| Some((measure.get(), bar.judged()?, bar.difficulty())))
+            .filter(|&(_, level, _)| level >= min)
+            .collect();
+        bars.sort_by_key(|&(measure, level, difficulty)| (Reverse((level, difficulty)), measure));
+        bars.into_iter().map(|(measure, ..)| measure).collect()
+    }
+
+    /// Up to two of the hardest bars (level 3 or 4), hardest first: the
+    /// library card's "weakest bars".
     #[must_use]
-    pub fn weak_bars(&self) -> WeakBars {
-        WeakBars {
-            runs: self.runs,
-            bars: self
+    pub fn weakest(&self) -> Vec<u32> {
+        self.worst(3).into_iter().take(2).collect()
+    }
+
+    /// "Work on next": the judged bars at level 1 or more, worst first,
+    /// neighbours merged into one passage, up to three passages.
+    #[must_use]
+    pub fn work_on_next(&self, reference: &ReferencePerformance) -> Vec<Passage> {
+        let worst = self.worst(1);
+        let marked: BTreeSet<u32> = worst.iter().copied().collect();
+        let mut passages: Vec<(u32, u32)> = Vec::new();
+        for measure in worst {
+            if passages.len() == WORK_ON_NEXT {
+                break;
+            }
+            if passages
+                .iter()
+                .any(|&(first, last)| (first..=last).contains(&measure))
+            {
+                continue;
+            }
+            let mut first = measure;
+            while first > 1 && marked.contains(&(first - 1)) {
+                first -= 1;
+            }
+            let mut last = measure;
+            while marked.contains(&(last + 1)) {
+                last += 1;
+            }
+            passages.push((first, last));
+        }
+        passages
+            .into_iter()
+            .filter_map(|(first, last)| {
+                let (from, to) = practise_range(
+                    reference,
+                    MeasureNumber::new(first)?,
+                    MeasureNumber::new(last)?,
+                );
+                Some(Passage {
+                    first,
+                    last,
+                    from: from.get(),
+                    to: to.get(),
+                    facts: self.facts(first..=last),
+                })
+            })
+            .collect()
+    }
+
+    /// What happened in `bars` lately, per pass of each, added up.
+    fn facts(&self, bars: std::ops::RangeInclusive<u32>) -> String {
+        let (mut pause_us, mut wrong_milli, mut stops) = (0, 0, 0);
+        for bar in bars.filter_map(|measure| self.now.get(MeasureNumber::new(measure)?)) {
+            let passes = u64::from(bar.passes.max(1));
+            pause_us += bar.pause_us / passes;
+            wrong_milli += u64::from(bar.wrong) * 1000 / passes;
+            stops += bar.gave_up;
+        }
+        let mut parts = Vec::new();
+        if pause_us >= 50_000 {
+            parts.push(format!("avg pause {} s", seconds(pause_us)));
+        }
+        if wrong_milli > 0 {
+            parts.push(wrong_per_pass(wrong_milli));
+        }
+        if stops > 0 {
+            parts.push(format!("stopped {stops}×"));
+        }
+        parts.join(" · ")
+    }
+
+    /// Bar `measure`'s line: now against its earliest sessions.
+    ///
+    /// The earliest are its first sessions in which it was played, at most
+    /// three and at most half of them; now is [`Bars::now`]. One session
+    /// says only how it went, with no trend; one pass, not enough.
+    #[must_use]
+    pub fn detail(&self, measure: u32) -> Option<String> {
+        let played: Vec<&Cell> = self
+            .sessions
+            .iter()
+            .filter_map(|session| session.bars.iter().find(|cell| cell.measure == measure))
+            .collect();
+        let now = self.now.get(MeasureNumber::new(measure)?)?;
+        if now.passes < 2 {
+            return Some("Play this bar twice to see stats.".to_owned());
+        }
+        let per_pass = |passes: u32, pause_us: u64, wrong: u32| {
+            let passes = u64::from(passes.max(1));
+            (pause_us / passes, u64::from(wrong) * 1000 / passes)
+        };
+        let (pause_now, wrong_now) = per_pass(now.passes, now.pause_us, now.wrong);
+        if played.len() < 2 {
+            return Some(format!(
+                "avg pause {} s · wrong notes {} per pass",
+                seconds(pause_now),
+                tenths(wrong_now)
+            ));
+        }
+        let earliest: Vec<&Cell> = played
+            .iter()
+            .take(EARLIEST.min(played.len() / 2))
+            .copied()
+            .collect();
+        let (pause_then, wrong_then) = per_pass(
+            earliest.iter().map(|cell| cell.passes).sum(),
+            earliest.iter().map(|cell| cell.pause_us).sum(),
+            earliest.iter().map(|cell| cell.wrong).sum(),
+        );
+        Some(format!(
+            "avg pause {} s → {} s over {} sessions · wrong notes {} → {} per pass",
+            seconds(pause_then),
+            seconds(pause_now),
+            played.len(),
+            tenths(wrong_then),
+            tenths(wrong_now)
+        ))
+    }
+
+    /// The Progress page for `piece`.
+    #[must_use]
+    pub fn view(
+        &self,
+        piece: &hogwash_library::Piece,
+        last_practised_ms: Option<u64>,
+    ) -> ProgressView {
+        let bars = piece.score().measures().len();
+        ProgressView {
+            id: piece.id().as_str().to_owned(),
+            title: piece.title().to_owned(),
+            composer: piece.composer().map(str::to_owned),
+            bars,
+            sessions: self.sessions.iter().rev().cloned().collect(),
+            played_us: self.sessions.iter().map(|session| session.played_us).sum(),
+            last_practised_ms,
+            now: self
                 .now
                 .iter()
-                .filter_map(|(measure, bar)| {
-                    Some(WeakBar {
-                        measure: measure.get(),
-                        level: bar.judged()?,
-                        difficulty: bar.difficulty(),
+                .map(|(measure, bar)| NowBar {
+                    measure: measure.get(),
+                    level: bar.judged(),
+                })
+                .collect(),
+            work_on_next: self.work_on_next(piece.reference()),
+            details: (1..=u32::try_from(bars).unwrap_or(u32::MAX))
+                .filter_map(|measure| {
+                    let bar = MeasureNumber::new(measure)?;
+                    let (from, to) = practise_range(piece.reference(), bar, bar);
+                    Some(Detail {
+                        measure,
+                        line: self
+                            .detail(measure)
+                            .unwrap_or_else(|| "Not played yet.".to_owned()),
+                        from: from.get(),
+                        to: to.get(),
                     })
                 })
                 .collect(),
@@ -108,11 +295,27 @@ impl Progress {
     }
 }
 
-/// Replays every attempt kept for `piece` against `reference`. Sessions
-/// that cannot be read are skipped, as the library does.
-#[must_use]
-pub fn weak_bars(records: &Records, piece: &PieceId, reference: &ReferencePerformance) -> WeakBars {
-    weak_bars_in(&sessions(records), piece, reference)
+/// Microseconds as seconds to one decimal: "3.1".
+fn seconds(us: u64) -> String {
+    let tenths = (us + 50_000) / 100_000;
+    format!("{}.{}", tenths / 10, tenths % 10)
+}
+
+/// Thousandths to one decimal, a whole number without one: "1", "1.5".
+fn tenths(milli: u64) -> String {
+    let tenths = (milli + 50) / 100;
+    if tenths.is_multiple_of(10) {
+        (tenths / 10).to_string()
+    } else {
+        format!("{}.{}", tenths / 10, tenths % 10)
+    }
+}
+
+/// "1 wrong note per pass", "1.5 wrong notes per pass".
+fn wrong_per_pass(milli: u64) -> String {
+    let count = tenths(milli);
+    let notes = if count == "1" { "note" } else { "notes" };
+    format!("{count} wrong {notes} per pass")
 }
 
 /// Every session that can be read; none if the history folder can't be.
@@ -124,17 +327,8 @@ pub fn sessions(records: &Records) -> Vec<SessionRecord> {
         .unwrap_or_default()
 }
 
-/// [`weak_bars`] over sessions already read, so a whole library reads them once.
-#[must_use]
-pub fn weak_bars_in(
-    sessions: &[SessionRecord],
-    piece: &PieceId,
-    reference: &ReferencePerformance,
-) -> WeakBars {
-    progress_in(sessions, piece, reference).weak_bars()
-}
-
-/// `piece`'s [`Progress`] over sessions already read.
+/// Replays every attempt kept for `piece` against `reference`, over
+/// sessions already read (so a whole library reads them once).
 #[must_use]
 pub fn progress_in(
     sessions: &[SessionRecord],
@@ -241,6 +435,11 @@ mod tests {
     /// The whole piece in its written rhythm, a quarter every 600 ms, with
     /// `late` µs more before step `stall`.
     fn run(reference: &ReferencePerformance, stall: usize, late: u64) -> AttemptRecord {
+        run_late(reference, &[(stall, late)])
+    }
+
+    /// [`run`], late before each of several steps.
+    fn run_late(reference: &ReferencePerformance, stalls: &[(usize, u64)]) -> AttemptRecord {
         let mut played = ObservedPerformance::new();
         let mut at_us = 1_000_000;
         for step in 0..reference.len() {
@@ -248,8 +447,10 @@ mod tests {
                 let written = u64::from(reference.written_gap(step).unwrap_or(TICKS_PER_QUARTER));
                 at_us += written * 600_000 / u64::from(TICKS_PER_QUARTER);
             }
-            if step == stall {
-                at_us += late;
+            for &(stall, late) in stalls {
+                if step == stall {
+                    at_us += late;
+                }
             }
             for pitch in reference
                 .at(step)
@@ -306,22 +507,16 @@ mod tests {
         );
         let weak = minuet.at(stall).expect("a step").measure().get();
 
-        let history = weak_bars(&records, &piece, &minuet);
+        let progress = progress_in(&sessions(&records), &piece, &minuet);
 
-        assert_eq!(history.runs, 2);
-        let level = |measure| {
-            history
-                .bars
-                .iter()
-                .find(|bar| bar.measure == measure)
-                .map(|bar| bar.level)
-        };
+        assert_eq!(progress.runs, 2);
+        let level = |measure: u32| progress.now.get(MeasureNumber::new(measure)?)?.judged();
         assert_eq!(level(weak), Some(3));
         assert!(
-            history
-                .bars
+            progress
+                .now
                 .iter()
-                .all(|bar| bar.measure == weak || bar.level == 0)
+                .all(|(measure, bar)| measure.get() == weak || bar.judged() == Some(0))
         );
     }
 
@@ -345,7 +540,7 @@ mod tests {
 
         assert_eq!(last_practised(&sessions, &piece), Some(1_761_390_000_000));
         assert_eq!(
-            weak_bars_in(&sessions, &piece, &minuet).weakest(),
+            progress_in(&sessions, &piece, &minuet).weakest(),
             vec![weak]
         );
         assert_eq!(last_practised(&[], &piece), None);
@@ -388,22 +583,132 @@ mod tests {
             .find(|cell| cell.measure == once)
             .expect("played");
         assert_eq!((cell.passes, cell.level), (1, 4));
-        assert!(
-            progress
-                .weak_bars()
-                .bars
-                .iter()
-                .all(|bar| bar.measure != once)
+        let judged = progress.now.get(MeasureNumber::new(once).expect("a bar"));
+        assert_eq!(judged.map(Bar::judged), Some(None));
+        assert_eq!(
+            progress.detail(once).as_deref(),
+            Some("Play this bar twice to see stats.")
         );
         drop(records);
     }
 
     #[test]
     #[ignore = "needs a real libverovio; run `just provided-test`"]
-    fn a_piece_never_played_has_no_weak_bars() {
+    fn a_piece_never_played_has_no_progress() {
         let (records, piece, minuet) = minuet("empty");
+        let progress = progress_in(&sessions(&records), &piece, &minuet);
 
-        assert_eq!(weak_bars(&records, &piece, &minuet), WeakBars::default());
+        assert_eq!(progress, Progress::default());
+        assert!(progress.work_on_next(&minuet).is_empty());
+    }
+
+    /// Sessions of `piece`, a day apart, one attempt each.
+    fn days(piece: &PieceId, attempts: Vec<AttemptRecord>) -> Vec<SessionRecord> {
+        attempts
+            .into_iter()
+            .enumerate()
+            .map(|(day, attempt)| SessionRecord {
+                id: format!("day{day}"),
+                piece: piece.clone(),
+                started: (1_761_300_000_000 + 86_400_000 * day as u64).to_string(),
+                closed: true,
+                attempts: vec![attempt],
+            })
+            .collect()
+    }
+
+    /// The first step of bar `measure`, or its second for bar 1 (the
+    /// first note of an attempt is never timed).
+    fn opening(reference: &ReferencePerformance, measure: u32) -> usize {
+        (1..reference.len())
+            .find(|&step| reference.at(step).map(|notes| notes.measure().get()) == Some(measure))
+            .expect("the bar is in the piece")
+    }
+
+    // Worst first, neighbours merged, at most three, each looped from the
+    // bar before; bar 2, the fourth, is left for later.
+    #[test]
+    #[ignore = "needs a real libverovio; run `just provided-test`"]
+    fn work_on_next_merges_neighbours_and_lists_three() {
+        let (records, piece, minuet) = minuet("next");
+        let at = |measure| opening(&minuet, measure);
+        let stalls = [
+            (at(14), 19_000_000), // a gap over 20 s is a break, not a pause
+            (at(10), 16_000_000),
+            (at(6), 12_000_000),
+            (at(7), 12_000_000),
+            (at(2), 6_000_000),
+        ];
+        let progress = progress_in(
+            &days(&piece, vec![run_late(&minuet, &stalls)]),
+            &piece,
+            &minuet,
+        );
+
+        let next: Vec<(u32, u32, u32, u32)> = progress
+            .work_on_next(&minuet)
+            .iter()
+            .map(|passage| (passage.first, passage.last, passage.from, passage.to))
+            .collect();
+
+        assert_eq!(next, vec![(14, 14, 13, 14), (10, 10, 9, 10), (6, 7, 5, 7)]);
+        let facts = &progress.work_on_next(&minuet)[0].facts;
+        assert!(
+            facts.starts_with("avg pause ") && facts.ends_with(" s"),
+            "{facts}"
+        );
+        drop(records);
+    }
+
+    #[test]
+    #[ignore = "needs a real libverovio; run `just provided-test`"]
+    fn trouble_in_bar_1_loops_from_bar_1_and_clean_playing_lists_nothing() {
+        let (records, piece, minuet) = minuet("first");
+        let stall = opening(&minuet, 1);
+
+        let troubled = progress_in(
+            &days(&piece, vec![run(&minuet, stall, 12_000_000)]),
+            &piece,
+            &minuet,
+        );
+        let clean = progress_in(&days(&piece, vec![run(&minuet, 0, 0)]), &piece, &minuet);
+
+        let first = &troubled.work_on_next(&minuet)[0];
+        assert_eq!(
+            (first.first, first.last, first.from, first.to),
+            (1, 1, 1, 1)
+        );
+        assert!(clean.work_on_next(&minuet).is_empty());
+        assert_eq!(
+            clean.detail(1).as_deref(),
+            Some("avg pause 0.0 s · wrong notes 0 per pass")
+        );
+        drop(records);
+    }
+
+    // Three bad sessions, then three clean: the earliest three against now.
+    #[test]
+    #[ignore = "needs a real libverovio; run `just provided-test`"]
+    fn a_bar_s_trend_is_its_earliest_sessions_against_now() {
+        let (records, piece, minuet) = minuet("trend");
+        let stall = opening(&minuet, 6);
+        let bad = || run(&minuet, stall, 12_000_000);
+        let good = || run(&minuet, 0, 0);
+        let progress = progress_in(
+            &days(&piece, vec![bad(), bad(), bad(), good(), good(), good()]),
+            &piece,
+            &minuet,
+        );
+
+        let line = progress.detail(6).expect("bar 6 was played");
+
+        assert!(line.starts_with("avg pause "), "{line}");
+        assert!(
+            line.ends_with(" s → 0.0 s over 6 sessions · wrong notes 0 → 0 per pass"),
+            "{line}"
+        );
+        assert!(progress.work_on_next(&minuet).is_empty());
+        drop(records);
     }
 
     // Budget: opening a piece stays quick with a long history, on the
@@ -422,7 +727,7 @@ mod tests {
         }
 
         let began = Instant::now();
-        let history = weak_bars(&records, &piece, &prelude);
+        let history = progress_in(&sessions(&records), &piece, &prelude);
 
         assert_eq!(history.runs, 50);
         // The budget is for the release build; a debug build is a few times slower.

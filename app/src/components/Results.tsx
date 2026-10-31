@@ -28,6 +28,7 @@ export function Results({
   onNoteNames,
   onAgain,
   onShowScore,
+  onProgress,
   onLibrary,
 }: {
   readonly review: Review;
@@ -42,6 +43,8 @@ export function Results({
   readonly onAgain: () => void;
   /** Back to the score, its marks left on; at a bar, if one was picked. */
   readonly onShowScore: (measure?: number) => void;
+  /** The piece's Progress page: every session, and what to work on next. */
+  readonly onProgress: () => void;
   readonly onLibrary: () => void;
 }) {
   const { numbers } = review;
@@ -130,6 +133,9 @@ export function Results({
         </motion.button>
         <button type="button" onClick={() => onShowScore()} title="Esc" className={SECONDARY}>
           ♪ Show on the score
+        </button>
+        <button type="button" onClick={onProgress} className={SECONDARY}>
+          Progress →
         </button>
         <button type="button" onClick={onLibrary} className={SECONDARY}>
           ← Library

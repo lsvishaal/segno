@@ -32,6 +32,7 @@ export function PieceCard({
   note,
   now,
   onOpen,
+  onProgress,
   onRename,
   onCountHistory,
   onDelete,
@@ -42,6 +43,7 @@ export function PieceCard({
   /** The time "2 days ago" counts from. */
   readonly now: number;
   readonly onOpen: (id: string) => void;
+  readonly onProgress: (id: string) => void;
   /** Saves a new title; resolves to why it could not be, or `null`. */
   readonly onRename: (id: string, title: string) => Promise<string | null>;
   /** How many practice sessions deleting it would take with it. */
@@ -189,9 +191,19 @@ export function PieceCard({
           {piece.notes} {piece.notes === 1 ? "note" : "notes"}
         </p>
 
-        <p className="mt-auto border-t border-rule pt-3 text-xs text-ink-muted">
+        <p className="mt-auto border-t border-rule pt-3 pr-20 text-xs text-ink-muted">
           {practised}
         </p>
+      </button>
+
+      {/* Always visible: the way in to what to practise next. */}
+      <button
+        type="button"
+        aria-label={`Progress for ${piece.title}`}
+        onClick={() => onProgress(piece.id)}
+        className={`${ACTION} absolute right-3 bottom-[0.9rem] text-ink-muted underline decoration-rule underline-offset-4 hover:text-ink`}
+      >
+        Progress
       </button>
 
       {/* Beside the card's button, not inside it: a button cannot hold another.
