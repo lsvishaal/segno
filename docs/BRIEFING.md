@@ -1,6 +1,6 @@
 # Hogwash — briefing for Claude chat
 
-> Generated 2026-10-26 (after M2.9) from `README.md`, `ROADMAP.md`, `DECISIONS.md`, `CLAUDE.md`
+> Generated 2026-10-31 (after M2.10) from `README.md`, `ROADMAP.md`, `DECISIONS.md`, `CLAUDE.md`
 > and `docs/`. It makes no claim those files don't. Regenerated at the end of every
 > milestone or phase, and before a release.
 
@@ -27,13 +27,13 @@
    - a library with shelves and Continue
    - wait-mode practice; start from any bar; loop bars
    - Results after each run with up to 3 coach cards
-   - weak bars over time
-6. **Next:** a per-piece **Progress page** (M2.10). Absolute weak-bar levels (M2.9) and
-   live marks that stay for the whole attempt (M2.11) are built.
+   - a per-piece **Progress page**: what to work on next, every session bar by bar
+6. **Next:** the v0.1 launch tasks (release build, clean-system test, README, the
+   name). M2.9–M2.11 (levels, the Progress page, live marks) are built.
 7. **v0.1 preview:** Sun 8 Nov 2026. **v1.0:** Sun 13 Dec 2026. The active milestone
    is the v0.1 checklist below.
-8. **Deadline guard:** if the Progress page isn't done by Sun 1 Nov, ship v0.1 with
-   the on-score tint and do launch tasks.
+8. **Deadline guard** (Progress page by Sun 1 Nov): met on 31 Oct; the on-score tint
+   is gone.
 9. **One developer**, who is also the main user: a self-taught adult pianist.
 10. **Open decisions:** D1 dates, D6 practice log, D8 the name (needed for v0.1), D13
     Listen's sound.
@@ -93,13 +93,14 @@
   simplified)
 - Starter · Intermediate (Minuet in G, Prelude in C)
 - Cards: composer in small caps, title in serif italic, size, "Last practised … ·
-  weakest bar …" or "Not practised yet"
+  weakest bar …" or "Not practised yet", and an always-visible "Progress" link (also
+  beside Continue)
 
 **Practice:**
 - the cursor waits (chords, ties, repeats, grace notes)
 - click a bar to start there; Shift-click or L to loop, with a clean-passes counter
   and "Join it back up"
-- R restarts; zoom (Ctrl+wheel); note names; MIDI Thru
+- R restarts; zoom (Ctrl+wheel); note names; MIDI Thru; remembers the keyboard
 - a 60 s grace period when the keyboard disconnects
 - auto-finish 1.5 s after the last note
 - **marks while playing:** each right key's note turns green, a wrong key is a red head
@@ -114,6 +115,22 @@
 - Went well
 - Details (big numbers, a per-bar chart)
 - Keys: Enter = first card, R = again, Esc = the score
+- "Progress →" opens the piece's Progress page
+
+**The Progress page** (`docs/DESIGN.md` §17.5; built 31 Oct):
+- header: "3 sessions · 4 min · last practised today"
+- **Work on next:** up to 3 passages (judged bars at level ≥ 1, worst first,
+  neighbours merged), e.g. "Bars 6–7 · avg pause 3.1 s · 1 wrong note per pass" with
+  "⟲ Practise bars 5–7"; none: "Every bar is clean in your recent sessions." +
+  "Play it through"
+- **Every session:** bars across, sessions down (newest on top, last 12, "Show
+  all"), a Now row of heights (taller, deeper amber = harder; dotted = played once)
+- **Bar detail** on a click: "Bar 6 · avg pause 4.1 s → 3.1 s over 3 sessions ·
+  wrong notes 0 → 0 per pass"
+- never played: "Play this piece once and your progress shows here." + Practise
+- from the cards, Continue, Results and the practice header; Practise from the
+  library starts at once on the remembered keyboard (no keyboard: the loop is set
+  and the picker asks)
 
 **Coach cards:**
 - Going into bar N
@@ -137,8 +154,8 @@ written rhythm, and hunting for one note counts as at most 3 wrong notes.
   - provisional, re-checked at the 1 Nov cut-check
 - **Now** is a bar's own last 3 sessions in which it was played, judged only with ≥ 2
   passes. Per-session cells show their level from 1 pass.
-- Shown on the library cards ("weakest bars …", level 3+) and as an amber tint on
-  the idle score (W toggles), which the Progress page replaces.
+- Shown on the library cards ("weakest bars …", level 3+) and on the Progress page.
+  Nothing about past sessions is drawn on the score.
 
 ## What history holds (`docs/DESIGN.md` §17.5)
 - **Per session:** start time, attempts, how each ended, bars covered, time played.
@@ -148,22 +165,16 @@ written rhythm, and hunting for one note counts as at most 3 wrong notes.
   notes, stops, tempo, time played.
 - **Not yet known:** which hand a note is in; key signatures in the steps.
 
-## Decided on 25–26 Oct and about to be built (`DECISIONS.md`, `ROADMAP.md` M2)
-- **M2.9, D10:** built (see "Weak bars over time" above). Difficulty stays a total
-  per pass, not per note; a stop counts only in a bar you'd begun.
-- **M2.10, the Progress page:**
-  - Contents:
-    - a header ("N sessions · total time · last practised …")
-    - Work on next (up to 3 passages)
-    - a session × bar grid with a "Now" row of bar heights; cells show their level
-      from 1 pass, blank when not played
-    - bar detail ("avg pause 14.1 s → 3.2 s over 6 sessions")
-  - Reached from: the library card, Continue, Results and the practice screen.
-  - It removes the on-score tint and W.
+## Decided 25–31 Oct (`DECISIONS.md`)
+- **D10:** difficulty stays a total per pass, not per note; a stop counts only in a
+  bar you'd begun.
 - **One shared rule:** every "Practise bars …" loop starts one bar before the trouble,
-  including "You keep stopping".
-- **M2.11, live marks:** built 26 Oct (see Practice above). After Results, bars not
-  reached stay faded with the marks until the next Start.
+  including "You keep stopping" (N−1–N).
+- **Live marks:** after Results, bars not reached stay faded with the marks until the
+  next Start.
+- **Checking (31 Oct):** Claude Code checks visuals itself from screenshots of the
+  real AppImage driven by the e2e kit (`just shots`); the owner's checklist covers
+  only how it feels on the piano.
 - **Moved to v1.0:**
   - hands separately
   - per-piece state
@@ -175,8 +186,8 @@ written rhythm, and hunting for one note counts as at most 3 wrong notes.
 - **M0.2 part 1 (done):** the five personal scores are untracked, kept in the
   ignored `test-scores/`. Part 2, the history purge, blocks going public, not v0.1.
 - **M0.3:** swap the Prelude for the OpenWTC edition.
-- **M2.9, M2.11 (done):** D10 absolute levels, live marks. **M2.10:** the Progress page.
-- **M1.3:** remember the keyboard and auto-detect it.
+- **M2.9, M2.10, M2.11 (done):** D10 absolute levels, the Progress page, live marks.
+- **M1.3:** auto-detect a keyboard plugged in later (remembering it is done).
 - **D8:** the name.
 - **M4.1:** a release build made by CI from a tag.
 - **M4.2:** a clean-system test.

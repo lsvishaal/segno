@@ -1,5 +1,6 @@
 // What the scenarios share: where things are, the virtual keyboard, the
 // app's private data folder, and the steps every scenario takes.
+import { spawnSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
 import * as w from "./wd.mjs";
@@ -33,6 +34,23 @@ export function resetData({ withMine = false } = {}) {
 }
 
 export const shot = (name) => w.shot(`${SHOTS}/${name}.png`);
+
+/** Waits until no copy of the app is running, so a closing app's last
+ * writes can't land while the next one starts or the data folder is cleared. */
+export async function appExited(ms = 15000) {
+  const until = Date.now() + ms;
+  while (spawnSync("pgrep", ["-f", `${DIR}/app/squashfs-root`]).status === 0) {
+    if (Date.now() > until) throw new Error(`the app was still running ${ms / 1000} s after it was closed`);
+    await w.sleep(100);
+  }
+}
+
+/** Closes the app and opens it again on the same data: a new day's practice. */
+export async function relaunch() {
+  await w.stop();
+  await appExited();
+  await w.start(APP);
+}
 
 /** Waits until `test()` holds (read in node: the data folder, say), for at most `ms`; answers whether it did. */
 export async function eventually(test, ms = 5000) {

@@ -51,10 +51,13 @@ layout, real files written by the running app, and timing.
 | `just provided-test` | — | 6 s |
 | `just engraving-test` | — | 1 s |
 | `just midi-test` | — | 2 s |
-| `just e2e` | ≤ 180 s | 123 s reusing the AppImage; 158 s after a front-end-only rebuild; up to 290 s when Rust changed (the release build is ~170 s of it) |
+| `just e2e` | ≤ 180 s | 162 s reusing the AppImage (31 Oct, with `progress`: three launches); 158 s after a front-end-only rebuild; up to 290 s when Rust changed (the release build is ~170 s of it) |
 
 **e2e conventions:**
 - Each scenario starts from a clean app and data folder; none depends on another.
+- History is made by playing, never by writing session files: a scenario that needs
+  several sessions plays them and calls `relaunch()` (one launch is one session),
+  as `progress.mjs` does for the Progress page.
 - Wait for a condition, not a guessed time: `w.until(...)`, `w.settle()` (the page
   has stopped changing), `eventually(...)` (a file the app writes). A fixed sleep
   only where the time *is* the test (press gaps, flash spacing, how long marks stay).
@@ -73,7 +76,9 @@ skipped, with a note, when it's absent.
 - Each scenario runs with its own data folder, `target/e2e/data` via `XDG_DATA_HOME`.
   The kit waits for the previous scenario's app to exit before clearing it.
   The real folder is never written; scenarios marked `mine` start from a copy of it.
-- Screenshots go to `target/e2e/shots/`.
+- Screenshots go to `target/e2e/shots/`. Claude Code opens them and checks the
+  screens against the change's checklist (`just shots progress marks` for the
+  Progress page and the live marks).
 - `just expected` writes the Minuet's notes in cursor order for scenarios to play.
 
 ### 22.2 Manual checklist per behaviour change

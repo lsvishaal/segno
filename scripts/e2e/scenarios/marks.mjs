@@ -46,6 +46,7 @@ export default async function marks() {
   kb("on 61 80", "wait 40", "off 61");
   await w.sleep(2000);
   await shot("marks-mid-run");
+  check("no amber tint and no legend on the score", (await w.run("return document.querySelectorAll('[data-weak-bar], [data-weak-legend]').length")) === 0);
   check("right notes stay green", (await flashed()) > 0, String(await flashed()));
   check("a wrong key stays, red and ringed", (await live()) === 1 && (await w.run("return !!document.querySelector('[data-live-wrong] [data-wrong-ring]')")));
 

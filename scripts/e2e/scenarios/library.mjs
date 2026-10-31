@@ -44,7 +44,7 @@ export default async function library() {
   const [deleted, renamed] = imported;
   log(`    renaming "${renamed.title}"; deleting "${deleted.title}" (${deleted.sessions} session(s))`);
 
-  check("bundled pieces offer no Rename or Delete", (await cardButtons("Minuet in G Major")).length === 1);
+  check("bundled pieces offer no Rename or Delete", !(await cardButtons("Minuet in G Major")).some((label) => /^(Rename|Delete)/.test(label)));
   check("imported pieces do", (await cardButtons(renamed.title)).join("|").includes("Rename"));
 
   await clickLabel(`Rename ${renamed.title}`);

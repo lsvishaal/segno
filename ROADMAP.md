@@ -30,9 +30,9 @@ What used to be here (as-built notes, the 6 Oct inventory, the feature catalogue
 - [ ] **M0.3** Swap the Prelude for the OpenWTC edition (D4).
 - [x] **M2.9** D10 absolute weak levels from each bar's last 3 sessions — 26 Oct
 - [x] **M2.11** Live marks while playing; key → mark 15 ms median on the Prelude — 26 Oct
-- [ ] **M2.10** The per-piece Progress page (see M2 below).
-- [ ] **M1.3** Remember the keyboard; auto-detect one plugged in later (every 3 s,
-      plus Rescan).
+- [x] **M2.10** The per-piece Progress page — 31 Oct
+- [ ] **M1.3** Auto-detect a keyboard plugged in later (every 3 s, plus Rescan).
+      Remembering the keyboard is done (31 Oct, with M2.10).
 - [ ] **D8** The name decided (keep "Hogwash" or rename).
 - [ ] **M4.1** Release build, built by CI from a version tag.
 - [ ] **M4.2** Test the AppImage on a clean system.
@@ -82,7 +82,7 @@ stats, weak bars over time (the Progress page), M4.1 release build.
 
 - [x] M1.1 Timestamps and velocity on every played note — 20 Oct
 - [x] M1.2 Leaving the practice screen ends and saves the attempt — 18 Oct
-- [ ] **M1.3 · S** Remember the keyboard; one-click start; visible device indicator;
+- [ ] **M1.3 · S** One-click start; visible device indicator (remembering the keyboard: done 31 Oct);
       auto-detect a keyboard plugged in later (every 3 s, plus a Rescan button)
 - [x] M1.4 Results after a run, with the coach's cards — 24 Oct
 - [x] M1.5 Start from any bar — 22 Oct
@@ -108,14 +108,7 @@ passes, difficulty, levels) are owned by the doc comments in
 - [-] M2.7 Per-bar trend — 25 Oct, replaced by the Progress page's bar detail
 - [x] M2.8 Library card shows the weakest bars and when last practised — 25 Oct
 - [x] M2.9 D10 absolute levels (0.5 s / 2 / 5 / 10, provisional) from each bar's own last 3 sessions; ≥ 2 passes for judgements; per-session cells; library cards and the tint use it — 26 Oct
-- [ ] **M2.10 · L** The per-piece Progress page.
-      - Contents: header, "Work on next" (up to 3 passages), the session × bar grid,
-        and bar detail on a column click.
-      - Reached from: the library card, Continue, Results ("Progress →") and the
-        practice screen. Results stays first after a run.
-      - [x] Every "Practise bars …" loop, on coach cards and here, starts one bar
-        before the trouble (`practise_range`); "You keep stopping" loops N−1–N — 26 Oct
-      - [x] The page, its entry points and remembering the keyboard; the on-score tint, its legend and W removed — 31 Oct
+- [x] M2.10 The per-piece Progress page: header, Work on next (up to 3, looped from the bar before), every session bar by bar with a Now row of heights, bar detail; from the cards, Continue, Results and the practice header; Practise from the library starts at once on the remembered keyboard; the on-score tint, legend and W removed — 31 Oct
 - [x] M2.11 Live marks while playing (per key in a chord, wrong keys ringed, at most 3 at one place), cleared on a new attempt and each loop pass, kept after Results until the next Start; setting "Marks while playing"; key → mark 15 ms median — 26 Oct
 
 ## M4 — Preview release v0.1

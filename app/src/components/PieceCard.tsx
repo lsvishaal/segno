@@ -201,7 +201,7 @@ export function PieceCard({
         type="button"
         aria-label={`Progress for ${piece.title}`}
         onClick={() => onProgress(piece.id)}
-        className={`${ACTION} absolute right-3 bottom-[0.9rem] text-ink-muted underline decoration-rule underline-offset-4 hover:text-ink`}
+        className={`${ACTION} absolute right-3 bottom-[1.1rem] text-ink-muted underline decoration-rule underline-offset-4 hover:text-ink`}
       >
         Progress
       </button>
