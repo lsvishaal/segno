@@ -78,6 +78,8 @@ skipped, with a note, when it's absent.
 ### 22.2 Manual checklist per behaviour change
 
 Claude Code writes it; you run it with the FP-10 before ticking the box.
+It covers only how it feels on the piano (timing, loops, marks keeping up): Claude
+Code checks the visuals itself from real-app screenshots (`just shots`).
 Format: *open X → play Y → expect Z.* Store the latest ones at the bottom of
 `annoyances.md` or in the commit message.
 
