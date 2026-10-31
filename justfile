@@ -82,6 +82,13 @@ dev: run
 
 # --- check your work ---------------------------------------------------------
 
+# runs only the named e2e scenarios (reusing the AppImage) and lists their screenshots in target/e2e/shots
+[group('check')]
+shots +scenarios:
+    rm -rf target/e2e/shots
+    just e2e {{scenarios}}
+    ls target/e2e/shots/*.png
+
 # every tier, slowest last: the gate, the real-engine tests, real MIDI, then the real app
 [group('check')]
 check-all: ci provided-test engraving-test midi-test e2e

@@ -40,6 +40,7 @@ layout, real files written by the running app, and timing.
 | `just provided-test` | ignored `hogwash-app` tests: the bundled pieces through the real engine, the practice thread, history | a built Verovio |
 | `just e2e [--rebuild] [scenario …]` | builds the AppImage (or reuses it, saying `reusing AppImage <hash>`, when nothing it's built from changed; `--rebuild` forces it), then drives the real app through `scripts/e2e/scenarios/*.mjs` | `tauri-driver`, ALSA |
 | `just midi-test` | ignored `hogwash-midi` tests: notes stamped in order, an unplug noticed, Thru forwarding to an output | ALSA (Linux) |
+| `just shots <scenario …>` | only those scenarios, into a fresh `target/e2e/shots/`, and lists the PNGs (for checking the screens by eye) | as `e2e` |
 | `just check-all` | every row above, `e2e` last | all of the above |
 
 **Time budgets** (this machine; measured 26 Oct):
