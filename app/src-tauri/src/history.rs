@@ -72,7 +72,8 @@ pub struct Passage {
     pub last: u32,
     pub from: u32,
     pub to: u32,
-    /// "avg pause 3.1 s · 1 wrong note per pass", over the bars' Now.
+    /// "about 3.1 s of hesitation each time through", over the bars' Now
+    /// ([`facts_per_pass`]).
     pub facts: String,
 }
 
@@ -191,24 +192,14 @@ impl Progress {
             wrong_milli += u64::from(bar.wrong) * 1000 / passes;
             stops += bar.gave_up;
         }
-        let mut parts = Vec::new();
-        if pause_us >= 50_000 {
-            parts.push(format!("avg pause {} s", seconds(pause_us)));
-        }
-        if wrong_milli > 0 {
-            parts.push(wrong_per_pass(wrong_milli));
-        }
-        if stops > 0 {
-            parts.push(format!("stopped {stops}×"));
-        }
-        parts.join(" · ")
+        facts_per_pass(pause_us, wrong_milli, stops)
     }
 
     /// Bar `measure`'s line: now against its earliest sessions.
     ///
     /// The earliest are its first sessions in which it was played, at most
     /// three and at most half of them; now is [`Bars::now`]. One session
-    /// says only how it went, with no trend; one pass, not enough.
+    /// says only how it is now; one pass, not enough ([`ONCE`]).
     #[must_use]
     pub fn detail(&self, measure: u32) -> Option<String> {
         let played: Vec<&Cell> = self
@@ -218,19 +209,16 @@ impl Progress {
             .collect();
         let now = self.now.get(MeasureNumber::new(measure)?)?;
         if now.passes < 2 {
-            return Some("Play this bar twice to see stats.".to_owned());
+            return Some(ONCE.to_owned());
         }
         let per_pass = |passes: u32, pause_us: u64, wrong: u32| {
             let passes = u64::from(passes.max(1));
             (pause_us / passes, u64::from(wrong) * 1000 / passes)
         };
         let (pause_now, wrong_now) = per_pass(now.passes, now.pause_us, now.wrong);
+        let now_facts = facts_per_pass(pause_now, wrong_now, now.gave_up);
         if played.len() < 2 {
-            return Some(format!(
-                "avg pause {} s · wrong notes {} per pass",
-                seconds(pause_now),
-                tenths(wrong_now)
-            ));
+            return Some(format!("Now: {now_facts}."));
         }
         let earliest: Vec<&Cell> = played
             .iter()
@@ -242,13 +230,13 @@ impl Progress {
             earliest.iter().map(|cell| cell.pause_us).sum(),
             earliest.iter().map(|cell| cell.wrong).sum(),
         );
+        let then_facts = facts_per_pass(
+            pause_then,
+            wrong_then,
+            earliest.iter().map(|cell| cell.stops).sum(),
+        );
         Some(format!(
-            "avg pause {} s → {} s over {} sessions · wrong notes {} → {} per pass",
-            seconds(pause_then),
-            seconds(pause_now),
-            played.len(),
-            tenths(wrong_then),
-            tenths(wrong_now)
+            "Now: {now_facts}. In your first sessions: {then_facts}."
         ))
     }
 
@@ -311,11 +299,40 @@ fn tenths(milli: u64) -> String {
     }
 }
 
-/// "1 wrong note per pass", "1.5 wrong notes per pass".
-fn wrong_per_pass(milli: u64) -> String {
-    let count = tenths(milli);
-    let notes = if count == "1" { "note" } else { "notes" };
-    format!("{count} wrong {notes} per pass")
+/// A bar's detail line when it has been played only once.
+pub const ONCE: &str = "Played once so far. Play it again to see how it's going.";
+
+/// What happened each time through, in words a pianist reads without help:
+/// "about 3.1 s of hesitation each time through, a wrong note 1 time in 3,
+/// you stopped here 2 times", or "clean". Pauses under 0.05 s aren't
+/// mentioned.
+fn facts_per_pass(pause_us: u64, wrong_milli: u64, stops: u32) -> String {
+    let mut parts = Vec::new();
+    if pause_us >= 50_000 {
+        parts.push(format!(
+            "about {} s of hesitation each time through",
+            seconds(pause_us)
+        ));
+    }
+    if let Some(twice) = 2000u64.checked_div(wrong_milli) {
+        let one_in = twice.div_ceil(2);
+        parts.push(if one_in >= 2 {
+            format!("a wrong note 1 time in {one_in}")
+        } else {
+            let count = tenths(wrong_milli.max(1000));
+            let notes = if count == "1" { "note" } else { "notes" };
+            format!("{count} wrong {notes} each time through")
+        });
+    }
+    if stops > 0 {
+        let times = if stops == 1 { "time" } else { "times" };
+        parts.push(format!("you stopped here {stops} {times}"));
+    }
+    if parts.is_empty() {
+        "clean".to_owned()
+    } else {
+        parts.join(", ")
+    }
 }
 
 /// Every session that can be read; none if the history folder can't be.
@@ -585,10 +602,7 @@ mod tests {
         assert_eq!((cell.passes, cell.level), (1, 4));
         let judged = progress.now.get(MeasureNumber::new(once).expect("a bar"));
         assert_eq!(judged.map(Bar::judged), Some(None));
-        assert_eq!(
-            progress.detail(once).as_deref(),
-            Some("Play this bar twice to see stats.")
-        );
+        assert_eq!(progress.detail(once).as_deref(), Some(ONCE));
         drop(records);
     }
 
@@ -654,7 +668,7 @@ mod tests {
         assert_eq!(next, vec![(14, 14, 13, 14), (10, 10, 9, 10), (6, 7, 5, 7)]);
         let facts = &progress.work_on_next(&minuet)[0].facts;
         assert!(
-            facts.starts_with("avg pause ") && facts.ends_with(" s"),
+            facts.starts_with("about ") && facts.ends_with(" s of hesitation each time through"),
             "{facts}"
         );
         drop(records);
@@ -679,10 +693,7 @@ mod tests {
             (1, 1, 1, 1)
         );
         assert!(clean.work_on_next(&minuet).is_empty());
-        assert_eq!(
-            clean.detail(1).as_deref(),
-            Some("avg pause 0.0 s · wrong notes 0 per pass")
-        );
+        assert_eq!(clean.detail(1).as_deref(), Some("Now: clean."));
         drop(records);
     }
 
@@ -702,13 +713,32 @@ mod tests {
 
         let line = progress.detail(6).expect("bar 6 was played");
 
-        assert!(line.starts_with("avg pause "), "{line}");
         assert!(
-            line.ends_with(" s → 0.0 s over 6 sessions · wrong notes 0 → 0 per pass"),
+            line.starts_with("Now: clean. In your first sessions: about "),
+            "{line}"
+        );
+        assert!(
+            line.ends_with(" s of hesitation each time through."),
             "{line}"
         );
         assert!(progress.work_on_next(&minuet).is_empty());
         drop(records);
+    }
+
+    #[test]
+    fn facts_read_as_plain_sentences() {
+        assert_eq!(facts_per_pass(0, 0, 0), "clean");
+        assert_eq!(facts_per_pass(40_000, 0, 0), "clean");
+        assert_eq!(facts_per_pass(0, 333, 0), "a wrong note 1 time in 3");
+        assert_eq!(
+            facts_per_pass(3_100_000, 1000, 2),
+            "about 3.1 s of hesitation each time through, \
+             1 wrong note each time through, you stopped here 2 times"
+        );
+        assert_eq!(
+            facts_per_pass(0, 2500, 1),
+            "2.5 wrong notes each time through, you stopped here 1 time"
+        );
     }
 
     // Budget: opening a piece stays quick with a long history, on the

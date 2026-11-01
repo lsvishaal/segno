@@ -35,9 +35,11 @@ Everything so far, before the first preview (v0.1).
 - **History:**
   - every note saved with its timing and velocity
   - **a Progress page per piece** (from each card, Continue, Results and the
-    practice screen): what to work on next with a button that loops it, every
-    session bar by bar with where each bar stands now, and a bar's story on a
-    click. It replaces the amber tint on the score, its legend and the W key.
+    practice screen): what to practise next with a button that loops it, a map
+    of the piece with a word for each bar (Secure, Small slips, Uneven, Shaky,
+    Needs work) and a legend, and the bar you pick graphed over time (hesitation
+    and wrong notes, each time through), all in plain sentences. It replaces the
+    amber tint on the score, its legend and the W key.
   - Practise on the Progress page starts at once on the keyboard you last
     started on, which Hogwash now remembers
 - **Marks while playing:** each right key's note turns green and stays; a wrong key stays as a red note with a ring (at most 3 in one place). They clear on a new attempt and on each pass of a loop, and stay on the score after Results until the next Start. Settings › Marks while playing turns them back into a brief flash. The ✕ counts the score used to show after a run are gone.

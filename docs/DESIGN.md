@@ -139,11 +139,11 @@ H hands, N note names, + / − / 0 zoom, Ctrl+O add a piece, Ctrl+F search.
 | `cursor` | accent at 70% | accent at 70% | Cursor line |
 | `position-band` | accent at 8% | accent at 12% | Current position band |
 | `loop-band` | `#2563eb` at 8% | at 14% | Selected loop range |
-| `heat-1…5` | `#fef3c7` → `#f59e0b` → `#b45309` | same hues, lower lightness | Weak bars over time on the Progress page (`--color-pause` at 22 / 42 / 66 / 92% for levels 1–4); the same amber is the pause mark on Results |
+| `heat-1…5` | `#fef3c7` → `#f59e0b` → `#b45309` | same hues, lower lightness | The Progress page's piece map (`--color-pause` at 22 / 42 / 66 / 92% for levels 1–4, `--color-correct` at 14% for Secure); the same amber is the pause mark on Results |
 
 Rules:
 - **Never encode meaning in colour alone.** Wrong notes also get a ring and their key's name;
-  weak-bar levels on the Progress page are also drawn as bar heights and listed as facts; correct notes are a filled
+  bar levels on the Progress page's map also carry a word in every box; correct notes are a filled
   dot, wrong an outlined cross.
 - Heat colours are a **single amber hue**, so the score never looks covered
   in failure-red.
@@ -268,7 +268,7 @@ STARTER · INTERMEDIATE — around Grades 1–4
 | Settings | ⚙ | Appearance (note names, show geometry), Sound (MIDI input and output / Thru), View & export (zoom, export MusicXML), About (version, licence, credits) |
 | Shortcuts (planned, M3.6) | ? | The table in 15.5 |
 
-History and the bar card are no longer panels. They live on the Progress page (M2.10, planned): a session × bar grid, "Work on next", and bar detail on a column click.
+History and the bar card are no longer panels. They live on the Progress page (17.5): "Practise next", a map of the piece bar by bar, and one bar over time.
 
 ### 17.4 Onboarding and first run
 
@@ -285,25 +285,32 @@ History and the bar card are no longer panels. They live on the Progress page (M
 Results are described in 17.2.
 
 The **Progress page** (M2.10; levels and words from `app/src-tauri/src/history.rs`):
-- **Header:** composer (small caps), title (serif italic), and a mono line
-  "3 sessions · 4 min · last practised today".
-- **Work on next:** up to 3 rows, "Bars 6–7 · avg pause 3.1 s · 1 wrong note per
-  pass" with "⟲ Practise bars 5–7" (from one bar before, clamped at bar 1). Judged
-  bars at level ≥ 1, worst first, neighbours merged. None: "Every bar is clean in
-  your recent sessions." and "Play it through".
-- **Every session:** one column per bar (a number at bar 1 and every 4th), one row
-  per session (newest on top, the last 12, then "Show all N sessions"), and a
-  "Now" row above them drawn as heights: taller and deeper amber is harder, a
-  flat grey line is fine, a dotted stub is "played once, not enough to judge".
-  Cells are amber by level from 1 pass, a thin outline for level 0, blank when not
-  played. A caption under it says what height and dots mean. No red.
-- **Bar detail:** a click (or Enter) on a column outlines it in ink and bolds its
-  number, and shows "Bar 6 · avg pause 6.2 s → 3.1 s over 4 sessions · wrong notes
-  2 → 0 per pass" with "⟲ Practise bars 5–6". The earliest are the bar's first
-  sessions, at most 3 and at most half; one session gives no arrow; one pass gives
-  "Play this bar twice to see stats."
+- **Header:** composer (small caps), title (serif italic), a plain line
+  "Practised 3 times · 4 min in total · last practised today", and under it
+  "Which bars need work, and whether they're getting better."
+- **Practise next:** up to 3 rows, "Bars 6–7 — about 3.1 s of hesitation each time
+  through, a wrong note 1 time in 3" with "⟲ Practise bars 5–7" (from one bar
+  before, clamped at bar 1). Judged bars at level ≥ 1, worst first, neighbours
+  merged. None: "Every bar is secure in your recent sessions." and "Play it through".
+- **The piece, bar by bar:** one box per bar, 8 to a row like a page of music, each
+  showing its number and a word for its level now: Secure (pale green) · Small slips
+  · Uneven · Shaky · Needs work (`--color-pause` at 22 / 42 / 66 / 92%). Played once:
+  a dotted border and "Not enough yet". Not played: blank, the number muted. A legend
+  underneath names every fill. The word carries the meaning, never the colour alone.
+  No red.
+- **Bar N over time:** the selected box gets an ink outline (`aria-pressed`); the
+  hardest bar is selected on open, none when every bar is secure ("Click a bar to see
+  how it has gone over time."). It shows one sentence, "Now: clean. In your first
+  sessions: about 6.2 s of hesitation each time through." (the earliest are the bar's
+  first sessions, at most 3 and at most half; one session says only "Now: …"; one
+  pass, "Played once so far. Play it again to see how it's going."), the bar's
+  Practise button, and two line graphs side by side, "Hesitation (seconds, each time
+  through)" and "Wrong notes (each time through)": one dot per session that played
+  the bar, oldest left, 0 and the highest value on the axis, dates underneath (with
+  the time when two share a day). Fewer than 2 sessions: "Play this bar on another
+  day to see a line."
 - **Never played:** "Play this piece once and your progress shows here." and
-  Practise; no grid.
+  Practise; no map.
 - **Practise** from a page opened from the library opens the piece and starts at
   once (the loop set) on the keyboard last started on, else the first connected;
   with none, the loop is set and the picker says no keyboard is connected. From the
@@ -390,9 +397,9 @@ back), and never opens by itself.
 
 - No pieces imported yet (library section)
 - Piece never practised (Progress page: one line and a Practise button)
-- Not enough data for a bar (Progress page bar detail: "Play this bar twice to see stats.")
+- Not enough data for a bar (Progress page: "Played once so far. Play it again to see how it's going." and "Play this bar on another day to see a line.")
 - No keyboard connected (header + practice status line)
-- Progress page with one session: the grid with one row, no trend text
+- Progress page with one session: the map, each bar's "Now: …" with no first-sessions part, no line
 
 ---
 

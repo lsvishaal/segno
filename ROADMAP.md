@@ -108,7 +108,7 @@ passes, difficulty, levels) are owned by the doc comments in
 - [-] M2.7 Per-bar trend — 25 Oct, replaced by the Progress page's bar detail
 - [x] M2.8 Library card shows the weakest bars and when last practised — 25 Oct
 - [x] M2.9 D10 absolute levels (0.5 s / 2 / 5 / 10, provisional) from each bar's own last 3 sessions; ≥ 2 passes for judgements; per-session cells; library cards and the tint use it — 26 Oct
-- [x] M2.10 The per-piece Progress page: header, Work on next (up to 3, looped from the bar before), every session bar by bar with a Now row of heights, bar detail; from the cards, Continue, Results and the practice header; Practise from the library starts at once on the remembered keyboard; the on-score tint, legend and W removed — 31 Oct
+- [x] M2.10 The per-piece Progress page: header, Work on next (up to 3, looped from the bar before), every session bar by bar with a Now row of heights, bar detail (1 Nov: redone as Practise next, a piece map with a word per bar, and a bar's line graphs); from the cards, Continue, Results and the practice header; Practise from the library starts at once on the remembered keyboard; the on-score tint, legend and W removed — 31 Oct
 - [x] M2.11 Live marks while playing (per key in a chord, wrong keys ringed, at most 3 at one place), cleared on a new attempt and each loop pass, kept after Results until the next Start; setting "Marks while playing"; key → mark 15 ms median — 26 Oct
 
 ## M4 — Preview release v0.1
@@ -209,3 +209,4 @@ _One dated line per idea. Reviewed between milestones; survivors move into a mil
 - 2026-10-25 · AppImage is 115 MB against a 60 MB budget (`docs/DESIGN.md`); look at what's in it · 26 Oct: WebKit 95 MB, JavaScriptCore 40 MB, ICU data 32 MB, plus AV1/JPEG-XL codecs (libaom, SvtAv1, rav1e, jxl, openraw, dav1d) pulled from this rolling distro; revisit with the CI build on Ubuntu (M4.1)
 - 2026-10-26 · Windows/macOS builds and an optional portable mode (data next to the app); macOS needs signing. After v1.0, with Next 6.
 - 2026-10-26 · Re-check level thresholds (0.5 s / 2 / 5 / 10) against the self-use week's data at the 1 Nov cut-check.
+- 2026-11-01 · Play on the computer keyboard when no MIDI keyboard is connected ("x is middle C"; a PianoBooster idea).

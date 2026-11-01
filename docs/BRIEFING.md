@@ -117,16 +117,16 @@
 - Keys: Enter = first card, R = again, Esc = the score
 - "Progress →" opens the piece's Progress page
 
-**The Progress page** (`docs/DESIGN.md` §17.5; built 31 Oct):
-- header: "3 sessions · 4 min · last practised today"
-- **Work on next:** up to 3 passages (judged bars at level ≥ 1, worst first,
-  neighbours merged), e.g. "Bars 6–7 · avg pause 3.1 s · 1 wrong note per pass" with
-  "⟲ Practise bars 5–7"; none: "Every bar is clean in your recent sessions." +
-  "Play it through"
-- **Every session:** bars across, sessions down (newest on top, last 12, "Show
-  all"), a Now row of heights (taller, deeper amber = harder; dotted = played once)
-- **Bar detail** on a click: "Bar 6 · avg pause 4.1 s → 3.1 s over 3 sessions ·
-  wrong notes 0 → 0 per pass"
+**The Progress page** (`docs/DESIGN.md` §17.5; built 31 Oct, made readable 1 Nov):
+- header: "Practised 3 times · 4 min in total · last practised today" + what it's for
+- **Practise next:** up to 3 passages (judged bars at level ≥ 1, worst first,
+  neighbours merged), e.g. "Bar 6 — about 3.1 s of hesitation each time through"
+  with "⟲ Practise bars 5–6"; none: "Every bar is secure in your recent sessions."
+- **The piece, bar by bar:** 8 boxes to a row, each its number and a word:
+  Secure · Small slips · Uneven · Shaky · Needs work; "Not enough yet" = played
+  once; blank = not played; a legend underneath
+- **Bar N over time** (hardest first): "Now: … In your first sessions: …", Practise,
+  and line graphs of hesitation and wrong notes per time through, a dot per session
 - never played: "Play this piece once and your progress shows here." + Practise
 - from the cards, Continue, Results and the practice header; Practise from the
   library starts at once on the remembered keyboard (no keyboard: the loop is set

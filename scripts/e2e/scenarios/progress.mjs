@@ -83,36 +83,39 @@ export default async function progress() {
 
   await openProgress("Minuet in G Major");
   const facts = await w.run("return document.querySelector('[data-progress-facts]')?.textContent ?? ''");
-  check("the header counts 3 sessions and says when", /^3 sessions · .+ · last practised today$/.test(facts), facts);
-  const rows = await w.run("return document.querySelectorAll('[data-bar-column=\"1\"] [data-cell]').length");
-  check("one row per session", rows === 3, String(rows));
-  const now = await w.run(
-    "return [...document.querySelectorAll('[data-bar-column]')].map(c=>({bar:Number(c.dataset.barColumn), now:c.querySelector('[data-now]').dataset.now, h:c.querySelector('[data-now] > span')?.getBoundingClientRect().height ?? 0})).filter(c=>c.now!=='')",
+  check("the header counts 3 sessions and says when", /^Practised 3 times · .+ in total · last practised today$/.test(facts), facts);
+  const map = await w.run(
+    "return [...document.querySelectorAll('[data-bar]')].map(b=>({bar:Number(b.dataset.bar), level:b.dataset.level, label:b.getAttribute('aria-label'), text:b.textContent}))",
   );
-  log("    now:", JSON.stringify(now));
-  const tallest = now.reduce((best, bar) => (bar.h > best.h ? bar : best), { h: -1 });
-  check("bar 6 is the tallest now", tallest.bar === 6, `bar ${tallest.bar}`);
-  check("bar 9, played once, is a dotted stub", now.find((bar) => bar.bar === 9)?.now === "null");
+  log("    map:", JSON.stringify(map.filter((bar) => bar.level !== "")));
+  check("one box per bar", map.length === 32, String(map.length));
+  check("every played box shows its word", map.every((bar) => bar.level === "" || bar.text.endsWith(bar.label.split(": ")[1])));
+  const worst = map.reduce((best, bar) => (bar.level !== "" && bar.level !== "null" && Number(bar.level) > Number(best.level) ? bar : best), { level: "-1" });
+  check("bar 6 is the hardest now, in amber words", worst.bar === 6 && /Small slips|Uneven|Shaky|Needs work/.test(worst.label), worst.label);
+  check("bar 9, played once, says not enough yet", map.find((bar) => bar.bar === 9)?.label === "Bar 9: Not enough yet");
+  check("the legend explains the words", /Secure.*Needs work.*Not enough yet.*Blank/.test(await w.run("return document.querySelector('[data-legend]')?.textContent ?? ''")));
   const red = await w.run(
     "return [...document.querySelectorAll('[data-progress] *')].filter(e=>{const c=getComputedStyle(e).backgroundColor; return /rgb\\(220, 38, 38/.test(c)}).length",
   );
   check("no red on the page", red === 0, String(red));
   const first = await w.run("return document.querySelector('[data-work-on-next]')?.textContent ?? ''");
-  check("Work on next starts with bar 6, practised from bar 5", /^Bar 6 · avg pause [\d.]+ s.*⟲ Practise bars 5–6$/.test(first), first);
+  check("Practise next starts with bar 6, practised from bar 5", /^Bar 6 — about [\d.]+ s of hesitation each time through.*⟲ Practise bars 5–6$/.test(first), first);
   const listed = await w.run("return document.querySelectorAll('[data-work-on-next]').length");
   check("at most 3 passages", listed >= 1 && listed <= 3, String(listed));
+  const opened = await w.run("return document.querySelector('[data-bar-detail] h3')?.textContent ?? ''");
+  check("opens on bar 6 over time", opened === "Bar 6 over time", opened);
   await shot("progress-minuet");
 
-  await w.run("document.querySelector('[data-bar-column=\"6\"]').click(); return 1");
+  await w.run("document.querySelector('[data-bar=\"3\"]').click(); return 1");
   await w.settle();
   const story = await w.run("return document.querySelector('[data-bar-detail]')?.textContent ?? ''");
-  check(
-    "bar 6's story: earliest against now, over 3 sessions",
-    /^Bar 6 · avg pause [\d.]+ s → [\d.]+ s over 3 sessions · wrong notes [\d.]+ → [\d.]+ per pass⟲ Practise bars 5–6$/.test(story),
-    story,
-  );
-  const marked = await w.run("return document.querySelector('[data-bar-column=\"6\"]').getAttribute('aria-pressed')");
-  check("its column is marked", marked === "true");
+  check("bar 3's sentence: now, then its first sessions", /Bar 3 over timeNow: .+\. In your first sessions: .+\./.test(story), story);
+  const points = await w.run("return document.querySelectorAll('[data-bar-detail] [data-line-graph]')[1]?.querySelectorAll('[data-point]').length ?? 0");
+  check("its wrong-notes graph has a dot per session", points === 3, String(points));
+  const marked = await w.run("return document.querySelector('[data-bar=\"3\"]').getAttribute('aria-pressed')");
+  check("its box is marked", marked === "true");
+  await w.run("document.querySelector('[data-bar-detail]').scrollIntoView({block:'end'}); return 1");
+  await w.settle();
   await shot("progress-bar-detail");
 
   // Practise: opens the piece looping 5–6 and starts on the keyboard last
@@ -139,6 +142,6 @@ export default async function progress() {
   await openProgress("Lightly Row");
   const empty = await w.run("return document.querySelector('[data-progress-empty]')?.textContent ?? ''");
   check("a piece never played: one line and Practise", empty === "Play this piece once and your progress shows here.Practise", empty);
-  check("and no grid", (await w.run("return document.querySelectorAll('[data-bar-column]').length")) === 0);
+  check("and no map", (await w.run("return document.querySelectorAll('[data-piece-map]').length")) === 0);
   await shot("progress-empty");
 }

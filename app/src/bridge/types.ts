@@ -188,7 +188,7 @@ export interface Passage {
   readonly last: number;
   readonly from: number;
   readonly to: number;
-  /** "avg pause 3.1 s · 1 wrong note per pass". */
+  /** "about 3.1 s of hesitation each time through". */
   readonly facts: string;
 }
 
@@ -209,7 +209,7 @@ export interface ProgressView {
   /** Each bar played: its level now, or null when it needs another pass. */
   readonly now: readonly { readonly measure: number; readonly level: number | null }[];
   readonly workOnNext: readonly Passage[];
-  /** Every bar: its line after "Bar N · ", and the loop its Practise button plays. */
+  /** Every bar: its sentence ("Now: clean."), and the loop its Practise button plays. */
   readonly details: readonly {
     readonly measure: number;
     readonly line: string;
