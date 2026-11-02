@@ -47,7 +47,7 @@ impl Startup {
     ///    environment.
     /// 2. **Beside the executable.** A plain build with the files copied next
     ///    to it.
-    /// 3. **`HOGWASH_VEROVIO_LIB` / `HOGWASH_VEROVIO_DATA`.** For development,
+    /// 3. **`SEGNO_VEROVIO_LIB` / `SEGNO_VEROVIO_DATA`.** For development,
     ///    and for a performer who has deliberately substituted their own build
     ///    — which the design exists to permit.
     ///
@@ -87,8 +87,8 @@ impl Startup {
     fn candidates(resources: Option<&Path>) -> Vec<(PathBuf, PathBuf)> {
         let executable = std::env::current_exe().ok();
         let variables = match (
-            std::env::var("HOGWASH_VEROVIO_LIB"),
-            std::env::var("HOGWASH_VEROVIO_DATA"),
+            std::env::var("SEGNO_VEROVIO_LIB"),
+            std::env::var("SEGNO_VEROVIO_DATA"),
         ) {
             (Ok(library), Ok(data)) => Some((PathBuf::from(library), PathBuf::from(data))),
             _ => None,

@@ -20,7 +20,7 @@ use segno_notation::{ExpectedNotes, ReferencePerformance, TICKS_PER_QUARTER};
 fn reference(source: &[u8]) -> ReferencePerformance {
     let engraved = VerovioEngraver::from_environment()
         .and_then(|mut engraver| engraver.engrave(source))
-        .expect("set HOGWASH_VEROVIO_LIB and HOGWASH_VEROVIO_DATA, or run `just engraving-test`");
+        .expect("set SEGNO_VEROVIO_LIB and SEGNO_VEROVIO_DATA, or run `just engraving-test`");
     ReferencePerformance::derived_from(engraved.score())
 }
 

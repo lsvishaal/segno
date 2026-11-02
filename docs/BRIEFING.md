@@ -174,7 +174,7 @@ No data folder: Hogwash says so rather than saving elsewhere.
   replaced the bars × sessions grid, which wasn't readable to a pianist.
 - **2 Nov:** D8 closed (keep "Hogwash", `com.segno.practice`); feature freeze until
   the stable base is tagged; a demo history from real pieces played through the
-  virtual keyboard, dated by a clock hook (`HOGWASH_CLOCK_FILE`), in
+  virtual keyboard, dated by a clock hook (`SEGNO_CLOCK_FILE`), in
   `target/demo-data`, opened with `just demo`; settings and a log file in the data
   folder.
 - **Moved to v1.0:** hands separately, per-piece state, chords held together,

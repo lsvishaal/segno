@@ -7,18 +7,18 @@ default:
 
 # `verovio_lib` / `verovio_data` default to the sibling checkout this repo has
 # always been developed against (`../verovio`, built into `../verovio-build`
-# by `just verovio-build`). An explicit HOGWASH_VEROVIO_LIB/DATA in the
+# by `just verovio-build`). An explicit SEGNO_VEROVIO_LIB/DATA in the
 # environment always wins — these defaults exist so a machine that already
 # has Verovio built beside this repo needs no manual exporting at all.
-verovio_lib := env_var_or_default("HOGWASH_VEROVIO_LIB", justfile_directory() + "/../verovio-build/libverovio.so")
-verovio_data := env_var_or_default("HOGWASH_VEROVIO_DATA", justfile_directory() + "/../verovio/data")
+verovio_lib := env_var_or_default("SEGNO_VEROVIO_LIB", justfile_directory() + "/../verovio-build/libverovio.so")
+verovio_data := env_var_or_default("SEGNO_VEROVIO_DATA", justfile_directory() + "/../verovio/data")
 
 # --- run it ------------------------------------------------------------------
 
 # launches the app with live reload — the command you actually want (Verovio is found automatically)
 [group('run')]
 run: _require-verovio
-    cd app && HOGWASH_VEROVIO_LIB="{{verovio_lib}}" HOGWASH_VEROVIO_DATA="{{verovio_data}}" npx tauri dev
+    cd app && SEGNO_VEROVIO_LIB="{{verovio_lib}}" SEGNO_VEROVIO_DATA="{{verovio_data}}" npx tauri dev
 
 # builds the Linux AppImage an end user would run, with Verovio bundled beside it (M4.1)
 [group('run')]
@@ -69,9 +69,9 @@ e2e *args: _require-verovio
     fi
     rm -rf target/e2e/app && mkdir -p target/e2e/app
     (cd target/e2e/app && ../../release/bundle/appimage/Segno_*.AppImage --appimage-extract >/dev/null)
-    HOGWASH_VEROVIO_LIB="{{verovio_lib}}" HOGWASH_VEROVIO_DATA="{{verovio_data}}" \
+    SEGNO_VEROVIO_LIB="{{verovio_lib}}" SEGNO_VEROVIO_DATA="{{verovio_data}}" \
         cargo run --quiet --package segno-cli -- expected app/src-tauri/library/minuet-in-g.musicxml > target/e2e/minuet.expected.json
-    HOGWASH_VEROVIO_LIB="{{verovio_lib}}" HOGWASH_VEROVIO_DATA="{{verovio_data}}" \
+    SEGNO_VEROVIO_LIB="{{verovio_lib}}" SEGNO_VEROVIO_DATA="{{verovio_data}}" \
         cargo run --quiet --package segno-cli -- expected app/src-tauri/library/prelude-in-c.musicxml > target/e2e/prelude.expected.json
     cargo build --quiet --package segno-midi --example vkbd
     node scripts/e2e/run.mjs "${scenarios[@]}"
@@ -188,7 +188,7 @@ harness:
 # Segno needs no C++ toolchain and no shared library — that's why these
 # stay separate from `just ci` rather than folded into it. All of them
 # default to the sibling `../verovio` / `../verovio-build` checkout; an
-# explicit HOGWASH_VEROVIO_LIB/DATA always overrides that.
+# explicit SEGNO_VEROVIO_LIB/DATA always overrides that.
 
 # builds libverovio.so from a clone, OUTSIDE this repo (never vendored, never committed)
 [group('verovio')]
@@ -197,8 +197,8 @@ verovio-build clone output=".verovio-build":
     cmake --build "{{output}}" --parallel "$(nproc)"
     @echo
     @echo "Built. Point the recipes above at it:"
-    @echo "  export HOGWASH_VEROVIO_LIB=$(realpath {{output}})/libverovio.so"
-    @echo "  export HOGWASH_VEROVIO_DATA=$(realpath {{clone}})/data"
+    @echo "  export SEGNO_VEROVIO_LIB=$(realpath {{output}})/libverovio.so"
+    @echo "  export SEGNO_VEROVIO_DATA=$(realpath {{clone}})/data"
 
 # fails with one clear message when Verovio isn't built yet, instead of a
 # confusing runtime error several layers down
@@ -214,8 +214,8 @@ _require-verovio:
         echo >&2
         echo "Build it with:   just verovio-build ../verovio" >&2
         echo "...or point at an existing build:" >&2
-        echo "  export HOGWASH_VEROVIO_LIB=/path/to/libverovio.so" >&2
-        echo "  export HOGWASH_VEROVIO_DATA=/path/to/verovio/data" >&2
+        echo "  export SEGNO_VEROVIO_LIB=/path/to/libverovio.so" >&2
+        echo "  export SEGNO_VEROVIO_DATA=/path/to/verovio/data" >&2
         exit 1
     fi
 
@@ -224,35 +224,35 @@ _require-verovio:
 engraving-test: _require-verovio
     #!/usr/bin/env bash
     set -euo pipefail
-    scores="${HOGWASH_TEST_SCORES:-{{justfile_directory()}}/test-scores}"
+    scores="${SEGNO_TEST_SCORES:-{{justfile_directory()}}/test-scores}"
     [ -d "$scores" ] || echo "$scores not found: the personal-score Gymnopédie test is skipped."
-    HOGWASH_VEROVIO_LIB="{{verovio_lib}}" HOGWASH_VEROVIO_DATA="{{verovio_data}}" \
+    SEGNO_VEROVIO_LIB="{{verovio_lib}}" SEGNO_VEROVIO_DATA="{{verovio_data}}" \
         cargo test --package segno-engraving-verovio --package segno-analysis -- --ignored
 
-# the shipped practice pieces and importing, against a real engine (personal scores from test-scores/ or HOGWASH_TEST_SCORES, skipped when absent)
+# the shipped practice pieces and importing, against a real engine (personal scores from test-scores/ or SEGNO_TEST_SCORES, skipped when absent)
 [group('verovio')]
 provided-test: _require-verovio
     #!/usr/bin/env bash
     set -euo pipefail
-    scores="${HOGWASH_TEST_SCORES:-{{justfile_directory()}}/test-scores}"
+    scores="${SEGNO_TEST_SCORES:-{{justfile_directory()}}/test-scores}"
     [ -d "$scores" ] || echo "$scores not found: the 8 personal-score import tests are skipped."
-    HOGWASH_VEROVIO_LIB="{{verovio_lib}}" HOGWASH_VEROVIO_DATA="{{verovio_data}}" \
+    SEGNO_VEROVIO_LIB="{{verovio_lib}}" SEGNO_VEROVIO_DATA="{{verovio_data}}" \
         cargo test --package segno-app -- --ignored
 
 # The requirement for engraving: the same score must place its notes identically across processes
 [group('verovio')]
 engraving-determinism: _require-verovio
-    HOGWASH_VEROVIO_LIB="{{verovio_lib}}" HOGWASH_VEROVIO_DATA="{{verovio_data}}" \
+    SEGNO_VEROVIO_LIB="{{verovio_lib}}" SEGNO_VEROVIO_DATA="{{verovio_data}}" \
         ./scripts/check-engraving-determinism.sh
 
 # runs a MusicXML file and a JSON file of played notes through practice + analysis, step by step
 [group('verovio')]
 replay score events *flags: _require-verovio
-    @HOGWASH_VEROVIO_LIB="{{verovio_lib}}" HOGWASH_VEROVIO_DATA="{{verovio_data}}" \
+    @SEGNO_VEROVIO_LIB="{{verovio_lib}}" SEGNO_VEROVIO_DATA="{{verovio_data}}" \
         cargo run --quiet --package segno-cli -- replay "{{score}}" "{{events}}" {{flags}}
 
 # prints what the cursor will require for a MusicXML file, as a replayable (perfect) events file
 [group('verovio')]
 expected score: _require-verovio
-    @HOGWASH_VEROVIO_LIB="{{verovio_lib}}" HOGWASH_VEROVIO_DATA="{{verovio_data}}" \
+    @SEGNO_VEROVIO_LIB="{{verovio_lib}}" SEGNO_VEROVIO_DATA="{{verovio_data}}" \
         cargo run --quiet --package segno-cli -- expected "{{score}}"

@@ -113,10 +113,10 @@ mod tests {
     const MINUET_MXL: &[u8] = include_bytes!("../tests/fixtures/minuet-in-g.mxl");
 
     /// The owner's own `.mxl` exports, from the ignored `test-scores/` (or
-    /// `HOGWASH_TEST_SCORES`). They aren't redistributable, so they may be
+    /// `SEGNO_TEST_SCORES`). They aren't redistributable, so they may be
     /// absent; whatever is there is checked.
     fn personal_scores() -> Vec<Vec<u8>> {
-        let folder = std::env::var_os("HOGWASH_TEST_SCORES").map_or_else(
+        let folder = std::env::var_os("SEGNO_TEST_SCORES").map_or_else(
             || std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../test-scores"),
             std::path::PathBuf::from,
         );

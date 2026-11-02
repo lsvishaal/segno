@@ -23,8 +23,8 @@ useKeyboard(vkbd.stdin);
 // The app inherits this environment: its data goes to target/e2e/data, and
 // it finds Verovio inside the AppImage, as an installed copy would.
 const env = { ...process.env, XDG_DATA_HOME: `${DIR}/data` };
-delete env.HOGWASH_VEROVIO_LIB;
-delete env.HOGWASH_VEROVIO_DATA;
+delete env.SEGNO_VEROVIO_LIB;
+delete env.SEGNO_VEROVIO_DATA;
 const driver = spawn("tauri-driver", ["--port", "4444", "--native-port", "4445"], { env, stdio: "ignore" });
 
 const summary = [];

@@ -91,7 +91,7 @@ jobs:
 
       - name: Against a real engine
         run: |
-          export HOGWASH_VEROVIO_LIB="$PWD/.verovio-build/libverovio.so"
-          export HOGWASH_VEROVIO_DATA="$PWD/../verovio/data"
+          export SEGNO_VEROVIO_LIB="$PWD/.verovio-build/libverovio.so"
+          export SEGNO_VEROVIO_DATA="$PWD/../verovio/data"
           just engraving-test
           just engraving-determinism

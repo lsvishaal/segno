@@ -121,7 +121,7 @@ impl VerovioEngraver {
         self.layout = layout;
     }
 
-    /// Opens Verovio from `HOGWASH_VEROVIO_LIB` and `HOGWASH_VEROVIO_DATA`.
+    /// Opens Verovio from `SEGNO_VEROVIO_LIB` and `SEGNO_VEROVIO_DATA`.
     ///
     /// A development convenience. Where an installed application looks for
     /// these files is a packaging question, not an architectural one, and it
@@ -139,10 +139,7 @@ impl VerovioEngraver {
             })
         };
 
-        Self::open(
-            &named("HOGWASH_VEROVIO_LIB")?,
-            &named("HOGWASH_VEROVIO_DATA")?,
-        )
+        Self::open(&named("SEGNO_VEROVIO_LIB")?, &named("SEGNO_VEROVIO_DATA")?)
     }
 }
 

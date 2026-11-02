@@ -22,10 +22,10 @@ set -euo pipefail
 
 cd "$(dirname "$0")/.."
 
-if [ -z "${HOGWASH_VEROVIO_LIB:-}" ] || [ -z "${HOGWASH_VEROVIO_DATA:-}" ]; then
-    echo "check-engraving-determinism: set HOGWASH_VEROVIO_LIB and HOGWASH_VEROVIO_DATA." >&2
-    echo "  HOGWASH_VEROVIO_LIB   path to libverovio.so / .dll / .dylib" >&2
-    echo "  HOGWASH_VEROVIO_DATA  path to verovio's data/ directory" >&2
+if [ -z "${SEGNO_VEROVIO_LIB:-}" ] || [ -z "${SEGNO_VEROVIO_DATA:-}" ]; then
+    echo "check-engraving-determinism: set SEGNO_VEROVIO_LIB and SEGNO_VEROVIO_DATA." >&2
+    echo "  SEGNO_VEROVIO_LIB   path to libverovio.so / .dll / .dylib" >&2
+    echo "  SEGNO_VEROVIO_DATA  path to verovio's data/ directory" >&2
     exit 1
 fi
 

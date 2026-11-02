@@ -13,7 +13,7 @@
 //! just engraving-test
 //! ```
 //!
-//! which supplies `HOGWASH_VEROVIO_LIB` and `HOGWASH_VEROVIO_DATA`.
+//! which supplies `SEGNO_VEROVIO_LIB` and `SEGNO_VEROVIO_DATA`.
 //!
 //! What is *not* here: anything about how MEI or a timemap is read. That is
 //! the adapter's real judgement, it is pure, and it is tested against
@@ -73,7 +73,7 @@ fn many_bars() -> String {
 
 fn engraver() -> VerovioEngraver {
     VerovioEngraver::from_environment()
-        .expect("set HOGWASH_VEROVIO_LIB and HOGWASH_VEROVIO_DATA, or run `just engraving-test`")
+        .expect("set SEGNO_VEROVIO_LIB and SEGNO_VEROVIO_DATA, or run `just engraving-test`")
 }
 
 fn engraved() -> EngravedScore {
@@ -508,11 +508,11 @@ fn a_bar_inside_a_repeat_starts_at_its_first_occurrence_in_the_minuet() {
 // Satie's Gymnopédie No. 1, bar 10: its opening note is tied over from bar 9.
 // Played through, it is not struck again; starting at bar 10, it must be.
 // The owner's own score, from the ignored `test-scores/` (or
-// `HOGWASH_TEST_SCORES`); skipped, with a note, when it isn't there.
+// `SEGNO_TEST_SCORES`); skipped, with a note, when it isn't there.
 #[test]
 #[ignore = "needs a real libverovio; run `just engraving-test`"]
 fn a_note_tied_into_a_bar_is_required_when_starting_there_in_the_gymnopedie() {
-    let path = std::env::var_os("HOGWASH_TEST_SCORES")
+    let path = std::env::var_os("SEGNO_TEST_SCORES")
         .map_or_else(
             || PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../test-scores"),
             PathBuf::from,

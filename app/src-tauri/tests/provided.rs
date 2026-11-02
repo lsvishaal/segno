@@ -59,7 +59,7 @@ fn provided() -> Vec<(String, Vec<u8>)> {
 
 fn engraver() -> VerovioEngraver {
     VerovioEngraver::from_environment()
-        .expect("set HOGWASH_VEROVIO_LIB and HOGWASH_VEROVIO_DATA, or run `just provided-test`")
+        .expect("set SEGNO_VEROVIO_LIB and SEGNO_VEROVIO_DATA, or run `just provided-test`")
 }
 
 // a first session requires no externally obtained

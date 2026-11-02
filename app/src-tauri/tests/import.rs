@@ -2,7 +2,7 @@
 //!
 //! `#[ignore]`d and run with `just provided-test`'s sibling recipe, for the
 //! same reason as `tests/provided.rs`: Verovio is loaded at run
-//! time, so these need `HOGWASH_VEROVIO_LIB`/`HOGWASH_VEROVIO_DATA` set.
+//! time, so these need `SEGNO_VEROVIO_LIB`/`SEGNO_VEROVIO_DATA` set.
 
 #![expect(
     clippy::expect_used,
@@ -217,11 +217,11 @@ fn an_imported_piece_survives_a_restart() {
 }
 
 /// One of the owner's own scores. They aren't redistributable, so they live in
-/// the ignored `test-scores/` folder (or `HOGWASH_TEST_SCORES`), not in git.
+/// the ignored `test-scores/` folder (or `SEGNO_TEST_SCORES`), not in git.
 /// `None`, said on stderr, when it isn't there: the test that wanted it is
 /// skipped, so a fresh clone still passes.
 fn personal_score(name: &str) -> Option<Vec<u8>> {
-    let folder = std::env::var_os("HOGWASH_TEST_SCORES").map_or_else(
+    let folder = std::env::var_os("SEGNO_TEST_SCORES").map_or_else(
         || PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../test-scores"),
         PathBuf::from,
     );
