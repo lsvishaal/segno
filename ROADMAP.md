@@ -44,9 +44,12 @@ order below.
 - [ ] A clean first run works (empty data folder → library → a starter piece)
 - [ ] Tag `stable-base-1` pushed (not a release)
 - [ ] CI green on the tagged commit
-- [ ] Stable base B (demo history) and C (UI tour): the owner decides after the Phase 1 audit
+- [-] Stable base B (demo history) and C (UI tour) — 3 Nov, deferred until after `stable-base-1`; B comes before the M-Test README and screenshots (M4.6, M3.20)
 
 ### M-Win — Windows parity (D3)
+First task after the checkpoint: the Verovio DLL spike (a `windows-latest` CI job builds
+`verovio.dll` at the pinned commit and runs the engraving tests; ~½ day).
+
 - [ ] CI builds and runs the Rust and UI tests on Windows
 - [ ] Verovio builds for Windows in CI
 - [ ] The data folder is in the proper Windows location
