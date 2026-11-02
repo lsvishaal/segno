@@ -1,6 +1,6 @@
 //! The session file format, pinned.
 //!
-//! A performer's history outlives any one version of Hogwash, so what is on
+//! A performer's history outlives any one version of Segno, so what is on
 //! disk is checked against files kept here: one per schema ever written.
 //! Old ones must always load; today's must load to exactly the record it
 //! describes and be written back byte for byte. A change to the format that

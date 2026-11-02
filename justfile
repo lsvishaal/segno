@@ -59,7 +59,7 @@ e2e *args: _require-verovio
         find "{{verovio_data}}" -type f -printf '%P %s %T@\n' | sort
     } | sha256sum | cut -c1-12)
     stamp=target/release/bundle/appimage/.inputs
-    if ! $rebuild && [ "$(cat "$stamp" 2>/dev/null)" = "$inputs" ] && compgen -G "target/release/bundle/appimage/Hogwash_*.AppImage" >/dev/null; then
+    if ! $rebuild && [ "$(cat "$stamp" 2>/dev/null)" = "$inputs" ] && compgen -G "target/release/bundle/appimage/Segno_*.AppImage" >/dev/null; then
         echo "reusing AppImage $inputs (nothing it is built from changed; just e2e --rebuild builds it anyway)"
     else
         rm -f "$stamp"
@@ -68,7 +68,7 @@ e2e *args: _require-verovio
         echo "built AppImage $inputs"
     fi
     rm -rf target/e2e/app && mkdir -p target/e2e/app
-    (cd target/e2e/app && ../../release/bundle/appimage/Hogwash_*.AppImage --appimage-extract >/dev/null)
+    (cd target/e2e/app && ../../release/bundle/appimage/Segno_*.AppImage --appimage-extract >/dev/null)
     HOGWASH_VEROVIO_LIB="{{verovio_lib}}" HOGWASH_VEROVIO_DATA="{{verovio_data}}" \
         cargo run --quiet --package segno-cli -- expected app/src-tauri/library/minuet-in-g.musicxml > target/e2e/minuet.expected.json
     HOGWASH_VEROVIO_LIB="{{verovio_lib}}" HOGWASH_VEROVIO_DATA="{{verovio_data}}" \
@@ -185,7 +185,7 @@ harness:
 # --- Verovio -------------------------------------------------------------
 #
 # The design loads Verovio at run time, so building and testing the rest of
-# Hogwash needs no C++ toolchain and no shared library — that's why these
+# Segno needs no C++ toolchain and no shared library — that's why these
 # stay separate from `just ci` rather than folded into it. All of them
 # default to the sibling `../verovio` / `../verovio-build` checkout; an
 # explicit HOGWASH_VEROVIO_LIB/DATA always overrides that.

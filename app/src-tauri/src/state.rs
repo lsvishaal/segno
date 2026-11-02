@@ -28,14 +28,14 @@ use crate::startup::Unavailable;
 
 /// Everything the application needs while it is running.
 #[derive(Debug)]
-pub struct Hogwash {
+pub struct Segno {
     engraving: Engraving,
     library: Library,
     records: Records,
     practice: Practice,
 }
 
-impl Hogwash {
+impl Segno {
     /// Engraves the provided material and opens the performer's records.
     ///
     /// # Why the provided pieces are engraved at startup
@@ -149,7 +149,7 @@ impl Hogwash {
         let Some(first) = pieces.next() else {
             return Err(Unavailable {
                 summary: "No practice material could be prepared.".to_owned(),
-                detail: "Hogwash ships with music to practise, and none of it could be \
+                detail: "Segno ships with music to practise, and none of it could be \
                          read. That points at the engraving engine rather than at the \
                          music, since these files travel with the application."
                     .to_owned(),
@@ -233,12 +233,12 @@ impl Hogwash {
 /// performer clicks a few times a minute — and a `Mutex` has one way to be
 /// used wrongly where a `RwLock` has several.
 #[derive(Debug)]
-pub struct Shared(pub Mutex<Hogwash>);
+pub struct Shared(pub Mutex<Segno>);
 
 /// The application, when it could not start.
 ///
 /// Managed *instead of* [`Shared`], so a command that needs a working
-/// Hogwash simply does not find one. The window still opens: a startup
+/// Segno simply does not find one. The window still opens: a startup
 /// failure that closed the program would have no way to say what went wrong.
 #[derive(Debug)]
 pub struct Failed(pub Unavailable);
@@ -307,7 +307,7 @@ fn skipped(unreadable: &[segno_records::RecordsFailure]) -> Vec<String> {
                 format!("skipped the practice record {}: {detail}", path.display())
             }
             segno_records::RecordsFailure::FromTheFuture { path, schema } => format!(
-                "skipped the practice record {}: written by a newer Hogwash (schema {schema})",
+                "skipped the practice record {}: written by a newer Segno (schema {schema})",
                 path.display()
             ),
             segno_records::RecordsFailure::Storage(failure) => {
@@ -445,7 +445,7 @@ mod tests {
         let engraving = crate::engraving::Engraving::start().expect("the engine starts");
         let practice =
             crate::practice::Practice::start(records.clone(), |_| {}).expect("the thread starts");
-        let started = super::Hogwash::start(engraving, records.clone(), practice);
+        let started = super::Segno::start(engraving, records.clone(), practice);
 
         assert!(started.is_ok(), "the app did not start");
         assert_eq!(records.sessions_of(&minuet), 1);

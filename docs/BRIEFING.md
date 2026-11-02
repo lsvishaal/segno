@@ -155,9 +155,9 @@ written rhythm, and hunting for one note counts as at most 3 wrong notes.
   notes, stops, tempo, time played.
 - **Not yet known:** which hand a note is in; key signatures in the steps.
 
-**Data folder** (`~/.local/share/com.hogwash.practice`): imported scores (copied in,
+**Data folder** (`~/.local/share/com.segno.practice`): imported scores (copied in,
 named by a hash of their bytes), `history/` (one JSON file per session, versioned),
-`settings.json` (versioned), `hogwash.log` (warnings, errors, panics; ~2 MB at most).
+`settings.json` (versioned), `segno.log` (warnings, errors, panics; ~2 MB at most).
 No data folder: Hogwash says so rather than saving elsewhere.
 
 ## Decided 25 Oct – 2 Nov (`DECISIONS.md`)
@@ -172,7 +172,7 @@ No data folder: Hogwash says so rather than saving elsewhere.
   only how it feels on the piano.
 - **Progress page (1–2 Nov):** the piece map with a word per bar and line graphs
   replaced the bars × sessions grid, which wasn't readable to a pianist.
-- **2 Nov:** D8 closed (keep "Hogwash", `com.hogwash.practice`); feature freeze until
+- **2 Nov:** D8 closed (keep "Hogwash", `com.segno.practice`); feature freeze until
   the stable base is tagged; a demo history from real pieces played through the
   virtual keyboard, dated by a clock hook (`HOGWASH_CLOCK_FILE`), in
   `target/demo-data`, opened with `just demo`; settings and a log file in the data

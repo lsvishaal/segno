@@ -9,7 +9,7 @@ use segno_capture::{Heard, Instrument, Keyboard, MidiSource, NoInstrument};
 use crate::message::decode;
 
 /// The name `midir` is asked to give this application's ports.
-const CLIENT: &str = "Hogwash";
+const CLIENT: &str = "Segno";
 
 /// How often a connected instrument is checked for still being there.
 ///

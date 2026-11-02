@@ -14,7 +14,7 @@ use std::fmt::Write as _;
 use segno_domain::PieceId;
 use sha2::{Digest, Sha256};
 
-/// One piece that ships with Hogwash.
+/// One piece that ships with Segno.
 #[derive(Debug, Clone, Copy)]
 pub struct Provided {
     /// What the file is called, for diagnostics.

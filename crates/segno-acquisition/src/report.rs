@@ -136,10 +136,10 @@ impl UnsupportedInput {
         Self {
             format,
             reason: format!(
-                "The part of Hogwash that draws music could not be started, \
+                "The part of Segno that draws music could not be started, \
                  so nothing could be read: {detail}"
             ),
-            route: "This is not a problem with your file. Reinstalling Hogwash \
+            route: "This is not a problem with your file. Reinstalling Segno \
                     should restore it; MusicXML files will work again once it is."
                 .to_owned(),
             blames_the_material: false,
@@ -166,7 +166,7 @@ impl UnsupportedInput {
 
     /// Whether the material itself is the obstacle.
     ///
-    /// `false` when Hogwash is the problem. The distinction exists so that a
+    /// `false` when Segno is the problem. The distinction exists so that a
     /// performer is not sent to fix a file that is fine.
     #[must_use]
     pub const fn blames_the_material(&self) -> bool {
@@ -182,7 +182,7 @@ fn why(format: OfferedFormat) -> String {
              signature and no note spellings, so there is no score to read from."
             .to_owned(),
 
-        OfferedFormat::Pdf => "A PDF is a picture of a page. Hogwash needs to know which \
+        OfferedFormat::Pdf => "A PDF is a picture of a page. Segno needs to know which \
              notes are written where, and a picture does not say."
             .to_owned(),
 
@@ -190,7 +190,7 @@ fn why(format: OfferedFormat) -> String {
             "This is a MuseScore file, which only MuseScore reads.".to_owned()
         }
 
-        OfferedFormat::Unrecognised => "This file is not in a format Hogwash recognises as \
+        OfferedFormat::Unrecognised => "This file is not in a format Segno recognises as \
              written music."
             .to_owned(),
 
@@ -199,7 +199,7 @@ fn why(format: OfferedFormat) -> String {
         // defect, and a defect that says something true is better than one
         // that says something confident and wrong.
         supported => format!(
-            "{} can be read, so this refusal is a fault in Hogwash rather than \
+            "{} can be read, so this refusal is a fault in Segno rather than \
              a problem with your file.",
             supported.name()
         ),
@@ -225,7 +225,7 @@ fn route_from(format: OfferedFormat) -> String {
              then MusicXML. Open the exported file here."
             .to_owned(),
 
-        _ => "Hogwash reads MusicXML, compressed or not. Most notation programs can \
+        _ => "Segno reads MusicXML, compressed or not. Most notation programs can \
              export it."
             .to_owned(),
     }

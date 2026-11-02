@@ -30,7 +30,7 @@ all-features = true
 # reached through `wry`'s webview bindings and through `dirs`.
 #
 # It is accepted because it is copyleft **per file**, not per program. Using
-# the crates imposes nothing on Hogwash's own code; only modifications to
+# the crates imposes nothing on Segno's own code; only modifications to
 # their files would have to be published under MPL-2.0, and we make none.
 # Their source is on crates.io, which discharges the availability obligation.
 #
@@ -58,7 +58,7 @@ allow = [
 unused-allowed-license = "allow"
 confidence-threshold = 0.93
 
-# Our own workspace crates carry no `license` field, because Hogwash's
+# Our own workspace crates carry no `license` field, because Segno's
 # licence is not chosen yet (see Cargo.toml). They are `publish = false`,
 # so they are exempt: this allow-list exists to police third-party code,
 # not to make us declare a licence before we have decided on one.
@@ -103,12 +103,12 @@ yanked = "deny"
 # draw the *application's own window furniture*, not anything a performer
 # supplies. What is attacker-shaped is a MusicXML file, and that reaches
 # Verovio and then the webview's SVG parser — neither of which is on this
-# list. Against even that: the requirements make Hogwash entirely offline, so
+# list. Against even that: the requirements make Segno entirely offline, so
 # a hostile file must be deliberately obtained and opened, and there is
 # nothing for it to exfiltrate to.
 #
 # Reviewed if: any of these turns into a *vulnerability* advisory; Tauri moves
-# to GTK4 and they leave the graph; or Hogwash gains any network capability,
+# to GTK4 and they leave the graph; or Segno gains any network capability,
 # which would change the reasoning above entirely.
 ignore = [
     # GTK3 bindings, beneath Tauri's Linux window.

@@ -69,14 +69,14 @@ pub fn run() -> Result<(), tauri::Error> {
                             drop(handle.emit(PRACTICE_CHANNEL, event));
                         })?;
 
-                        state::Hogwash::start(engraving, records, practice)
+                        state::Segno::start(engraving, records, practice)
                     },
                 )
             });
 
             match started {
-                Ok(hogwash) => {
-                    app.manage(state::Shared(std::sync::Mutex::new(hogwash)));
+                Ok(segno) => {
+                    app.manage(state::Shared(std::sync::Mutex::new(segno)));
                 }
                 Err(unavailable) => {
                     log::error(&format!("{}: {}", unavailable.summary, unavailable.detail));

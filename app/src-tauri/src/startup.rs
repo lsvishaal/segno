@@ -75,7 +75,7 @@ impl Startup {
 
         Err(Unavailable {
             summary: "The music engraving engine is missing.".to_owned(),
-            detail: "Hogwash draws sheet music with Verovio, which ships beside the \
+            detail: "Segno draws sheet music with Verovio, which ships beside the \
                      application as a separate file. It was not found, so no score can \
                      be displayed."
                 .to_owned(),
@@ -133,7 +133,7 @@ impl Startup {
     ///
     /// # Errors
     ///
-    /// When the platform can't say: Hogwash then says so, rather than
+    /// When the platform can't say: Segno then says so, rather than
     /// keeping records in whatever folder it was started from.
     pub fn data_directory(
         resolver: &tauri::path::PathResolver<tauri::Wry>,
@@ -148,7 +148,7 @@ impl Startup {
     /// [`Self::data_directory`] with the platform's answer handed in.
     fn data_directory_from(found: Result<PathBuf, String>) -> Result<PathBuf, Unavailable> {
         found.map_err(|reason| Unavailable {
-            summary: "Hogwash couldn't find a folder to keep your practice in.".to_owned(),
+            summary: "Segno couldn't find a folder to keep your practice in.".to_owned(),
             detail: format!(
                 "Your system didn't say where an application's data belongs ({reason}), \
                  so nothing was saved anywhere else instead."
@@ -171,7 +171,7 @@ mod tests {
 
         assert_eq!(
             failed.summary,
-            "Hogwash couldn't find a folder to keep your practice in."
+            "Segno couldn't find a folder to keep your practice in."
         );
         assert!(
             failed.detail.contains("HOME is not set"),
@@ -187,7 +187,7 @@ mod tests {
     #[test]
     fn a_packaged_engine_is_found_before_the_environment_and_beside_the_binary() {
         let found = Startup::candidates_from(
-            Some(Path::new("/app/usr/lib/Hogwash")),
+            Some(Path::new("/app/usr/lib/Segno")),
             Some(Path::new("/app/usr/bin/segno-app")),
             Some((
                 PathBuf::from("/dev/libverovio.so"),
@@ -199,12 +199,12 @@ mod tests {
         assert_eq!(
             libraries,
             [
-                Path::new("/app/usr/lib/Hogwash").join(Startup::LIBRARY),
+                Path::new("/app/usr/lib/Segno").join(Startup::LIBRARY),
                 Path::new("/app/usr/bin").join(Startup::LIBRARY),
                 PathBuf::from("/dev/libverovio.so"),
             ]
         );
-        assert_eq!(found[0].1, Path::new("/app/usr/lib/Hogwash/verovio-data"));
+        assert_eq!(found[0].1, Path::new("/app/usr/lib/Segno/verovio-data"));
         assert_eq!(found[1].1, Path::new("/app/usr/bin/verovio-data"));
     }
 

@@ -9,7 +9,7 @@ use crate::atomic;
 use crate::store::{Records, RecordsFailure};
 
 /// The version of the settings shape below. A newer one is refused, and the
-/// file is left alone so the newer Hogwash that wrote it keeps it.
+/// file is left alone so the newer Segno that wrote it keeps it.
 const SETTINGS_SCHEMA: u32 = 1;
 
 /// What the performer chose, remembered across restarts.
@@ -51,7 +51,7 @@ impl Records {
     /// # Errors
     ///
     /// [`RecordsFailure::Unreadable`] for a file that can't be understood,
-    /// [`RecordsFailure::FromTheFuture`] for one a newer Hogwash wrote.
+    /// [`RecordsFailure::FromTheFuture`] for one a newer Segno wrote.
     pub fn settings(&self) -> Result<Option<Settings>, RecordsFailure> {
         let path = self.settings_path();
         let text = match fs::read_to_string(&path) {
@@ -73,7 +73,7 @@ impl Records {
         Ok(Some(stored.settings))
     }
 
-    /// Keeps `settings`, unless the file there is from a newer Hogwash.
+    /// Keeps `settings`, unless the file there is from a newer Segno.
     ///
     /// # Errors
     ///

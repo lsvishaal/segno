@@ -1,4 +1,4 @@
-//! Verovio as Hogwash's engraver.
+//! Verovio as Segno's engraver.
 //!
 //! This is the sole implementor of [`Engraver`], and the only
 //! crate in the workspace that knows C exists. Everything above it deals in

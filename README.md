@@ -47,8 +47,8 @@ What works today:
 ## Principles
 
 - **Local only.** No accounts, no network calls, no telemetry. Your music and
-  history stay on your machine (`~/.local/share/com.hogwash.practice`: your
-  imported scores, practice history, `settings.json`, and `hogwash.log` for
+  history stay on your machine (`~/.local/share/com.segno.practice`: your
+  imported scores, practice history, `settings.json`, and `segno.log` for
   warnings and errors).
 - **No gamification.** No XP, streaks or badges. Feedback says where and what,
   never how good.

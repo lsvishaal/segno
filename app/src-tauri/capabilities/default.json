@@ -1,7 +1,7 @@
 {
   "$schema": "../gen/schemas/desktop-schema.json",
   "identifier": "default",
-  "description": "What the window is allowed to ask the system for. Deliberately short: Hogwash is offline and touches nothing beyond the file the performer chooses to import.",
+  "description": "What the window is allowed to ask the system for. Deliberately short: Segno is offline and touches nothing beyond the file the performer chooses to import.",
   "windows": ["main"],
   "permissions": [
     "core:default",

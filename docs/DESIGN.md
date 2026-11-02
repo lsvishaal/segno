@@ -393,7 +393,7 @@ back), and never opens by itself.
 | App closed mid-attempt | Attempt saved on window close (extend M1.2) |
 | Computer sleeps mid-attempt | On wake, treat like a device reconnect |
 | The system gives no app data folder | The startup-failure screen: "Hogwash couldn't find a folder to keep your practice in.", the reason, and where it looked; nothing is saved anywhere else |
-| `settings.json` unreadable or from a newer Hogwash | The defaults, a line in `hogwash.log`; a newer file is never overwritten |
+| `settings.json` unreadable or from a newer Hogwash | The defaults, a line in `segno.log`; a newer file is never overwritten |
 
 ### 19.3 Empty states (all need copy and one action)
 

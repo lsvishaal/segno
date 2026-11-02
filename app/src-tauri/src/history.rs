@@ -434,9 +434,9 @@ mod tests {
         let engraving = crate::engraving::Engraving::start().expect("the engine starts");
         let practice = crate::practice::Practice::start(records.clone(), |_| {})
             .expect("the practice thread starts");
-        let hogwash = crate::state::Hogwash::start(engraving, records.clone(), practice)
+        let segno = crate::state::Segno::start(engraving, records.clone(), practice)
             .expect("the provided material prepares");
-        let piece = hogwash
+        let piece = segno
             .library()
             .pieces()
             .into_iter()

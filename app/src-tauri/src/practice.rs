@@ -294,7 +294,7 @@ impl Practice {
             .name("segno-practice".to_owned())
             .spawn(move || run(&incoming, &sink, &records))
             .map_err(|failure| Unavailable {
-                summary: "Hogwash could not start its practice thread.".to_owned(),
+                summary: "Segno could not start its practice thread.".to_owned(),
                 detail: failure.to_string(),
                 looked_in: Vec::new(),
             })?;
@@ -1301,10 +1301,10 @@ mod tests {
         let engraving = crate::engraving::Engraving::start().expect("the engine starts");
         let practice =
             Practice::start(records.clone(), |_| {}).expect("the practice thread starts");
-        let hogwash = crate::state::Hogwash::start(engraving, records.clone(), practice)
+        let segno = crate::state::Segno::start(engraving, records.clone(), practice)
             .expect("the provided material prepares");
 
-        let minuet = hogwash
+        let minuet = segno
             .library()
             .pieces()
             .into_iter()
@@ -1368,9 +1368,9 @@ mod tests {
         let engraving = crate::engraving::Engraving::start().expect("the engine starts");
         let practice =
             Practice::start(records.clone(), |_| {}).expect("the practice thread starts");
-        let hogwash = crate::state::Hogwash::start(engraving, records.clone(), practice)
+        let segno = crate::state::Segno::start(engraving, records.clone(), practice)
             .expect("the provided material prepares");
-        let piece = hogwash
+        let piece = segno
             .library()
             .pieces()
             .into_iter()

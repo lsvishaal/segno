@@ -53,7 +53,7 @@ if ! cmp -s "$workdir/first" "$workdir/second"; then
     echo
     diff "$workdir/first" "$workdir/second" || true
     echo
-    echo "Hogwash requires identical results across executions."
+    echo "Segno requires identical results across executions."
     echo "This is release-blocking."
     exit 1
 fi

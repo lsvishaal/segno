@@ -21,13 +21,13 @@ fn temporary(name: &str) -> PathBuf {
     path
 }
 
-fn hogwash(root: &std::path::Path) -> segno_app_lib::state::Hogwash {
+fn segno(root: &std::path::Path) -> segno_app_lib::state::Segno {
     let engraving = segno_app_lib::engraving::Engraving::start().expect("the engine starts");
     let records = segno_records::Records::under(root);
     let practice = segno_app_lib::practice::Practice::start(records.clone(), |_| {})
         .expect("the practice thread starts");
 
-    segno_app_lib::state::Hogwash::start(engraving, records, practice)
+    segno_app_lib::state::Segno::start(engraving, records, practice)
         .expect("the provided material prepares")
 }
 
@@ -46,15 +46,14 @@ fn fixture() -> Vec<u8> {
 #[ignore = "needs a real libverovio; run `just provided-test`"]
 fn a_supported_file_joins_the_library() {
     let root = temporary("joins");
-    let mut hogwash = hogwash(&root);
-    let before = hogwash.library().count();
+    let mut segno = segno(&root);
+    let before = segno.library().count();
 
-    let imported =
-        accept_offered(&fixture(), None, &mut hogwash).expect("the fixture is supported");
+    let imported = accept_offered(&fixture(), None, &mut segno).expect("the fixture is supported");
 
-    assert_eq!(hogwash.library().count(), before + 1);
+    assert_eq!(segno.library().count(), before + 1);
     assert!(
-        hogwash
+        segno
             .library()
             .pieces()
             .into_iter()
@@ -69,13 +68,13 @@ fn a_supported_file_joins_the_library() {
 #[ignore = "needs a real libverovio; run `just provided-test`"]
 fn the_imported_source_can_be_read_back() {
     let root = temporary("round-trips");
-    let mut hogwash = hogwash(&root);
+    let mut segno = segno(&root);
     let material = fixture();
 
-    let imported = accept_offered(&material, None, &mut hogwash).expect("the fixture is supported");
+    let imported = accept_offered(&material, None, &mut segno).expect("the fixture is supported");
 
     let id = segno_domain::PieceId::new(&imported.piece.id).expect("a usable name");
-    assert_eq!(hogwash.source_of(&id), Some(material));
+    assert_eq!(segno.source_of(&id), Some(material));
 }
 
 // Re-offering the same bytes does not accumulate a duplicate: `PieceId` is a
@@ -85,7 +84,7 @@ fn the_imported_source_can_be_read_back() {
 #[ignore = "needs a real libverovio; run `just provided-test`"]
 fn importing_the_same_bytes_twice_does_not_duplicate() {
     let root = temporary("dedup");
-    let mut running = hogwash(&root);
+    let mut running = segno(&root);
     let material = fixture();
 
     accept_offered(&material, None, &mut running).expect("the fixture is supported");
@@ -98,7 +97,7 @@ fn importing_the_same_bytes_twice_does_not_duplicate() {
     assert!(second.already);
 
     // Still one piece after a restart: identical bytes are stored once.
-    assert_eq!(hogwash(&root).library().count(), before);
+    assert_eq!(segno(&root).library().count(), before);
 }
 
 // content in an unsupported format is refused, not partially
@@ -108,16 +107,16 @@ fn importing_the_same_bytes_twice_does_not_duplicate() {
 #[ignore = "needs a real libverovio; run `just provided-test`"]
 fn an_unsupported_format_is_refused_with_a_route() {
     let root = temporary("refused");
-    let mut hogwash = hogwash(&root);
-    let before = hogwash.library().count();
+    let mut segno = segno(&root);
+    let before = segno.library().count();
 
-    let refusal = accept_offered(b"%PDF-1.7 not music", None, &mut hogwash)
+    let refusal = accept_offered(b"%PDF-1.7 not music", None, &mut segno)
         .expect_err("a PDF is not supported");
 
     assert!(refusal.to_lowercase().contains("pdf"));
-    assert_eq!(hogwash.library().count(), before);
+    assert_eq!(segno.library().count(), before);
     assert!(
-        hogwash.records().imported().is_empty(),
+        segno.records().imported().is_empty(),
         "a refused file is never stored"
     );
 }
@@ -132,7 +131,7 @@ fn a_broken_file_is_refused_and_never_stored() {
     let Some(canon) = personal_score("Canon_in_D.mxl") else {
         return;
     };
-    let mut running = hogwash(&root);
+    let mut running = segno(&root);
 
     let refusal = accept_offered(
         &canon[..canon.len() / 2],
@@ -157,15 +156,15 @@ fn a_broken_file_is_refused_and_never_stored() {
 #[ignore = "needs a real libverovio; run `just provided-test`"]
 fn a_real_compressed_musicxml_file_joins_the_library() {
     let root = temporary("real-mxl");
-    let mut hogwash = hogwash(&root);
-    let before = hogwash.library().count();
+    let mut segno = segno(&root);
+    let before = segno.library().count();
     let Some(material) = personal_score("Fur_Elise_Easy.mxl") else {
         return;
     };
 
-    let imported = accept_offered(&material, None, &mut hogwash).expect("a real .mxl is supported");
+    let imported = accept_offered(&material, None, &mut segno).expect("a real .mxl is supported");
 
-    assert_eq!(hogwash.library().count(), before + 1);
+    assert_eq!(segno.library().count(), before + 1);
     assert_eq!(imported.piece.title, "Fur Elise");
 }
 
@@ -175,7 +174,7 @@ fn a_real_compressed_musicxml_file_joins_the_library() {
 #[ignore = "needs a real libverovio; run `just provided-test`"]
 fn a_title_printed_only_on_the_page_is_read() {
     let root = temporary("printed-titles");
-    let mut hogwash = hogwash(&root);
+    let mut segno = segno(&root);
 
     for (file, title, composer) in [
         (
@@ -192,14 +191,14 @@ fn a_title_printed_only_on_the_page_is_read() {
         let Some(source) = personal_score(file) else {
             return;
         };
-        let imported = accept_offered(&source, None, &mut hogwash).expect("supported");
+        let imported = accept_offered(&source, None, &mut segno).expect("supported");
 
         assert_eq!(imported.piece.title, title);
         assert_eq!(imported.piece.composer.as_deref(), Some(composer));
     }
 }
 
-// An imported piece is still there after a restart: a fresh Hogwash on the
+// An imported piece is still there after a restart: a fresh Segno on the
 // same data folder finds it on disk.
 #[test]
 #[ignore = "needs a real libverovio; run `just provided-test`"]
@@ -208,9 +207,9 @@ fn an_imported_piece_survives_a_restart() {
     let Some(satie) = personal_score("Erik_Satie_-_Gymnopedie_No.1.mxl") else {
         return;
     };
-    let imported = accept_offered(&satie, None, &mut hogwash(&root)).expect("supported");
+    let imported = accept_offered(&satie, None, &mut segno(&root)).expect("supported");
 
-    let restarted = hogwash(&root);
+    let restarted = segno(&root);
 
     assert!(restarted.library().pieces().into_iter().any(|piece| {
         piece.id().as_str() == imported.piece.id && piece.title() == "Gymnopédie No.1"
@@ -252,19 +251,16 @@ fn library_file(name: &str) -> Vec<u8> {
 #[ignore = "needs a real libverovio; run `just provided-test`"]
 fn a_file_identical_to_a_bundled_piece_adds_nothing() {
     let root = temporary("bundled-twin");
-    let mut hogwash = hogwash(&root);
-    let before = hogwash.library().count();
+    let mut segno = segno(&root);
+    let before = segno.library().count();
 
-    let imported = accept_offered(&library_file("minuet-in-g.musicxml"), None, &mut hogwash)
+    let imported = accept_offered(&library_file("minuet-in-g.musicxml"), None, &mut segno)
         .expect("the Minuet is supported");
 
     assert!(imported.already);
     assert_eq!(imported.piece.title, "Minuet in G Major");
-    assert_eq!(hogwash.library().count(), before);
-    assert!(
-        hogwash.records().imported().is_empty(),
-        "nothing was stored"
-    );
+    assert_eq!(segno.library().count(), before);
+    assert!(segno.records().imported().is_empty(), "nothing was stored");
 }
 
 // Identical files that got into the data folder under two names (copied by
@@ -273,11 +269,11 @@ fn a_file_identical_to_a_bundled_piece_adds_nothing() {
 #[ignore = "needs a real libverovio; run `just provided-test`"]
 fn identical_stored_copies_collapse_at_startup() {
     let root = temporary("collapse");
-    let before = hogwash(&root).library().count();
+    let before = segno(&root).library().count();
     let Some(canon) = personal_score("Canon_in_D.mxl") else {
         return;
     };
-    let imported = accept_offered(&canon, None, &mut hogwash(&root)).expect("supported");
+    let imported = accept_offered(&canon, None, &mut segno(&root)).expect("supported");
     let scores = root.join("scores");
     std::fs::copy(
         scores.join(format!("{}.musicxml", imported.piece.id)),
@@ -285,7 +281,7 @@ fn identical_stored_copies_collapse_at_startup() {
     )
     .expect("copies the file");
 
-    let restarted = hogwash(&root);
+    let restarted = segno(&root);
 
     assert_eq!(restarted.library().count(), before + 1);
     assert!(!scores.join("hand-copied.musicxml").exists());
@@ -303,17 +299,17 @@ fn two_real_fur_elise_files_are_two_pieces() {
     ) else {
         return;
     };
-    let mut hogwash = hogwash(&root);
-    let before = hogwash.library().count();
+    let mut segno = segno(&root);
+    let before = segno.library().count();
 
-    let full = accept_offered(&full_source, Some("Fur_Elise.mxl"), &mut hogwash);
+    let full = accept_offered(&full_source, Some("Fur_Elise.mxl"), &mut segno);
     let easy =
-        accept_offered(&easy_source, Some("Fur_Elise_Easy.mxl"), &mut hogwash).expect("supported");
+        accept_offered(&easy_source, Some("Fur_Elise_Easy.mxl"), &mut segno).expect("supported");
 
     // Its pickup bar is numbered 0, which is refused until pickup bars are
     // supported; flip this when they are.
     assert!(full.is_err_and(|refusal| refusal.contains("numbered `0`")));
-    assert_eq!(hogwash.library().count(), before + 1);
+    assert_eq!(segno.library().count(), before + 1);
     assert_eq!(easy.piece.title, "Fur Elise");
     assert_eq!(easy.piece.composer, None);
     assert_eq!(easy.piece.file_name.as_deref(), Some("Fur_Elise_Easy.mxl"));
@@ -325,7 +321,7 @@ fn two_real_fur_elise_files_are_two_pieces() {
 #[ignore = "needs a real libverovio; run `just provided-test`"]
 fn a_score_with_no_title_anywhere_is_named_after_its_file() {
     let root = temporary("file-title");
-    let mut hogwash = hogwash(&root);
+    let mut segno = segno(&root);
     let minuet = String::from_utf8(library_file("minuet-in-g.musicxml")).expect("text");
     let nameless = cut_all(
         &cut_all(
@@ -340,7 +336,7 @@ fn a_score_with_no_title_anywhere_is_named_after_its_file() {
     let imported = accept_offered(
         nameless.as_bytes(),
         Some("Petzold_Minuet_in_G.musicxml"),
-        &mut hogwash,
+        &mut segno,
     )
     .expect("still music");
 
@@ -368,7 +364,7 @@ fn a_renamed_piece_keeps_its_title_after_a_restart() {
     let Some(source) = personal_score("Canon_in_D.mxl") else {
         return;
     };
-    let mut running = hogwash(&root);
+    let mut running = segno(&root);
     let canon = accept_offered(&source, Some("Canon_in_D.mxl"), &mut running)
         .expect("supported")
         .piece;
@@ -385,7 +381,7 @@ fn a_renamed_piece_keeps_its_title_after_a_restart() {
         "bundled keeps its title"
     );
 
-    let restarted = hogwash(&root);
+    let restarted = segno(&root);
     assert!(
         restarted
             .library()
@@ -404,7 +400,7 @@ fn a_deleted_piece_and_its_history_are_gone_after_a_restart() {
     let Some(canon_source) = personal_score("Canon_in_D.mxl") else {
         return;
     };
-    let mut running = hogwash(&root);
+    let mut running = segno(&root);
     let before = running.library().count();
     let canon = accept_offered(&canon_source, None, &mut running)
         .expect("supported")
@@ -429,7 +425,7 @@ fn a_deleted_piece_and_its_history_are_gone_after_a_restart() {
     assert_eq!(forget(&mut running, &canon.id).expect("deletes it"), 1);
     assert_eq!(running.library().count(), before);
 
-    let restarted = hogwash(&root);
+    let restarted = segno(&root);
     assert_eq!(restarted.library().count(), before);
     assert_eq!(restarted.records().sessions_of(&canon_id), 0);
 }

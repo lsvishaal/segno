@@ -1,4 +1,4 @@
-//! The [`Engraver`] Hogwash actually uses.
+//! The [`Engraver`] Segno actually uses.
 
 use std::path::{Path, PathBuf};
 

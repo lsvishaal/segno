@@ -1,6 +1,6 @@
-//! `hogwash.log` in the app data folder: warnings, errors and panics, so a
-//! performer can send something when Hogwash goes wrong. At most [`CAP`]
-//! bytes, plus one older file (`hogwash.log.1`). Every line also goes to
+//! `segno.log` in the app data folder: warnings, errors and panics, so a
+//! performer can send something when Segno goes wrong. At most [`CAP`]
+//! bytes, plus one older file (`segno.log.1`). Every line also goes to
 //! stderr.
 
 use std::fs::{self, OpenOptions};
@@ -9,14 +9,14 @@ use std::path::{Path, PathBuf};
 use std::sync::{Mutex, OnceLock};
 use std::time::{SystemTime, UNIX_EPOCH};
 
-/// How big the log grows before it becomes `hogwash.log.1`.
+/// How big the log grows before it becomes `segno.log.1`.
 const CAP: u64 = 1_000_000;
 
 static FILE: OnceLock<Mutex<PathBuf>> = OnceLock::new();
 
-/// Starts logging to `hogwash.log` in `folder`, and logs panics there too.
+/// Starts logging to `segno.log` in `folder`, and logs panics there too.
 pub fn start(folder: &Path) {
-    if FILE.set(Mutex::new(folder.join("hogwash.log"))).is_err() {
+    if FILE.set(Mutex::new(folder.join("segno.log"))).is_err() {
         return;
     }
     let default = std::panic::take_hook();
@@ -36,7 +36,7 @@ pub fn start(folder: &Path) {
     }));
 }
 
-/// Something went wrong that Hogwash got past.
+/// Something went wrong that Segno got past.
 pub fn warn(line: &str) {
     write("WARN", line);
 }
@@ -47,7 +47,7 @@ pub fn error(line: &str) {
 }
 
 fn write(level: &str, line: &str) {
-    eprintln!("hogwash: {level} {line}");
+    eprintln!("segno: {level} {line}");
     let Some(file) = FILE.get() else { return };
     let Ok(path) = file.lock() else { return };
     let seconds = SystemTime::now()
@@ -108,7 +108,7 @@ mod tests {
     fn a_full_log_moves_aside_and_one_older_file_is_kept() {
         let folder = std::env::temp_dir().join(format!("segno-log-{}", std::process::id()));
         fs::create_dir_all(&folder).expect("a folder");
-        let path = folder.join("hogwash.log");
+        let path = folder.join("segno.log");
         let line = "x".repeat(100_000);
 
         for _ in 0..25 {

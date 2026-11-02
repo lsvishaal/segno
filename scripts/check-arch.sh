@@ -9,7 +9,7 @@
 #
 # Two things are asserted:
 #
-#   1. segno-domain has NO dependencies at all — not on another hogwash
+#   1. segno-domain has NO dependencies at all — not on another segno
 #      crate, not on anything from crates.io. It is shared vocabulary
 # and nothing else.
 #

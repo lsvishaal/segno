@@ -1,4 +1,4 @@
-// A tiny W3C WebDriver client (plain fetch) for driving the real Hogwash
+// A tiny W3C WebDriver client (plain fetch) for driving the real Segno
 // window through tauri-driver.
 import fs from "node:fs";
 

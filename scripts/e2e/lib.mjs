@@ -10,9 +10,9 @@ export const DIR = `${ROOT}/target/e2e`;
 export const APP = `${DIR}/app/squashfs-root/AppRun`;
 export const SHOTS = `${DIR}/shots`;
 /** The app's data, via XDG_DATA_HOME. The real folder is never written. */
-export const DATA = `${DIR}/data/com.hogwash.practice`;
+export const DATA = `${DIR}/data/com.segno.practice`;
 export const HISTORY = `${DATA}/history`;
-const REAL = `${process.env.HOME}/.local/share/com.hogwash.practice`;
+const REAL = `${process.env.HOME}/.local/share/com.segno.practice`;
 
 export const log = (...a) => console.log(...a);
 export const results = [];

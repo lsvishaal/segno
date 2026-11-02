@@ -60,7 +60,7 @@ Commands:
      (Rust unit → real engine → ALSA → UI → e2e; tiers in `docs/TESTING.md`).
      e2e only for real MIDI, engraving and layout, files the running app
      writes, and timing.
-6. **Never write to the real data folder** (`~/.local/share/com.hogwash.practice`)
+6. **Never write to the real data folder** (`~/.local/share/com.segno.practice`)
    unless the owner explicitly asks. Use `target/e2e/data` or copies (e.g.
    `target/m21-data`).
 7. No new crates without approval. No features outside the current phase; ideas

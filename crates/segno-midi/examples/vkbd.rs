@@ -21,7 +21,7 @@ fn main() {
 
     let open = || -> MidiOutputConnection {
         MidiOutput::new("vkbd")
-            .map(|output| output.create_virtual("Hogwash Test Keyboard"))
+            .map(|output| output.create_virtual("Segno Test Keyboard"))
             .ok()
             .and_then(Result::ok)
             .unwrap_or_else(|| {

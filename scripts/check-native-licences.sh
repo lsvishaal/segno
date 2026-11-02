@@ -14,7 +14,7 @@
 #
 # WHAT IT ASSERTS
 #
-#   1. Hogwash declares a licence, and the file backing it exists.
+#   1. Segno declares a licence, and the file backing it exists.
 #   2. THIRD_PARTY.md exists and records every native component below, with
 #      its licence named.
 #   3. No native component has been added to the code without being recorded
@@ -35,18 +35,18 @@ NATIVE=(
 
 failed=0
 
-# --- 1. Hogwash's own licence is declared and present -----------------------
+# --- 1. Segno's own licence is declared and present -----------------------
 declared=$(grep -m1 '^license = ' Cargo.toml | cut -d'"' -f2 || true)
 
 if [ -z "$declared" ]; then
     echo "LICENCE VIOLATION: the workspace declares no license."
-    echo "  Hogwash is open source, under one chosen licence."
+    echo "  Segno is open source, under one chosen licence."
     failed=1
 elif [ ! -s LICENSE ]; then
     echo "LICENCE VIOLATION: Cargo.toml declares $declared but LICENSE is missing or empty."
     failed=1
 else
-    echo "ok  hogwash is $declared, and LICENSE carries its text"
+    echo "ok  segno is $declared, and LICENSE carries its text"
 fi
 
 # --- 2. every native component is recorded ---------------------------------
@@ -102,7 +102,7 @@ fi
 if [ "$failed" -ne 0 ]; then
     echo
     echo "Native licence obligations are not a formality: the choice of"
-    echo "Apache-2.0 for Hogwash depends on Verovio staying a separate,"
+    echo "Apache-2.0 for Segno depends on Verovio staying a separate,"
     echo "replaceable shared library. Changing how it is linked changes what"
     echo "this project may be licensed as."
     exit 1

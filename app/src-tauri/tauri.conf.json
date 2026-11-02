@@ -1,8 +1,8 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "Hogwash",
+  "productName": "Segno",
   "version": "0.1.0",
-  "identifier": "com.hogwash.practice",
+  "identifier": "com.segno.practice",
   "build": {
     "frontendDist": "../dist",
     "devUrl": "http://localhost:1420",
@@ -12,7 +12,7 @@
   "app": {
     "windows": [
       {
-        "title": "Hogwash",
+        "title": "Segno",
         "width": 1180,
         "height": 820,
         "minWidth": 820,

@@ -7,7 +7,7 @@
 //!
 //! # Why this test exists
 //!
-//! Because the failure it catches is invisible. `Hogwash::start` skips a
+//! Because the failure it catches is invisible. `Segno::start` skips a
 //! provided piece that will not engrave, so that one bad file does not stop
 //! the application — which is right, and means a piece can quietly vanish
 //! from the shelf with nothing but a log line.
@@ -131,7 +131,7 @@ fn every_provided_piece_expects_notes() {
 // Stage B's real claim, checked without a window: the application starts, and
 // every provided piece reaches the shelf.
 //
-// `Hogwash::start` skips a piece that will not engrave. That is deliberate —
+// `Segno::start` skips a piece that will not engrave. That is deliberate —
 // one bad file should not stop the application — and it is exactly why this
 // counts them. The window could look perfectly reasonable with a piece
 // missing.
@@ -145,10 +145,10 @@ fn starting_puts_every_provided_piece_on_the_shelf() {
     let practice = segno_app_lib::practice::Practice::start(records.clone(), |_| {})
         .expect("the practice thread starts");
 
-    let hogwash = segno_app_lib::state::Hogwash::start(engraving, records, practice)
+    let segno = segno_app_lib::state::Segno::start(engraving, records, practice)
         .expect("the provided material prepares");
 
-    let titles: Vec<&str> = hogwash
+    let titles: Vec<&str> = segno
         .library()
         .pieces()
         .into_iter()
@@ -221,12 +221,11 @@ fn every_piece_on_the_shelf_can_be_named_and_played() {
     let practice = segno_app_lib::practice::Practice::start(records.clone(), |_| {})
         .expect("the practice thread starts");
 
-    let hogwash =
-        segno_app_lib::state::Hogwash::start(engraving, records, practice).expect("prepares");
+    let segno = segno_app_lib::state::Segno::start(engraving, records, practice).expect("prepares");
 
-    assert!(hogwash.library().count() >= 1);
+    assert!(segno.library().count() >= 1);
 
-    for piece in hogwash.library().pieces() {
+    for piece in segno.library().pieces() {
         assert!(!piece.title().is_empty());
         assert!(
             !piece.reference().is_empty(),

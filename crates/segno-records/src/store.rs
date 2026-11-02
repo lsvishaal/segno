@@ -92,7 +92,7 @@ pub enum RecordsFailure {
         detail: String,
     },
 
-    /// A record written by a newer version of Hogwash.
+    /// A record written by a newer version of Segno.
     ///
     /// Refused rather than read as best it can be: a half-understood record
     /// reported as understood tells a performer the wrong thing about their
@@ -273,7 +273,7 @@ impl Records {
 
         // "in read-only form". Advisory rather than absolute; a
         // performer with a text editor can still change it. What it prevents
-        // is Hogwash doing so by accident, which is the case the requirement is about.
+        // is Segno doing so by accident, which is the case the requirement is about.
         if let Ok(metadata) = fs::metadata(&score) {
             let mut permissions = metadata.permissions();
             permissions.set_readonly(true);

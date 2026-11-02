@@ -1,5 +1,5 @@
 //! MIDI Thru — routing what a keyboard sends straight to a real synth,
-//! hardware or software, instead of Hogwash making its own sound.
+//! hardware or software, instead of Segno making its own sound.
 //!
 //! # Why this is not `segno-capture`'s business
 //!
@@ -30,7 +30,7 @@ use segno_capture::Instrument;
 /// own constant rather than shared with `keyboard.rs`'s: the two modules
 /// have no other reason to depend on each other, and the value is trivial to
 /// keep in sync by eye.
-const CLIENT: &str = "Hogwash";
+const CLIENT: &str = "Segno";
 
 /// One MIDI output device, named the way a performer would recognise it.
 #[derive(Debug, Clone, PartialEq, Eq)]

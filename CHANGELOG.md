@@ -12,7 +12,7 @@ Everything so far, before the first preview (v0.1).
 - **Settings are kept with your history:** marks, the remembered keyboard and
   zoom move to `settings.json` in the data folder (brought over once from where
   they were kept before).
-- **A log file:** warnings, errors and crashes go to `hogwash.log` in the data
+- **A log file:** warnings, errors and crashes go to `segno.log` in the data
   folder (at most about 2 MB). If the system gives no data folder, Hogwash says
   so instead of saving in the current folder.
 - **Library:**

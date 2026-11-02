@@ -100,7 +100,7 @@ impl Engraving {
                 }
             })
             .map_err(|failure| Unavailable {
-                summary: "Hogwash could not start its engraving thread.".to_owned(),
+                summary: "Segno could not start its engraving thread.".to_owned(),
                 detail: failure.to_string(),
                 looked_in: Vec::new(),
             })?;
@@ -109,9 +109,9 @@ impl Engraving {
             Ok(Ok(())) => Ok(Self { requests }),
             Ok(Err(unavailable)) => Err(unavailable),
             Err(_) => Err(Unavailable {
-                summary: "Hogwash's engraving thread stopped before it started.".to_owned(),
+                summary: "Segno's engraving thread stopped before it started.".to_owned(),
                 detail: "The thread ended without reporting why, which is a defect in \
-                         Hogwash rather than a problem with your music."
+                         Segno rather than a problem with your music."
                     .to_owned(),
                 looked_in: Vec::new(),
             }),
