@@ -5,7 +5,7 @@ decision (kept current), the **D-list as first written** (options and reasoning,
 kept as written), and the **log** (append-only: date · decision · why · what it
 replaced). A new decision is a log line, plus a status row if it has a D-number.
 
-## Status (updated 2026-10-25)
+## Status (updated 2026-11-02)
 
 | ID | Topic | Status |
 |---|---|---|
@@ -16,7 +16,7 @@ replaced). A new decision is a log line, plus a status row if it has a D-number.
 | D5 | Store or recompute per-bar stats | **Decided by implementation 24 Oct:** recompute from raw events |
 | D6 | Practice log | **Open.** Recommended (b): per-piece log, dates and minutes, no streaks |
 | D7 | Computer-keyboard fallback | Recommended: yes, v1.0 (M3.12), labelled "for trying Hogwash" |
-| D8 | The name | **Open.** Must be decided for v0.1 |
+| D8 | The name | **Decided 2 Nov:** keep "Hogwash"; the identifier stays `com.hogwash.practice` |
 | D9 | Velocity | **Decided by implementation 20 Oct:** stored, not analysed until after v1.0 |
 | D10 | What "weak" means over time | **Decided 25 Oct**, thresholds 26 Oct (provisional), built 26 Oct (M2.9): see the log; replaces "average of the last 3 sessions of the piece" and the quartile ranking in the code |
 | D11 | Clean pass in a loop | **Decided by implementation 22 Oct:** every position right, no wrong notes |
@@ -109,3 +109,9 @@ _Date · decision · why · what it replaced._
 - 2026-11-01 · Progress page: a map of the piece (8 bars to a row, each box its number and a word) and the selected bar's two line graphs over time (hesitation and wrong notes, each time through) replace the bars × sessions grid and the Now heights; the page says what it's for, and every fact is a plain sentence ("about 3.1 s of hesitation each time through", "a wrong note 1 time in 3") · the owner found the grid and "avg pause … per pass" unreadable to a pianist · the 25–26 Oct grid, its caption and "Show all"
 - 2026-11-01 · Level words, 0–4: Secure · Small slips · Uneven · Shaky · Needs work; Secure is a pale green, the rest the amber that deepens; played once is "Not enough yet" · a pianist reads a word, not a level number · levels shown only as heights and cell shades
 - 2026-11-01 · "Work on next" is called "Practise next"; its button keeps "⟲" like the coach cards · it names the action · "Work on next"
+- 2026-11-02 · Progress page details, recorded after the 1 Nov build: the header line is plain sans ("Practised N times · … in total"); "Every bar is secure" replaces "clean"; the hardest bar is selected on open, and with none "Click a bar to see how it has gone over time."; graph dates gain the time when two sessions share a day; the top tick rounds up to a tenth · plain words, and a graph never reads "0.0" or three identical dates · the mono "N sessions" line, "clean", no bar selected on open
+- 2026-11-02 · D8 closed: the name stays "Hogwash" and the identifier `com.hogwash.practice` · the owner's call · D8 open
+- 2026-11-02 · Feature freeze until the stable base is tagged: storage fixes, a demo history, a UI tour and a base check first · a stable base before anything new · building features as they come
+- 2026-11-02 · A demo history for viewing and testing: real pieces played through the virtual keyboard with deliberate mistakes, dated by a clock hook, kept in `target/demo-data` (never the real folder), opened with `just demo` · something realistic to look at without touching real practice · three Minuet sessions on one day
+- 2026-11-02 · Settings (marks, keyboard, zoom) move from the webview's localStorage to `settings.json` (with a schema number) in the app data folder, read from localStorage once; warnings, errors and panics go to `hogwash.log` there (1 MB, one older file kept); with no app data folder the app says so instead of using the current folder · the 2 Nov storage audit: on Windows localStorage is in a different folder, there was no log, and the fallback to "." could put records anywhere · localStorage, stderr only, "."
+- 2026-11-02 · The demo clock: `HOGWASH_CLOCK_FILE` names a file holding an offset in milliseconds added to the shell's session and attempt start stamps and to the "now" the screens count from; unset, nothing changes. Note timings still come from ALSA. The demo history is deterministic in its sessions, dates (to the minute), mistakes and the word on every bar, not in exact milliseconds; `just demo` opens a fresh copy of it · dates without hand-written files, and no invented timestamps · a cargo feature (a second AppImage build)
