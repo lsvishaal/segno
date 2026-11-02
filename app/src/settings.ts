@@ -57,7 +57,13 @@ export async function loadSettings(): Promise<void> {
   }
 }
 
-/** What the window kept in localStorage before settings.json. */
+/**
+ * What the window kept in localStorage before settings.json.
+ *
+ * The keys keep the app's old name on purpose: builds from before the rename
+ * to Segno wrote them, and this one-time migration has to find them
+ * (DECISIONS.md, 3 Nov).
+ */
 export function fromLocalStorage(): Settings {
   try {
     const zoom = Number(localStorage.getItem("hogwash.zoom"));
@@ -71,7 +77,7 @@ export function fromLocalStorage(): Settings {
   }
 }
 
-/** Sends errors the window catches to Hogwash's log. */
+/** Sends errors the window catches to Segno's log. */
 export function logErrors(): void {
   const send = (line: string) => {
     try {

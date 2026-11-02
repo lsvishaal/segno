@@ -93,7 +93,7 @@ export function App() {
   useEffect(() => {
     let live = true;
 
-    // Whether Hogwash started is asked first: if it did not, nothing else is
+    // Whether Segno started is asked first: if it did not, nothing else is
     // worth asking.
     void (async () => {
       try {
@@ -151,7 +151,7 @@ export function App() {
   }, []);
 
   // A refused import surfaces as a banner on the library screen, not a
-  // full-screen takeover: one file that did not work is not "Hogwash cannot
+  // full-screen takeover: one file that did not work is not "Segno cannot
   // start" (`UnavailableScreen` is reserved for that). The command's error is
   // already the refusal's reason and route, joined verbatim — nothing here
   // adds wording of its own.
@@ -301,12 +301,12 @@ export function App() {
 /**
  * A command that threw.
  *
- * That is a defect in Hogwash rather than something the performer did, and
+ * That is a defect in Segno rather than something the performer did, and
  * saying so is better than a blank window.
  */
 function defect(error: unknown): Unavailable {
   return {
-    summary: "Hogwash ran into a problem.",
+    summary: "Segno ran into a problem.",
     detail: String(error),
     lookedIn: [],
   };

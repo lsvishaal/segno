@@ -72,7 +72,7 @@ export type {
 };
 
 /** The Pieces available to practise. Never empty. */
-/** The version this build of Hogwash reports. */
+/** The version this build of Segno reports. */
 export function appVersion(): Promise<string> {
   return getVersion();
 }
@@ -106,7 +106,7 @@ export function saveSettings(settings: Settings): Promise<void> {
   return invoke<void>("save_settings", { settings });
 }
 
-/** Writes a line to Hogwash's log file. */
+/** Writes a line to Segno's log file. */
 export function logLine(line: string): Promise<void> {
   return invoke<void>("log_line", { line });
 }
@@ -208,7 +208,7 @@ export function outputPorts(): Promise<OutputPortSummary[]> {
 
 /**
  * Sets or clears the MIDI Thru route: everything `input` reports gets
- * forwarded straight to `output`, instead of Hogwash making its own sound.
+ * forwarded straight to `output`, instead of Segno making its own sound.
  * `null` for either side clears whatever route was set. Independent of
  * `startAttempt` — routing works with or without a practice attempt running.
  */

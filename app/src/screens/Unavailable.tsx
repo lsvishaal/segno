@@ -1,7 +1,7 @@
 import type { Unavailable } from "../bridge";
 
 /**
- * The screen shown when Hogwash cannot start.
+ * The screen shown when Segno cannot start.
  *
  * The design requires a failure to resolve into an explanation, and the one
  * that reaches here is the worst case — usually a missing engraving library.

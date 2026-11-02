@@ -979,7 +979,7 @@ function InstrumentPicker({
   if (available.length === 0) {
     return (
       <div className="panel shrink-0 rounded-2xl px-7 py-5 text-sm text-ink-muted">
-        No MIDI keyboard is connected. Plug one in — Hogwash will notice once you try
+        No MIDI keyboard is connected. Plug one in — Segno will notice once you try
         again.
         {refusal && <p className="mt-1 text-ink-muted">{refusal}</p>}
       </div>

@@ -35,7 +35,7 @@ export function distinguishing(pieces: readonly PieceSummary[]): ReadonlyMap<str
       alike.filter((other) => loosely(other.composer) === loosely(piece.composer)).length === 1;
     if (composerIsUnique) continue;
 
-    notes.set(piece.id, piece.fileName ?? "Bundled with Hogwash");
+    notes.set(piece.id, piece.fileName ?? "Bundled with Segno");
   }
 
   return notes;
@@ -85,7 +85,7 @@ const STARTERS = [
 
 /**
  * The shelf: everything available to practise. Where you left off first,
- * then the pieces you added, then the ones Hogwash comes with, by level.
+ * then the pieces you added, then the ones Segno comes with, by level.
  *
  * The bundled pieces mean it is never empty, so only "your pieces" has an
  * empty state.
@@ -154,7 +154,7 @@ export function LibraryScreen({
   return (
     <div className="mx-auto max-w-3xl px-6 pb-24 sm:px-8 lg:max-w-4xl lg:px-10 xl:max-w-6xl">
       <header className="flex items-baseline justify-between pt-10 pb-6">
-        <h1 className="font-serif text-heading">Hogwash</h1>
+        <h1 className="font-serif text-heading">Segno</h1>
       </header>
 
       {latest?.lastPractisedMs != null && (
@@ -239,7 +239,7 @@ export function LibraryScreen({
           shelf(yours)
         ) : (
           <p className="mt-4 max-w-md text-sm text-ink-muted">
-            Pieces you add appear here. Hogwash reads MusicXML — export it from MuseScore Studio or
+            Pieces you add appear here. Segno reads MusicXML — export it from MuseScore Studio or
             download from OpenScore.
           </p>
         )}

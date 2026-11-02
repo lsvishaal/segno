@@ -17,7 +17,7 @@ export default async function settings() {
   await w.settle();
   const panel = await w.run("return document.querySelector('[data-settings-panel]').innerText");
   await shot("settings-panel");
-  check("About shows the version and licence", /Hogwash \d+\.\d+\.\d+ · Apache-2\.0/.test(panel));
+  check("About shows the version and licence", /Segno \d+\.\d+\.\d+ · Apache-2\.0/.test(panel));
   check("About credits Verovio", panel.includes("Verovio"));
   check("there is no dark score surface option", !/surface|dark/i.test(panel));
   check("MIDI input and output are native selects", (await w.run("return document.querySelectorAll('[data-settings-panel] select').length")) === 2);

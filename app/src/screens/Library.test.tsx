@@ -86,7 +86,7 @@ describe("telling alike pieces apart", () => {
     expect(distinguishing([summary("a", "Canon in D", null, "Canon.mxl"), summary("b", "Minuet", null, null)]).size).toBe(0);
   });
 
-  // The performer's two real files, as Hogwash reads them.
+  // The performer's two real files, as Segno reads them.
   it("tells the two real Für Elise files apart, though their titles differ only by an accent", () => {
     const notes = distinguishing([
       summary("full", "Für Elise", "arr. Verona", "Fur_Elise.mxl"),
@@ -104,7 +104,7 @@ describe("telling alike pieces apart", () => {
     ]);
 
     expect(notes.get("a")).toBe("ode_easy.mxl");
-    expect(notes.get("b")).toBe("Bundled with Hogwash");
+    expect(notes.get("b")).toBe("Bundled with Segno");
   });
 
   it("shows the note on the card", () => {

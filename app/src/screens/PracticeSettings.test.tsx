@@ -147,7 +147,7 @@ describe("About", () => {
   it("names the version, the licence and Verovio", async () => {
     await renderPanel();
 
-    expect(screen.getByText("Hogwash 0.1.0 · Apache-2.0")).toBeInTheDocument();
+    expect(screen.getByText("Segno 0.1.0 · Apache-2.0")).toBeInTheDocument();
     expect(screen.getByText(/engraved by Verovio/)).toBeInTheDocument();
   });
 });

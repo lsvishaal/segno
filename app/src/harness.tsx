@@ -20,7 +20,7 @@ const piece = (query.get("piece") ?? "minuet-in-g") as Piece;
 const step = Number(query.get("step") ?? 0);
 const wrong = query.get("wrong");
 
-/** The shelf as the performer's real pieces summarise (titles as Hogwash reads them). */
+/** The shelf as the performer's real pieces summarise (titles as Segno reads them). */
 const SHELF: PieceSummary[] = [
   { id: "minuet", title: "Minuet in G Major", composer: "Christian Petzold", bars: 32, notes: 209, fileName: null, imported: false, level: "intermediate", lastPractisedMs: null, weakest: [] },
   { id: "prelude", title: "Prelude in C Major", composer: "Johann Sebastian Bach", bars: 35, notes: 533, fileName: null, imported: false, level: "intermediate", lastPractisedMs: null, weakest: [] },

@@ -41,7 +41,7 @@ describe("loading settings", () => {
     expect([setting("marks"), setting("keyboard"), setting("zoom")]).toEqual([true, "Digital Piano", 90]);
   });
 
-  it("keeps the defaults when Hogwash didn't start", async () => {
+  it("keeps the defaults when Segno didn't start", async () => {
     bridge.settings.mockRejectedValue("not started");
 
     await loadSettings();

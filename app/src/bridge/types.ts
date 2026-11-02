@@ -110,7 +110,7 @@ export interface StartPoint {
  * Why the application cannot do its job.
  *
  * Rendered as a whole screen rather than a toast: this is not a transient
- * error, it is Hogwash being unable to start, and the design asks for an
+ * error, it is Segno being unable to start, and the design asks for an
  * explanation rather than a shrug.
  */
 export interface Unavailable {

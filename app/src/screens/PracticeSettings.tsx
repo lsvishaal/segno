@@ -193,7 +193,7 @@ export function SettingsPanel({
 
 /**
  * What this is, and what it uses: the version, the licence, and the credit
- * Verovio's LGPL asks for. Plain text on purpose: Hogwash makes no network
+ * Verovio's LGPL asks for. Plain text on purpose: Segno makes no network
  * calls, so there is nothing here to click through to.
  */
 function About() {
@@ -214,7 +214,7 @@ function About() {
     <section className="pt-5">
       <h3 className="text-label font-medium text-ink-muted uppercase">About</h3>
       <p className="mt-3 text-xs text-ink-muted">
-        Hogwash{version ? ` ${version}` : ""} · Apache-2.0
+        Segno{version ? ` ${version}` : ""} · Apache-2.0
       </p>
       <p className="mt-1 text-xs text-ink-muted">
         Music is engraved by Verovio (LGPL-3.0-or-later).
@@ -225,7 +225,7 @@ function About() {
 
 /**
  * Routes MIDI Thru: an input device's raw messages, forwarded straight to an
- * output device — real hardware or a software synth, in place of Hogwash
+ * output device — real hardware or a software synth, in place of Segno
  * making its own sound. Deliberately independent of `InstrumentPicker`:
  * this owns its own input/output selection and works whether or not a
  * practice attempt is running, because Thru has nothing to do with
