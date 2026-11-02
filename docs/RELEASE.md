@@ -1,4 +1,4 @@
-# Hogwash — release
+# Segno — release
 
 How a release is made and launched.
 
@@ -17,7 +17,7 @@ How a release is made and launched.
    `.deb` for Debian/Ubuntu.
 5. **Getting music** — bundled pieces; MusicXML from MuseScore Studio
    (File → Export), OpenScore, Mutopia; why MIDI and PDF aren't read directly.
-6. **Honest comparison** — a short table: Hogwash vs MidiSlayer vs
+6. **Honest comparison** — a short table: Segno vs MidiSlayer vs
    midipiano.app vs Synthesia (price, open source, platforms, weak-bar
    memory, MIDI import). Be fair; say where others are ahead.
 7. **Principles** — local-first, no gamification, factual feedback.
@@ -36,14 +36,14 @@ How a release is made and launched.
 5. (45–60 s) Stop; Results, then the Progress page shows the weak bars. *"It remembers where
    you struggle."*
 6. (60–70 s) "Practise weak bars." *"And tells you what to practise next."*
-7. End card: *"Hogwash — free and open source. Linux."* + repo URL.
+7. End card: *"Segno — free and open source. Linux."* + repo URL.
 
 ### 24.3 Launch posts (v1.0 week)
 
 - **r/pianolearning** and **r/piano** — read the self-promotion rules first;
   lead with the problem ("I kept replaying whole pieces to fix two bars"),
   not the app. Answer every comment.
-- **Show HN** — title: *"Show HN: Hogwash – a free piano practice app that
+- **Show HN** — title: *"Show HN: Segno – a free piano practice app that
   remembers which bars you struggle with."* First comment: why, stack
   (Rust + Tauri + Verovio), what's not done.
 - **LinkedIn** — the build story (pairs with your 29 Sep post: "I rested it

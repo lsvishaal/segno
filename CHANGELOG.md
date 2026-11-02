@@ -8,12 +8,17 @@ All notable changes a user could notice. Format:
 
 Everything so far, before the first preview (v0.1).
 
+### Changed
+- **Renamed to Segno.** The window, About and library say Segno; your practice lives in
+  `~/.local/share/com.segno.practice` (move the old `com.hogwash.practice` folder there to keep
+  your history).
+
 ### Added
 - **Settings are kept with your history:** marks, the remembered keyboard and
   zoom move to `settings.json` in the data folder (brought over once from where
   they were kept before).
 - **A log file:** warnings, errors and crashes go to `segno.log` in the data
-  folder (at most about 2 MB). If the system gives no data folder, Hogwash says
+  folder (at most about 2 MB). If the system gives no data folder, Segno says
   so instead of saving in the current folder.
 - **Library:**
   - bundled pieces on Beginner and Intermediate shelves
@@ -47,7 +52,7 @@ Everything so far, before the first preview (v0.1).
     and wrong notes, each time through), all in plain sentences. It replaces the
     amber tint on the score, its legend and the W key.
   - Practise on the Progress page starts at once on the keyboard you last
-    started on, which Hogwash now remembers
+    started on, which Segno now remembers
 - **Marks while playing:** each right key's note turns green and stays; a wrong key stays as a red note with a ring (at most 3 in one place). They clear on a new attempt and on each pass of a loop, and stay on the score after Results until the next Start. Settings › Marks while playing turns them back into a brief flash. The ✕ counts the score used to show after a run are gone.
 - **Speed:** a key reaches the screen in about 15 ms (it was about 27): the keyboard is read every 5 ms while playing, not every 25 ms.
 - **Coach cards:** every Practise button loops from one bar before the trouble; "You keep stopping at bar N" now loops bars N−1–N instead of starting at bar N.

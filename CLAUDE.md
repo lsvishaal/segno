@@ -1,4 +1,4 @@
-# Hogwash — rules for Claude Code
+# Segno — rules for Claude Code
 
 ## What this is
 A free, open-source, local-first desktop app for practising piano from standard

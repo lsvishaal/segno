@@ -1,6 +1,6 @@
-# Hogwash — roadmap
+# Segno — roadmap
 
-> **The one sentence:** _Open a piece, play it, and Hogwash finds the bars you
+> **The one sentence:** _Open a piece, play it, and Segno finds the bars you
 > struggle with and helps you fix them. Free, open source, local-first._
 
 This file is the plan only. Why things are the way they are: `DECISIONS.md`.

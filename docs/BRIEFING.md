@@ -1,4 +1,4 @@
-# Hogwash — briefing for Claude chat
+# Segno — briefing for Claude chat
 
 > Generated 2026-11-02 (after stable base part A) from `README.md`, `ROADMAP.md`, `DECISIONS.md`, `CLAUDE.md`
 > and `docs/`. It makes no claim those files don't. Regenerated at the end of every
@@ -15,9 +15,9 @@
 - End with a `DECISIONS — …` block (format at the bottom).
 
 ## In ten lines
-1. Hogwash is a free, local-first Linux desktop app: practise piano from real sheet
+1. Segno is a free, local-first Linux desktop app: practise piano from real sheet
    music with a MIDI keyboard. The cursor **waits** for the right notes.
-2. **The one sentence:** open a piece, play it, and Hogwash finds the bars you
+2. **The one sentence:** open a piece, play it, and Segno finds the bars you
    struggle with and helps you fix them.
 3. **Built with:** a Rust workspace (13 crates, pure engine crates) and a Tauri v2
    app (React 19, TypeScript, Tailwind v4). Verovio draws the score at run time.
@@ -36,7 +36,7 @@
    is gone.
 9. **One developer**, who is also the main user: a self-taught adult pianist.
 10. **Open decisions:** D1 dates, D6 practice log, D13 Listen's sound. D8 is
-    decided: the name stays "Hogwash".
+    decided: the name is "Segno".
 
 ## Who it's for (`docs/PRODUCT.md`)
 - **Primary:** the self-taught adult with a digital piano who learns pieces they
@@ -158,7 +158,7 @@ written rhythm, and hunting for one note counts as at most 3 wrong notes.
 **Data folder** (`~/.local/share/com.segno.practice`): imported scores (copied in,
 named by a hash of their bytes), `history/` (one JSON file per session, versioned),
 `settings.json` (versioned), `segno.log` (warnings, errors, panics; ~2 MB at most).
-No data folder: Hogwash says so rather than saving elsewhere.
+No data folder: Segno says so rather than saving elsewhere.
 
 ## Decided 25 Oct – 2 Nov (`DECISIONS.md`)
 - **D10:** difficulty stays a total per pass, not per note; a stop counts only in a
@@ -172,7 +172,7 @@ No data folder: Hogwash says so rather than saving elsewhere.
   only how it feels on the piano.
 - **Progress page (1–2 Nov):** the piece map with a word per bar and line graphs
   replaced the bars × sessions grid, which wasn't readable to a pianist.
-- **2 Nov:** D8 closed (keep "Hogwash", `com.segno.practice`); feature freeze until
+- **2 Nov:** D8 decided (keep the old name; changed the same evening to "Segno", `com.segno.practice`); feature freeze until
   the stable base is tagged; a demo history from real pieces played through the
   virtual keyboard, dated by a clock hook (`SEGNO_CLOCK_FILE`), in
   `target/demo-data`, opened with `just demo`; settings and a log file in the data
@@ -186,7 +186,7 @@ No data folder: Hogwash says so rather than saving elsewhere.
 - **M0.3:** swap the Prelude for the OpenWTC edition.
 - **M2.9, M2.10, M2.11 (done):** D10 absolute levels, the Progress page, live marks.
 - **M1.3:** auto-detect a keyboard plugged in later (remembering it is done).
-- **D8 (decided 2 Nov):** keep "Hogwash".
+- **D8 (decided 2 Nov):** the name is "Segno".
 - **M4.1:** a release build made by CI from a tag.
 - **M4.2:** a clean-system test.
 - **M4.3:** playable in 3 clicks.
@@ -226,7 +226,7 @@ No data folder: Hogwash says so rather than saving elsewhere.
 | D13 | Listen's sound | open |
 
 Decided: D3 Linux only (Windows CI returns with Next 6), D4 Prelude swap, D5
-recompute, D8 keep "Hogwash", D9 velocity stored, D10, D11 clean pass.
+recompute, D8 "Segno", D9 velocity stored, D10, D11 clean pass.
 
 ## How the worker works (`CLAUDE.md`)
 - Plan first and wait for approval; one phase at a time; stop and report.

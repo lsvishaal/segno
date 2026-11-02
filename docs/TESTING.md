@@ -1,6 +1,6 @@
-# Hogwash — testing
+# Segno — testing
 
-How Hogwash is tested.
+How Segno is tested.
 
 ---
 

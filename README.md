@@ -1,9 +1,11 @@
-# Hogwash
+# Segno
+
+Segno (SEH-nyoh) is the musical sign that sends you back to repeat a passage.
 
 **A free, local-first desktop app for practising piano from real sheet music
 with a MIDI keyboard.**
 
-Open a piece and the cursor waits until you play the right notes. Hogwash keeps
+Open a piece and the cursor waits until you play the right notes. Segno keeps
 every note you play, tells you after each run what went wrong, where and how to
 practise it, and remembers which bars give you trouble over time.
 
@@ -63,7 +65,7 @@ More: `docs/PRODUCT.md`.
 
 ## Getting music
 
-Hogwash reads **MusicXML** (`.musicxml`, or compressed `.mxl`). Export it from
+Segno reads **MusicXML** (`.musicxml`, or compressed `.mxl`). Export it from
 [MuseScore Studio](https://musescore.org) or download public-domain scores from
 [OpenScore](https://openscore.cc). MIDI files and PDFs aren't scores and can't be
 imported (see `docs/archive/MIDI-IMPORT.md`).

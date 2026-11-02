@@ -1,6 +1,6 @@
-# Hogwash — design
+# Segno — design
 
-How Hogwash looks, behaves and speaks: the UX, the visual system, each screen, the words, and the budgets it must meet.
+How Segno looks, behaves and speaks: the UX, the visual system, each screen, the words, and the budgets it must meet.
 
 ---
 
@@ -8,7 +8,7 @@ How Hogwash looks, behaves and speaks: the UX, the visual system, each screen, t
 
 ### 15.1 The friction principle
 
-> **From launching Hogwash to hearing your first note judged: at most
+> **From launching Segno to hearing your first note judged: at most
 > 2 clicks. From finishing a pass to starting the next: 0 clicks.**
 
 Every flow below has a click budget. A change that adds a click needs a reason
@@ -48,7 +48,7 @@ Launch → play the Minuet, as the code works now:
 
 **Flow C — Fix a hard bar (budget: 2 clicks)**
 - On the score, click the darkest bar → bar card → **Loop this bar**.
-- Or toolbar → **Practise weak bars** (1 click, Hogwash chooses).
+- Or toolbar → **Practise weak bars** (1 click, Segno chooses).
 
 **Flow D — Import a piece (budget: 2 clicks, or a drag)**
 - Library → **Add a piece** → file dialog → it opens straight into practice.
@@ -192,7 +192,7 @@ Only the scale in `index.css` is allowed. No one-off sizes.
 ### 17.1 Library (as built, 25 Oct)
 
 ```
-Hogwash
+Segno
 
 CONTINUE
 ┌────────────────────────────────────────────────────────────┐
@@ -208,7 +208,7 @@ STARTER · INTERMEDIATE — around Grades 1–4
 
 - **Continue** appears once anything has been practised: the piece practised last.
 - **Your pieces:** imports, most recently practised first. Empty: *"Pieces you
-  add appear here. Hogwash reads MusicXML — export it from MuseScore Studio or
+  add appear here. Segno reads MusicXML — export it from MuseScore Studio or
   download from OpenScore."*
 - **Cards:** composer in small caps, title in serif italic, size in mono, footer
   "Last practised … · weakest bar(s) …" or "Not practised yet", and a "Progress"
@@ -273,7 +273,7 @@ History and the bar card are no longer panels. They live on the Progress page (1
 ### 17.4 Onboarding and first run
 
 - **No device connected** (library and practice):
-  `① Connect your keyboard (USB) → ② Hogwash finds it automatically → ③ Open a piece and play.`
+  `① Connect your keyboard (USB) → ② Segno finds it automatically → ③ Open a piece and play.`
   plus *"No keyboard? Try it with your computer keyboard."* (D7)
 - **First time on the practice screen:** three one-line hints, shown once,
   each dismissible: *"Play the first note to begin."* · *"Click any bar to
@@ -349,7 +349,7 @@ back), and never opens by itself.
 | End of attempt | "Great job! 87% accuracy!" | "Bars 1–18 played · 3 bars to work on" |
 | Weak bar | "You're bad at bar 9" | "Bar 9 · average pause 4.2 s · 2 wrong notes per pass" |
 | Improvement | "Amazing progress!!" | "Bar 9: average pause 14.1 s → 3.2 s over 6 sessions" |
-| No device | "ERROR: No MIDI device found" | "No keyboard connected. Plug it in — Hogwash will find it." |
+| No device | "ERROR: No MIDI device found" | "No keyboard connected. Plug it in — Segno will find it." |
 | Bad file | "Parse error at line 412" | "This file couldn't be read as sheet music. If it came from MuseScore, try exporting it again as MusicXML." |
 | Loop done | "🎉 Level up!" | "3 clean passes · bars 9–12" |
 
@@ -371,7 +371,7 @@ back), and never opens by itself.
    UI. Put them behind a "Details" disclosure, copyable for bug reports.
 3. A failure in one feature never takes down the screen. (Today, any thrown
    command error replaces the whole window with the Unavailable screen —
-   keep that only for "Hogwash can't start at all.")
+   keep that only for "Segno can't start at all.")
 4. Errors that fix themselves (device back) disappear on their own.
 
 ### 19.2 Edge cases to handle explicitly
@@ -382,7 +382,7 @@ back), and never opens by itself.
 | Keyboard reconnects with a different port name | Match by name prefix; ask only if ambiguous |
 | Sustain pedal (CC64) | Ignored for judging; never counts as a wrong note |
 | Notes held from the previous position | Not re-judged (ties logic already covers written ties) |
-| Piece with > 2 staves or several parts | Refuse clearly on import for v1.0: "Hogwash handles one piano part (two staves)." |
+| Piece with > 2 staves or several parts | Refuse clearly on import for v1.0: "Segno handles one piano part (two staves)." |
 | Piece with a pickup (anacrusis) bar | Bar numbering must match the printed score (test with a PD Für Elise) |
 | Very long piece (300+ bars) | Engraving and history stay within budgets (section 21) |
 | Mid-bar clef change | Known limit (`docs/PRODUCT.md`, Known limits) |
@@ -392,8 +392,8 @@ back), and never opens by itself.
 | Disk full / no write permission | "Couldn't save this session (disk full?). You can keep playing." |
 | App closed mid-attempt | Attempt saved on window close (extend M1.2) |
 | Computer sleeps mid-attempt | On wake, treat like a device reconnect |
-| The system gives no app data folder | The startup-failure screen: "Hogwash couldn't find a folder to keep your practice in.", the reason, and where it looked; nothing is saved anywhere else |
-| `settings.json` unreadable or from a newer Hogwash | The defaults, a line in `segno.log`; a newer file is never overwritten |
+| The system gives no app data folder | The startup-failure screen: "Segno couldn't find a folder to keep your practice in.", the reason, and where it looked; nothing is saved anywhere else |
+| `settings.json` unreadable or from a newer Segno | The defaults, a line in `segno.log`; a newer file is never overwritten |
 
 ### 19.3 Empty states (all need copy and one action)
 

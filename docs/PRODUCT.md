@@ -1,10 +1,10 @@
-# Hogwash — product
+# Segno — product
 
-Who Hogwash is for, the rules it keeps and why, and what it will never be.
+Who Segno is for, the rules it keeps and why, and what it will never be.
 
 ---
 
-## 2. Who Hogwash is for
+## 2. Who Segno is for
 
 Being specific about who it's for is what stops the app from becoming
 everything. When a feature idea comes up, ask: *which of these people needs
@@ -59,7 +59,7 @@ These are settled. Reopen one only with new evidence, and log it in DECISIONS.md
 | **The cursor waits.** Wait mode is the core experience. | It's what makes reading practice possible at your own speed. Tempo comes later, as a graduation step. |
 | **Local-first.** No accounts, no network, no telemetry. | Your practice history is personal. It also means nothing to host, nothing to break. |
 | **Everything is free.** No locked features, ever. | MidiSlayer charges $50 to play a public-domain Bach prelude. Being the free version is the point. |
-| **Users bring their own music.** Hogwash bundles only lawfully redistributable scores. | Shipping copyrighted arrangements gets a repo taken down. |
+| **Users bring their own music.** Segno bundles only lawfully redistributable scores. | Shipping copyrighted arrangements gets a repo taken down. |
 | **Integration over invention.** Verovio engraves, midir talks MIDI, MusicXML is the source of truth. | Every hour spent rebuilding a solved problem is an hour not spent on weak bars. |
 | **Deterministic analysis.** Same performance + same score = byte-identical results. | It's what makes the engine testable without a piano, and it's already enforced in CI. Don't lose it. |
 
@@ -136,7 +136,7 @@ are all about reading single notes, not about bars of a piece.
 - **Lichess** (Thibault Duplessis, 2010): a throwaway project kept alive by
   one stranger who used it and complained. **For us: motivation comes from
   the first real user, not from more planning.** Get one other pianist using
-  Hogwash as early as M4.
+  Segno as early as M4.
 
 ---
 
@@ -226,7 +226,7 @@ Carried over from the previous roadmap; each one is real but rare.
 | XP, levels, ranks, streaks, points, badges | Optimises for opening the app, not for playing better |
 | Accuracy percentages as the headline | One number hides *where*; bars are the unit of practice |
 | Flashcards, theory drills, lessons, exams, games | MidiSlayer's lane; we win on depth with pieces |
-| Falling notes as a mode | Synthesia/Neothesia's lane; Hogwash is about reading real notation |
+| Falling notes as a mode | Synthesia/Neothesia's lane; Segno is about reading real notation |
 | PDF / photo scanning (OMR) | A funded multi-year problem (Soundslice); point to Audiveris |
 | Locked or paid features | The point is that it's free |
 | Bundling copyrighted arrangements | Legal risk to the whole repo |
@@ -272,14 +272,14 @@ Ordered by how likely you are to make each one.
 
 ### Success, defined in advance
 
-Hogwash v1.0 is a success if all three are true, regardless of stars:
+Segno v1.0 is a success if all three are true, regardless of stars:
 1. You practise with it **5+ days a week** for a month after launch.
 2. **At least one stranger** opens an issue, sends a message, or says it helped.
 3. You can explain **every design decision** in your own words.
 
 ### On low-motivation days
 
-- **The minimum day:** practise piano with Hogwash for 15 minutes and add
+- **The minimum day:** practise piano with Segno for 15 minutes and add
   one line to `annoyances.md`. That counts as a project day.
 - **The smallest task:** pick an S task from the active milestone. Finish it.
   Push. Stop.

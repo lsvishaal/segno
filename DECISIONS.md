@@ -1,4 +1,4 @@
-# Hogwash — decisions
+# Segno — decisions
 
 Why things are the way they are. Three parts: the **status** of every numbered
 decision (kept current), the **D-list as first written** (options and reasoning,
@@ -15,7 +15,7 @@ replaced). A new decision is a log line, plus a status row if it has a D-number.
 | D4 | Prelude in C source | **Decided 25 Oct:** swap to the OpenWTC edition (M0.3, on the v0.1 checklist) |
 | D5 | Store or recompute per-bar stats | **Decided by implementation 24 Oct:** recompute from raw events |
 | D6 | Practice log | **Open.** Recommended (b): per-piece log, dates and minutes, no streaks |
-| D7 | Computer-keyboard fallback | Recommended: yes, v1.0 (M3.12), labelled "for trying Hogwash" |
+| D7 | Computer-keyboard fallback | Recommended: yes, v1.0 (M3.12), labelled "for trying Segno" |
 | D8 | The name | **Decided 2 Nov (evening):** "Segno"; identifier `com.segno.practice` (rename in M-Base) |
 | D9 | Velocity | **Decided by implementation 20 Oct:** stored, not analysed until after v1.0 |
 | D10 | What "weak" means over time | **Decided 25 Oct**, thresholds 26 Oct (provisional), built 26 Oct (M2.9): see the log; replaces "average of the last 3 sessions of the piece" and the quartile ranking in the code; thresholds stay provisional until dogfood data exists |
