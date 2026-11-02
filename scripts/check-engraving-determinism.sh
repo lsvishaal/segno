@@ -29,7 +29,7 @@ if [ -z "${HOGWASH_VEROVIO_LIB:-}" ] || [ -z "${HOGWASH_VEROVIO_DATA:-}" ]; then
     exit 1
 fi
 
-cargo build --quiet --package hogwash-engraving-verovio --example engraved-ids
+cargo build --quiet --package segno-engraving-verovio --example engraved-ids
 
 binary="target/debug/examples/engraved-ids"
 if [ ! -x "$binary" ]; then

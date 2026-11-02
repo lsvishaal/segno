@@ -106,7 +106,7 @@ mod tests {
 
     #[test]
     fn a_full_log_moves_aside_and_one_older_file_is_kept() {
-        let folder = std::env::temp_dir().join(format!("hogwash-log-{}", std::process::id()));
+        let folder = std::env::temp_dir().join(format!("segno-log-{}", std::process::id()));
         fs::create_dir_all(&folder).expect("a folder");
         let path = folder.join("hogwash.log");
         let line = "x".repeat(100_000);

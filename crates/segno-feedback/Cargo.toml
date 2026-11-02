@@ -1,0 +1,18 @@
+[package]
+name = "segno-feedback"
+version = "0.0.0"
+edition.workspace = true
+rust-version.workspace = true
+authors.workspace = true
+license.workspace = true
+publish = false
+description = "An Analysis in terms a performer can understand."
+
+[dependencies]
+segno-analysis = { path = "../segno-analysis" }
+segno-capture = { path = "../segno-capture" }
+segno-domain = { path = "../segno-domain" }
+segno-notation = { path = "../segno-notation" }
+
+[lints]
+workspace = true

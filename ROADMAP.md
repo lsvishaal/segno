@@ -145,7 +145,7 @@ Open tasks from these lists now live under the milestones above.
 
 The definitions (pace, pause, into-bar pause, break, wrong-note cap, gave up,
 passes, difficulty, levels) are owned by the doc comments in
-`crates/hogwash-analysis/src/bars.rs` and `coach.rs`. They are not restated here.
+`crates/segno-analysis/src/bars.rs` and `coach.rs`. They are not restated here.
 
 - [x] M2.1 Per-bar stats in analysis — 24 Oct
 - [x] M2.2 Per-piece history across sessions — 25 Oct

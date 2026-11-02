@@ -8,7 +8,7 @@
 //! released inside one command, and nothing behind it knows it exists.
 //!
 //! The distinction matters because it is the one that decision was about. A
-//! lock inside `hogwash-practice` would mean every test of the cursor had to
+//! lock inside `segno-practice` would mean every test of the cursor had to
 //! think about contention. A lock here means one command at a time touches
 //! the session, which is exactly the "one owner" the ADR asked for — arrived
 //! at by a different route, since a webview has no frame loop to be the owner.
@@ -16,10 +16,10 @@
 use std::collections::BTreeSet;
 use std::sync::Mutex;
 
-use hogwash_domain::PieceId;
-use hogwash_engraving_verovio::Layout;
-use hogwash_library::{Library, Piece, title_from};
-use hogwash_records::Records;
+use segno_domain::PieceId;
+use segno_engraving_verovio::Layout;
+use segno_library::{Library, Piece, title_from};
+use segno_records::Records;
 
 use crate::engraving::Engraving;
 use crate::practice::Practice;
@@ -299,18 +299,18 @@ fn collapse(
 
 /// One line per practice record that could not be read, saying which file
 /// and why. Written to the log; the file is left where it is.
-fn skipped(unreadable: &[hogwash_records::RecordsFailure]) -> Vec<String> {
+fn skipped(unreadable: &[segno_records::RecordsFailure]) -> Vec<String> {
     unreadable
         .iter()
         .map(|failure| match failure {
-            hogwash_records::RecordsFailure::Unreadable { path, detail } => {
+            segno_records::RecordsFailure::Unreadable { path, detail } => {
                 format!("skipped the practice record {}: {detail}", path.display())
             }
-            hogwash_records::RecordsFailure::FromTheFuture { path, schema } => format!(
+            segno_records::RecordsFailure::FromTheFuture { path, schema } => format!(
                 "skipped the practice record {}: written by a newer Hogwash (schema {schema})",
                 path.display()
             ),
-            hogwash_records::RecordsFailure::Storage(failure) => {
+            segno_records::RecordsFailure::Storage(failure) => {
                 format!("a practice record could not be read: {failure}")
             }
         })
@@ -321,7 +321,7 @@ fn skipped(unreadable: &[hogwash_records::RecordsFailure]) -> Vec<String> {
 mod tests {
     use std::collections::BTreeSet;
 
-    use hogwash_domain::PieceId;
+    use segno_domain::PieceId;
 
     use super::{collapse, skipped};
 
@@ -405,9 +405,9 @@ mod tests {
     #[test]
     #[ignore = "needs a real libverovio; run `just provided-test`"]
     fn a_session_with_an_unknown_ending_is_skipped_and_the_rest_still_count() {
-        use hogwash_records::{AttemptRecord, Ended, Records, SessionRecord};
+        use segno_records::{AttemptRecord, Ended, Records, SessionRecord};
 
-        let directory = std::env::temp_dir().join("hogwash-state-unknown-ending");
+        let directory = std::env::temp_dir().join("segno-state-unknown-ending");
         drop(std::fs::remove_dir_all(&directory));
         let records = Records::under(&directory);
         let minuet = crate::provided::PROVIDED
@@ -415,8 +415,8 @@ mod tests {
             .find(|piece| piece.name == "minuet-in-g.musicxml")
             .map(|piece| crate::provided::identify(piece.source))
             .expect("the Minuet is provided");
-        let mut played = hogwash_capture::ObservedPerformance::new();
-        played.record(hogwash_domain::Pitch::new(74).expect("D5"));
+        let mut played = segno_capture::ObservedPerformance::new();
+        played.record(segno_domain::Pitch::new(74).expect("D5"));
         let good = SessionRecord {
             id: format!("{}-1", minuet.as_str()),
             piece: minuet.clone(),

@@ -4,11 +4,11 @@
 use std::cmp::Reverse;
 use std::collections::BTreeSet;
 
-use hogwash_analysis::coach::practise_range;
-use hogwash_analysis::{Bar, Bars};
-use hogwash_domain::{MeasureNumber, PieceId};
-use hogwash_notation::ReferencePerformance;
-use hogwash_records::{Ended, Records, SessionRecord};
+use segno_analysis::coach::practise_range;
+use segno_analysis::{Bar, Bars};
+use segno_domain::{MeasureNumber, PieceId};
+use segno_notation::ReferencePerformance;
+use segno_records::{Ended, Records, SessionRecord};
 use serde::Serialize;
 
 /// How many passages "Work on next" lists, at most.
@@ -244,7 +244,7 @@ impl Progress {
     #[must_use]
     pub fn view(
         &self,
-        piece: &hogwash_library::Piece,
+        piece: &segno_library::Piece,
         last_practised_ms: Option<u64>,
     ) -> ProgressView {
         let bars = piece.score().measures().len();
@@ -415,9 +415,9 @@ mod tests {
     use std::sync::Arc;
     use std::time::Instant;
 
-    use hogwash_capture::{ObservedPerformance, Touch};
-    use hogwash_notation::{ExpectedNotes, TICKS_PER_QUARTER};
-    use hogwash_records::{AttemptRecord, SessionRecord};
+    use segno_capture::{ObservedPerformance, Touch};
+    use segno_notation::{ExpectedNotes, TICKS_PER_QUARTER};
+    use segno_records::{AttemptRecord, SessionRecord};
 
     use super::*;
 
@@ -428,7 +428,7 @@ mod tests {
 
     /// A provided piece, through the real engine, and an empty history.
     fn provided(name: &str, title: &str) -> (Records, PieceId, Arc<ReferencePerformance>) {
-        let directory = std::env::temp_dir().join(format!("hogwash-history-{name}"));
+        let directory = std::env::temp_dir().join(format!("segno-history-{name}"));
         drop(std::fs::remove_dir_all(&directory));
         let records = Records::under(&directory);
         let engraving = crate::engraving::Engraving::start().expect("the engine starts");

@@ -6,10 +6,10 @@
 use std::process::ExitCode;
 
 fn main() -> ExitCode {
-    match hogwash_app_lib::run() {
+    match segno_app_lib::run() {
         Ok(()) => ExitCode::SUCCESS,
         Err(failure) => {
-            hogwash_app_lib::log::error(&format!(
+            segno_app_lib::log::error(&format!(
                 "the application window could not be created: {failure}"
             ));
             ExitCode::FAILURE

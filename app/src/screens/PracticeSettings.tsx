@@ -229,7 +229,7 @@ function About() {
  * making its own sound. Deliberately independent of `InstrumentPicker`:
  * this owns its own input/output selection and works whether or not a
  * practice attempt is running, because Thru has nothing to do with
- * correctness (`hogwash-midi`'s `Thru`).
+ * correctness (`segno-midi`'s `Thru`).
  */
 function SoundRouting() {
   const [inputs, setInputs] = useState<readonly InstrumentSummary[]>([]);

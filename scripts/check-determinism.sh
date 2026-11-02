@@ -32,9 +32,9 @@ PERFORMANCE=(60 62 64 66 65 67 69 71 60 64 67 62)
 # still pass — this is what notices.
 OTHER=(60 62)
 
-cargo build --quiet --package hogwash-cli
+cargo build --quiet --package segno-cli
 
-binary="target/debug/hogwash-cli"
+binary="target/debug/segno-cli"
 if [ ! -x "$binary" ]; then
     echo "check-determinism: $binary was not built" >&2
     exit 1

@@ -46,14 +46,14 @@ use std::sync::mpsc::{Receiver, RecvTimeoutError, Sender, SyncSender, channel, s
 use std::thread;
 use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 
-use hogwash_analysis::{Analysis, Trace};
-use hogwash_capture::{Action, Instrument, Keyboard, MidiSource, NoInstrument, Touch};
-use hogwash_domain::{MeasureNumber, PieceId};
-use hogwash_feedback::Feedback;
-use hogwash_midi::{MidiInstruments, NoOutput, OutputPort, Thru, output_ports};
-use hogwash_notation::ReferencePerformance;
-use hogwash_practice::{Attempt, CursorMovement, Loop, Pass, PracticeSession};
-use hogwash_records::{AttemptRecord, Ended, Records, SessionRecord};
+use segno_analysis::{Analysis, Trace};
+use segno_capture::{Action, Instrument, Keyboard, MidiSource, NoInstrument, Touch};
+use segno_domain::{MeasureNumber, PieceId};
+use segno_feedback::Feedback;
+use segno_midi::{MidiInstruments, NoOutput, OutputPort, Thru, output_ports};
+use segno_notation::ReferencePerformance;
+use segno_practice::{Attempt, CursorMovement, Loop, Pass, PracticeSession};
+use segno_records::{AttemptRecord, Ended, Records, SessionRecord};
 use serde::Serialize;
 
 use crate::review::{self, LoopScope, Review, Run, Segment, Suggested};
@@ -291,7 +291,7 @@ impl Practice {
         let sink: Sink = Box::new(sink);
 
         thread::Builder::new()
-            .name("hogwash-practice".to_owned())
+            .name("segno-practice".to_owned())
             .spawn(move || run(&incoming, &sink, &records))
             .map_err(|failure| Unavailable {
                 summary: "Hogwash could not start its practice thread.".to_owned(),
@@ -1148,7 +1148,7 @@ fn unix_ms() -> u64 {
 ///
 /// The one function every ending funnels through — an explicit `End`
 /// command, reaching the end of the piece, or the instrument never coming
-/// back — so there is exactly one place an [`hogwash_practice::EndedAttempt`]
+/// back — so there is exactly one place an [`segno_practice::EndedAttempt`]
 /// is produced.
 fn finish(
     session: &mut Option<OpenSession>,
@@ -1263,9 +1263,9 @@ fn emit(sink: &Sink, event: &PracticeEvent) {
 mod tests {
     use std::sync::Arc;
 
-    use hogwash_domain::Pitch;
-    use hogwash_practice::PracticeSession;
-    use hogwash_records::{Ended, Records};
+    use segno_domain::Pitch;
+    use segno_practice::PracticeSession;
+    use segno_records::{Ended, Records};
 
     use super::{
         Command, Ending, Kept, LoopOf, LoopRange, NoStart, Ongoing, OpenSession, Practice,
@@ -1294,7 +1294,7 @@ mod tests {
     #[test]
     #[ignore = "needs a real libverovio; run `just provided-test`"]
     fn only_an_attempt_with_notes_is_kept() {
-        let directory = std::env::temp_dir().join("hogwash-practice-keeps-test");
+        let directory = std::env::temp_dir().join("segno-practice-keeps-test");
         drop(std::fs::remove_dir_all(&directory));
 
         let records = Records::under(&directory);
@@ -1345,8 +1345,8 @@ mod tests {
 
     /// A keyboard that is there and plays nothing.
     struct Silent;
-    impl hogwash_capture::Keyboard for Silent {
-        fn heard(&mut self) -> Vec<hogwash_capture::Heard> {
+    impl segno_capture::Keyboard for Silent {
+        fn heard(&mut self) -> Vec<segno_capture::Heard> {
             Vec::new()
         }
         fn is_connected(&self) -> bool {
@@ -1359,10 +1359,10 @@ mod tests {
         name: &str,
     ) -> (
         Records,
-        hogwash_domain::PieceId,
-        Arc<hogwash_notation::ReferencePerformance>,
+        segno_domain::PieceId,
+        Arc<segno_notation::ReferencePerformance>,
     ) {
-        let directory = std::env::temp_dir().join(format!("hogwash-practice-{name}"));
+        let directory = std::env::temp_dir().join(format!("segno-practice-{name}"));
         drop(std::fs::remove_dir_all(&directory));
         let records = Records::under(&directory);
         let engraving = crate::engraving::Engraving::start().expect("the engine starts");
@@ -1383,10 +1383,10 @@ mod tests {
         )
     }
 
-    fn practising(reference: &Arc<hogwash_notation::ReferencePerformance>) -> Ongoing {
+    fn practising(reference: &Arc<segno_notation::ReferencePerformance>) -> Ongoing {
         Ongoing {
-            instrument: hogwash_capture::Instrument::new("Silent".to_owned()),
-            attempt: hogwash_practice::Attempt::begin(Arc::clone(reference)),
+            instrument: segno_capture::Instrument::new("Silent".to_owned()),
+            attempt: segno_practice::Attempt::begin(Arc::clone(reference)),
             started: std::time::Instant::now(),
             began_ms: 0,
             to: None,
@@ -1396,8 +1396,8 @@ mod tests {
         }
     }
 
-    fn bar(number: u32) -> hogwash_domain::MeasureNumber {
-        hogwash_domain::MeasureNumber::new(number).expect("a bar")
+    fn bar(number: u32) -> segno_domain::MeasureNumber {
+        segno_domain::MeasureNumber::new(number).expect("a bar")
     }
 
     fn quiet() -> Sink {
@@ -1591,7 +1591,7 @@ mod tests {
                 ending: Ending::Left,
                 reply,
             },
-            &mut hogwash_midi::MidiInstruments,
+            &mut segno_midi::MidiInstruments,
             &mut session,
             &mut ongoing,
             &mut None,
@@ -1608,13 +1608,13 @@ mod tests {
 
     /// A keyboard that plays the keys given, all at once, then nothing.
     struct Plays(Vec<u8>);
-    impl hogwash_capture::Keyboard for Plays {
-        fn heard(&mut self) -> Vec<hogwash_capture::Heard> {
+    impl segno_capture::Keyboard for Plays {
+        fn heard(&mut self) -> Vec<segno_capture::Heard> {
             std::mem::take(&mut self.0)
                 .into_iter()
-                .map(|key| hogwash_capture::Heard {
+                .map(|key| segno_capture::Heard {
                     at: std::time::Instant::now(),
-                    action: hogwash_capture::Action::Pressed {
+                    action: segno_capture::Action::Pressed {
                         pitch: Pitch::new(key).expect("a key"),
                         velocity: 64,
                     },
@@ -1976,7 +1976,7 @@ mod tests {
                 ending: Ending::Left,
                 reply,
             },
-            &mut hogwash_midi::MidiInstruments,
+            &mut segno_midi::MidiInstruments,
             &mut session,
             &mut ongoing,
             &mut None,

@@ -26,8 +26,8 @@
 
 use std::path::PathBuf;
 
-use hogwash_engraving::Engraver;
-use hogwash_engraving_verovio::VerovioEngraver;
+use segno_engraving::Engraver;
+use segno_engraving_verovio::VerovioEngraver;
 
 /// Every file in `library/`, read from disk rather than compiled in, so the
 /// test sees what ships rather than what was compiled last.
@@ -138,21 +138,21 @@ fn every_provided_piece_expects_notes() {
 #[test]
 #[ignore = "needs a real libverovio; run `just provided-test`"]
 fn starting_puts_every_provided_piece_on_the_shelf() {
-    let temporary = std::env::temp_dir().join("hogwash-provided-test");
+    let temporary = std::env::temp_dir().join("segno-provided-test");
 
-    let engraving = hogwash_app_lib::engraving::Engraving::start().expect("the engine starts");
-    let records = hogwash_records::Records::under(&temporary);
-    let practice = hogwash_app_lib::practice::Practice::start(records.clone(), |_| {})
+    let engraving = segno_app_lib::engraving::Engraving::start().expect("the engine starts");
+    let records = segno_records::Records::under(&temporary);
+    let practice = segno_app_lib::practice::Practice::start(records.clone(), |_| {})
         .expect("the practice thread starts");
 
-    let hogwash = hogwash_app_lib::state::Hogwash::start(engraving, records, practice)
+    let hogwash = segno_app_lib::state::Hogwash::start(engraving, records, practice)
         .expect("the provided material prepares");
 
     let titles: Vec<&str> = hogwash
         .library()
         .pieces()
         .into_iter()
-        .map(hogwash_library::Piece::title)
+        .map(segno_library::Piece::title)
         .collect();
 
     assert_eq!(titles.len(), provided().len());
@@ -214,15 +214,15 @@ fn a_two_hand_piece_merges_notes_that_sound_together() {
 #[test]
 #[ignore = "needs a real libverovio; run `just provided-test`"]
 fn every_piece_on_the_shelf_can_be_named_and_played() {
-    let temporary = std::env::temp_dir().join("hogwash-provided-test");
+    let temporary = std::env::temp_dir().join("segno-provided-test");
 
-    let engraving = hogwash_app_lib::engraving::Engraving::start().expect("the engine starts");
-    let records = hogwash_records::Records::under(&temporary);
-    let practice = hogwash_app_lib::practice::Practice::start(records.clone(), |_| {})
+    let engraving = segno_app_lib::engraving::Engraving::start().expect("the engine starts");
+    let records = segno_records::Records::under(&temporary);
+    let practice = segno_app_lib::practice::Practice::start(records.clone(), |_| {})
         .expect("the practice thread starts");
 
     let hogwash =
-        hogwash_app_lib::state::Hogwash::start(engraving, records, practice).expect("prepares");
+        segno_app_lib::state::Hogwash::start(engraving, records, practice).expect("prepares");
 
     assert!(hogwash.library().count() >= 1);
 
@@ -252,7 +252,7 @@ fn drawn_elements_pair_with_the_notes_written_at_the_same_position() {
     .expect("a-little-chord-study.musicxml ships with the application");
 
     let drawn = engraver.engrave(&source).expect("engraves");
-    let reference = hogwash_notation::ReferencePerformance::derived_from(drawn.score());
+    let reference = segno_notation::ReferencePerformance::derived_from(drawn.score());
 
     // Bar two's chord (the design, `PROVENANCE.md`): C4, E4, G4 together.
     let chord = drawn
@@ -286,7 +286,7 @@ fn drawn_elements_pair_with_the_notes_written_at_the_same_position() {
 }
 
 /// The engraved Reference Performance of one provided piece.
-fn reference_of(file: &str) -> hogwash_notation::ReferencePerformance {
+fn reference_of(file: &str) -> segno_notation::ReferencePerformance {
     let source = std::fs::read(
         PathBuf::from(env!("CARGO_MANIFEST_DIR"))
             .join("library")
@@ -295,7 +295,7 @@ fn reference_of(file: &str) -> hogwash_notation::ReferencePerformance {
     .expect("the piece ships with the application");
     let drawn = engraver().engrave(&source).expect("engraves");
 
-    hogwash_notation::ReferencePerformance::derived_from(drawn.score())
+    segno_notation::ReferencePerformance::derived_from(drawn.score())
 }
 
 // Playing exactly what each real piece asks for, in order, is correct from
@@ -306,14 +306,14 @@ fn a_perfect_performance_of_each_real_piece_reaches_the_end_cleanly() {
     for file in ["minuet-in-g.musicxml", "prelude-in-c.musicxml"] {
         let reference = reference_of(file);
 
-        let mut perfect = hogwash_capture::ObservedPerformance::new();
+        let mut perfect = segno_capture::ObservedPerformance::new();
         for step in &reference {
             for pitch in step.sounding() {
                 perfect.record(pitch);
             }
         }
 
-        let summary = hogwash_analysis::Analysis::of(&perfect, &reference).summary();
+        let summary = segno_analysis::Analysis::of(&perfect, &reference).summary();
 
         assert_eq!(summary.incorrect(), 0, "{file}");
         assert_eq!(summary.unexpected(), 0, "{file}");

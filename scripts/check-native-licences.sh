@@ -83,9 +83,9 @@ fi
 # outside `crates/`, and a glob that missed it would have left the
 # one crate most likely to reach for a system library unchecked.
 opening=$(grep -rl 'Library::new' crates/*/src app/src-tauri/src 2>/dev/null \
-    | sed -e 's|^crates/||' -e 's|^app/src-tauri/src.*|hogwash-app|' \
+    | sed -e 's|^crates/||' -e 's|^app/src-tauri/src.*|segno-app|' \
     | cut -d/ -f1 | sort -u || true)
-expected="hogwash-engraving-verovio"
+expected="segno-engraving-verovio"
 
 if [ "$opening" != "$expected" ]; then
     echo "LICENCE VIOLATION: the set of crates opening a native library changed."

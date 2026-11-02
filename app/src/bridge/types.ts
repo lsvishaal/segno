@@ -4,7 +4,7 @@
  * Hand-written to mirror the `#[derive(Serialize)]` types in
  * `app/src-tauri/src/commands.rs`. They are deliberately *not* the domain's
  * types: the same translation the design made for storage, for the same
- * reason — an interface bound directly to `hogwash_notation::Score` would
+ * reason — an interface bound directly to `segno_notation::Score` would
  * break silently the moment that type was refactored.
  *
  * If one of these drifts from its Rust counterpart, the symptom is a missing
@@ -320,7 +320,7 @@ export interface Suggested {
 /**
  * One update the practice loop reports, while an attempt is running.
  *
- * Mirrors `hogwash_app_lib::practice::PracticeEvent` — a single tagged enum,
+ * Mirrors `segno_app_lib::practice::PracticeEvent` — a single tagged enum,
  * so the whole practice loop is one `switch` on `kind` here too.
  */
 export type PracticeEvent =

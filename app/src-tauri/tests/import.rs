@@ -11,30 +11,30 @@
 
 use std::path::PathBuf;
 
-use hogwash_app_lib::commands::{accept_offered, forget, retitle};
+use segno_app_lib::commands::{accept_offered, forget, retitle};
 
 /// A fresh directory for one test. Emptied first: imported files are kept
 /// read-only, so a previous run's copy would refuse to be written again.
 fn temporary(name: &str) -> PathBuf {
-    let path = std::env::temp_dir().join(format!("hogwash-import-test-{name}"));
+    let path = std::env::temp_dir().join(format!("segno-import-test-{name}"));
     let _ = std::fs::remove_dir_all(&path);
     path
 }
 
-fn hogwash(root: &std::path::Path) -> hogwash_app_lib::state::Hogwash {
-    let engraving = hogwash_app_lib::engraving::Engraving::start().expect("the engine starts");
-    let records = hogwash_records::Records::under(root);
-    let practice = hogwash_app_lib::practice::Practice::start(records.clone(), |_| {})
+fn hogwash(root: &std::path::Path) -> segno_app_lib::state::Hogwash {
+    let engraving = segno_app_lib::engraving::Engraving::start().expect("the engine starts");
+    let records = segno_records::Records::under(root);
+    let practice = segno_app_lib::practice::Practice::start(records.clone(), |_| {})
         .expect("the practice thread starts");
 
-    hogwash_app_lib::state::Hogwash::start(engraving, records, practice)
+    segno_app_lib::state::Hogwash::start(engraving, records, practice)
         .expect("the provided material prepares")
 }
 
 fn fixture() -> Vec<u8> {
     std::fs::read(
         PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-            .join("../../crates/hogwash-acquisition/tests/fixtures/two-bars.musicxml"),
+            .join("../../crates/segno-acquisition/tests/fixtures/two-bars.musicxml"),
     )
     .expect("the acquisition fixture ships in the repo")
 }
@@ -74,7 +74,7 @@ fn the_imported_source_can_be_read_back() {
 
     let imported = accept_offered(&material, None, &mut hogwash).expect("the fixture is supported");
 
-    let id = hogwash_domain::PieceId::new(&imported.piece.id).expect("a usable name");
+    let id = segno_domain::PieceId::new(&imported.piece.id).expect("a usable name");
     assert_eq!(hogwash.source_of(&id), Some(material));
 }
 
@@ -103,7 +103,7 @@ fn importing_the_same_bytes_twice_does_not_duplicate() {
 
 // content in an unsupported format is refused, not partially
 // accepted, and the refusal is something a performer can read: it names the
-// format and says what to do instead, verbatim from `hogwash-acquisition`.
+// format and says what to do instead, verbatim from `segno-acquisition`.
 #[test]
 #[ignore = "needs a real libverovio; run `just provided-test`"]
 fn an_unsupported_format_is_refused_with_a_route() {
@@ -409,10 +409,10 @@ fn a_deleted_piece_and_its_history_are_gone_after_a_restart() {
     let canon = accept_offered(&canon_source, None, &mut running)
         .expect("supported")
         .piece;
-    let canon_id = hogwash_domain::PieceId::new(&canon.id).expect("usable");
+    let canon_id = segno_domain::PieceId::new(&canon.id).expect("usable");
     running
         .records()
-        .keep(&hogwash_records::SessionRecord {
+        .keep(&segno_records::SessionRecord {
             id: "practised-once".to_owned(),
             piece: canon_id.clone(),
             started: "1".to_owned(),

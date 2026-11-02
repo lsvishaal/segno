@@ -1,0 +1,25 @@
+[package]
+name = "segno-cli"
+version = "0.0.0"
+edition.workspace = true
+rust-version.workspace = true
+authors.workspace = true
+license.workspace = true
+publish = false
+description = "Determinism harness, and replay of real scores through the practice path without a keyboard. Not a product surface."
+
+[dependencies]
+segno-analysis = { path = "../segno-analysis" }
+segno-capture = { path = "../segno-capture" }
+segno-domain = { path = "../segno-domain" }
+segno-engraving = { path = "../segno-engraving" }
+segno-engraving-verovio = { path = "../segno-engraving-verovio" }
+segno-feedback = { path = "../segno-feedback" }
+segno-notation = { path = "../segno-notation" }
+segno-practice = { path = "../segno-practice" }
+segno-records = { path = "../segno-records" }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+
+[lints]
+workspace = true

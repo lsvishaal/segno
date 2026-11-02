@@ -12,7 +12,7 @@
 
 use std::path::{Path, PathBuf};
 
-use hogwash_engraving_verovio::VerovioEngraver;
+use segno_engraving_verovio::VerovioEngraver;
 use serde::Serialize;
 
 /// Why the application cannot do its job, in terms a performer can act on.
@@ -188,7 +188,7 @@ mod tests {
     fn a_packaged_engine_is_found_before_the_environment_and_beside_the_binary() {
         let found = Startup::candidates_from(
             Some(Path::new("/app/usr/lib/Hogwash")),
-            Some(Path::new("/app/usr/bin/hogwash-app")),
+            Some(Path::new("/app/usr/bin/segno-app")),
             Some((
                 PathBuf::from("/dev/libverovio.so"),
                 PathBuf::from("/dev/data"),

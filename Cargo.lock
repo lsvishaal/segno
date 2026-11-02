@@ -1253,159 +1253,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7f24254aa9a54b5c858eaee2f5bccdb46aaf0e486a595ed5fd8f86ba55232a70"
 
 [[package]]
-name = "hogwash-acquisition"
-version = "0.0.0"
-dependencies = [
- "hogwash-domain",
- "hogwash-engraving",
- "hogwash-library",
- "hogwash-notation",
-]
-
-[[package]]
-name = "hogwash-analysis"
-version = "0.0.0"
-dependencies = [
- "hogwash-capture",
- "hogwash-domain",
- "hogwash-engraving",
- "hogwash-engraving-verovio",
- "hogwash-notation",
- "hogwash-practice",
-]
-
-[[package]]
-name = "hogwash-app"
-version = "0.0.0"
-dependencies = [
- "hogwash-acquisition",
- "hogwash-analysis",
- "hogwash-capture",
- "hogwash-domain",
- "hogwash-engraving",
- "hogwash-engraving-verovio",
- "hogwash-feedback",
- "hogwash-library",
- "hogwash-midi",
- "hogwash-notation",
- "hogwash-practice",
- "hogwash-records",
- "serde",
- "serde_json",
- "sha2",
- "tauri",
- "tauri-build",
- "tauri-plugin-dialog",
-]
-
-[[package]]
-name = "hogwash-capture"
-version = "0.0.0"
-dependencies = [
- "hogwash-domain",
-]
-
-[[package]]
-name = "hogwash-cli"
-version = "0.0.0"
-dependencies = [
- "hogwash-analysis",
- "hogwash-capture",
- "hogwash-domain",
- "hogwash-engraving",
- "hogwash-engraving-verovio",
- "hogwash-feedback",
- "hogwash-notation",
- "hogwash-practice",
- "hogwash-records",
- "serde",
- "serde_json",
-]
-
-[[package]]
-name = "hogwash-domain"
-version = "0.0.0"
-
-[[package]]
-name = "hogwash-engraving"
-version = "0.0.0"
-dependencies = [
- "hogwash-domain",
- "hogwash-notation",
-]
-
-[[package]]
-name = "hogwash-engraving-verovio"
-version = "0.0.0"
-dependencies = [
- "hogwash-domain",
- "hogwash-engraving",
- "hogwash-notation",
- "libloading 0.8.9",
- "roxmltree",
- "serde",
- "serde_json",
-]
-
-[[package]]
-name = "hogwash-feedback"
-version = "0.0.0"
-dependencies = [
- "hogwash-analysis",
- "hogwash-capture",
- "hogwash-domain",
- "hogwash-notation",
-]
-
-[[package]]
-name = "hogwash-library"
-version = "0.0.0"
-dependencies = [
- "hogwash-domain",
- "hogwash-notation",
-]
-
-[[package]]
-name = "hogwash-midi"
-version = "0.0.0"
-dependencies = [
- "hogwash-capture",
- "hogwash-domain",
- "midir",
-]
-
-[[package]]
-name = "hogwash-notation"
-version = "0.0.0"
-dependencies = [
- "hogwash-domain",
-]
-
-[[package]]
-name = "hogwash-practice"
-version = "0.0.0"
-dependencies = [
- "hogwash-capture",
- "hogwash-domain",
- "hogwash-notation",
-]
-
-[[package]]
-name = "hogwash-records"
-version = "0.0.0"
-dependencies = [
- "hogwash-analysis",
- "hogwash-capture",
- "hogwash-domain",
- "hogwash-feedback",
- "hogwash-library",
- "hogwash-notation",
- "serde",
- "serde_json",
- "tempfile",
-]
-
-[[package]]
 name = "html5ever"
 version = "0.38.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2765,6 +2612,159 @@ name = "scopeguard"
 version = "1.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "94143f37725109f92c262ed2cf5e59bce7498c01bcc1502d7b9afe439a4e9f49"
+
+[[package]]
+name = "segno-acquisition"
+version = "0.0.0"
+dependencies = [
+ "segno-domain",
+ "segno-engraving",
+ "segno-library",
+ "segno-notation",
+]
+
+[[package]]
+name = "segno-analysis"
+version = "0.0.0"
+dependencies = [
+ "segno-capture",
+ "segno-domain",
+ "segno-engraving",
+ "segno-engraving-verovio",
+ "segno-notation",
+ "segno-practice",
+]
+
+[[package]]
+name = "segno-app"
+version = "0.0.0"
+dependencies = [
+ "segno-acquisition",
+ "segno-analysis",
+ "segno-capture",
+ "segno-domain",
+ "segno-engraving",
+ "segno-engraving-verovio",
+ "segno-feedback",
+ "segno-library",
+ "segno-midi",
+ "segno-notation",
+ "segno-practice",
+ "segno-records",
+ "serde",
+ "serde_json",
+ "sha2",
+ "tauri",
+ "tauri-build",
+ "tauri-plugin-dialog",
+]
+
+[[package]]
+name = "segno-capture"
+version = "0.0.0"
+dependencies = [
+ "segno-domain",
+]
+
+[[package]]
+name = "segno-cli"
+version = "0.0.0"
+dependencies = [
+ "segno-analysis",
+ "segno-capture",
+ "segno-domain",
+ "segno-engraving",
+ "segno-engraving-verovio",
+ "segno-feedback",
+ "segno-notation",
+ "segno-practice",
+ "segno-records",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
+name = "segno-domain"
+version = "0.0.0"
+
+[[package]]
+name = "segno-engraving"
+version = "0.0.0"
+dependencies = [
+ "segno-domain",
+ "segno-notation",
+]
+
+[[package]]
+name = "segno-engraving-verovio"
+version = "0.0.0"
+dependencies = [
+ "libloading 0.8.9",
+ "roxmltree",
+ "segno-domain",
+ "segno-engraving",
+ "segno-notation",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
+name = "segno-feedback"
+version = "0.0.0"
+dependencies = [
+ "segno-analysis",
+ "segno-capture",
+ "segno-domain",
+ "segno-notation",
+]
+
+[[package]]
+name = "segno-library"
+version = "0.0.0"
+dependencies = [
+ "segno-domain",
+ "segno-notation",
+]
+
+[[package]]
+name = "segno-midi"
+version = "0.0.0"
+dependencies = [
+ "midir",
+ "segno-capture",
+ "segno-domain",
+]
+
+[[package]]
+name = "segno-notation"
+version = "0.0.0"
+dependencies = [
+ "segno-domain",
+]
+
+[[package]]
+name = "segno-practice"
+version = "0.0.0"
+dependencies = [
+ "segno-capture",
+ "segno-domain",
+ "segno-notation",
+]
+
+[[package]]
+name = "segno-records"
+version = "0.0.0"
+dependencies = [
+ "segno-analysis",
+ "segno-capture",
+ "segno-domain",
+ "segno-feedback",
+ "segno-library",
+ "segno-notation",
+ "serde",
+ "serde_json",
+ "tempfile",
+]
 
 [[package]]
 name = "selectors"

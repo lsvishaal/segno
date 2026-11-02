@@ -1,0 +1,15 @@
+[package]
+name = "segno-domain"
+version = "0.0.0"
+edition.workspace = true
+rust-version.workspace = true
+authors.workspace = true
+license.workspace = true
+publish = false
+description = "Shared domain vocabulary. No dependencies, by rule."
+
+# This crate has no dependencies and must never gain any.
+# scripts/check-arch.sh enforces it.
+
+[lints]
+workspace = true

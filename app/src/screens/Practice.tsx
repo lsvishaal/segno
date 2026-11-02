@@ -78,7 +78,7 @@ const PANEL = {
  * from Rust — the engraved score, the marks, and every `PracticeEvent`. This
  * component turns them into a cursor position and a `Dot`, and it judges
  * nothing: `correct`/`wrong` on a `Played` event is computed in
- * `hogwash-app`'s practice thread from `Cursor::expecting()`, never derived
+ * `segno-app`'s practice thread from `Cursor::expecting()`, never derived
  * here from whether the Cursor moved.
  */
 export function PracticeScreen({

@@ -18,7 +18,7 @@ them." Dates and the active milestone: `ROADMAP.md`.
 | Release checklist, launch material | `docs/RELEASE.md` |
 | The summary pasted into Claude chat | `docs/BRIEFING.md` |
 | Historical, not maintained | `docs/archive/` |
-| Domain definitions (pause, break, passes, levels, coach thresholds) | doc comments in `crates/hogwash-analysis/src/bars.rs`, `coach.rs`, `crates/hogwash-practice` — the source of truth |
+| Domain definitions (pause, break, passes, levels, coach thresholds) | doc comments in `crates/segno-analysis/src/bars.rs`, `coach.rs`, `crates/segno-practice` — the source of truth |
 | The owner's practice log | `annoyances.md` |
 
 Stack:

@@ -13,7 +13,7 @@ How Hogwash is tested.
   frontend tests.
 - Every engine feature (seek, loop, hands, per-bar stats) gets:
   - unit tests in its crate;
-  - at least one `just replay` fixture under `crates/hogwash-cli/examples/`
+  - at least one `just replay` fixture under `crates/segno-cli/examples/`
     named `<piece>.<behaviour>.json` (e.g. `minuet-in-g.loop-9-12.json`).
 - Old record formats keep loading: a test with a pre-M1.1 session file.
 
@@ -26,8 +26,8 @@ layout, real files written by the running app, and timing.
 | Tier | What belongs there | Where |
 |---|---|---|
 | Rust unit | Domain logic, analysis, words, formats: pure, no engine, no I/O | `#[cfg(test)]` in the crate, or its `tests/` |
-| Rust real engine | Anything that needs real Verovio: the bundled pieces, importing, the practice thread and history on real scores | `#[ignore = "… just provided-test"]` in `hogwash-app`; `… just engraving-test` in the engraving and analysis crates |
-| Rust ALSA | Real MIDI ports: timestamps, unplugging, Thru | `#[ignore]` in `hogwash-midi/tests/` |
+| Rust real engine | Anything that needs real Verovio: the bundled pieces, importing, the practice thread and history on real scores | `#[ignore = "… just provided-test"]` in `segno-app`; `… just engraving-test` in the engraving and analysis crates |
+| Rust ALSA | Real MIDI ports: timestamps, unplugging, Thru | `#[ignore]` in `segno-midi/tests/` |
 | UI | What a screen shows and asks for, given bridge answers (mocked) | `*.test.ts(x)` next to the component (vitest, jsdom) |
 | e2e | The real AppImage with a virtual keyboard: wiring across Rust, the webview and the disk; layout; timing | `scripts/e2e/scenarios/*.mjs` |
 
@@ -36,10 +36,10 @@ layout, real files written by the running app, and timing.
 | Command | What it runs | Needs |
 |---|---|---|
 | `just ci` | fmt, clippy, all Rust unit tests, cargo-deny, licence gates, architecture guard, determinism, frontend lint and UI tests (vitest) | nothing extra. `cargo-deny` writes to `~/.cargo`, so run it outside a sandbox |
-| `just engraving-test` | ignored tests in `hogwash-engraving-verovio` and `hogwash-analysis` (coach on real scores) | a built Verovio |
-| `just provided-test` | ignored `hogwash-app` tests: the bundled pieces through the real engine, the practice thread, history | a built Verovio |
+| `just engraving-test` | ignored tests in `segno-engraving-verovio` and `segno-analysis` (coach on real scores) | a built Verovio |
+| `just provided-test` | ignored `segno-app` tests: the bundled pieces through the real engine, the practice thread, history | a built Verovio |
 | `just e2e [--rebuild] [scenario …]` | builds the AppImage (or reuses it, saying `reusing AppImage <hash>`, when nothing it's built from changed; `--rebuild` forces it), then drives the real app through `scripts/e2e/scenarios/*.mjs` | `tauri-driver`, ALSA |
-| `just midi-test` | ignored `hogwash-midi` tests: notes stamped in order, an unplug noticed, Thru forwarding to an output | ALSA (Linux) |
+| `just midi-test` | ignored `segno-midi` tests: notes stamped in order, an unplug noticed, Thru forwarding to an output | ALSA (Linux) |
 | `just shots <scenario …>` | only those scenarios, into a fresh `target/e2e/shots/`, and lists the PNGs (for checking the screens by eye) | as `e2e` |
 | `just check-all` | every row above, `e2e` last | all of the above |
 
@@ -71,7 +71,7 @@ notes. Your own scores aren't redistributable: they live in the ignored
 skipped, with a note, when it's absent.
 
 **The e2e kit** (`scripts/e2e/`):
-- `run.mjs` starts a virtual MIDI keyboard (`hogwash-midi` example `vkbd`) and
+- `run.mjs` starts a virtual MIDI keyboard (`segno-midi` example `vkbd`) and
   `tauri-driver`.
 - Each scenario runs with its own data folder, `target/e2e/data` via `XDG_DATA_HOME`.
   The kit waits for the previous scenario's app to exit before clearing it.

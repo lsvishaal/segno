@@ -101,8 +101,8 @@ describe("the score component", () => {
 
   it("strips anything executable from the engraving", () => {
     const hostile = `<svg xmlns="http://www.w3.org/2000/svg">
-      <script>globalThis.__hogwash_escaped = true;</script>
-      <g id="note-a" class="note" onload="globalThis.__hogwash_escaped = true">
+      <script>globalThis.__segno_escaped = true;</script>
+      <g id="note-a" class="note" onload="globalThis.__segno_escaped = true">
         <ellipse cx="10" cy="10" rx="5" ry="5"/>
       </g>
     </svg>`;

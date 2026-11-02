@@ -1,0 +1,25 @@
+[package]
+name = "segno-records"
+version = "0.0.0"
+edition.workspace = true
+rust-version.workspace = true
+authors.workspace = true
+license.workspace = true
+publish = false
+description = "What happened, kept. One file per session, written so an interruption cannot damage an older one."
+
+[dependencies]
+segno-analysis = { path = "../segno-analysis" }
+segno-capture = { path = "../segno-capture" }
+segno-domain = { path = "../segno-domain" }
+segno-feedback = { path = "../segno-feedback" }
+segno-library = { path = "../segno-library" }
+segno-notation = { path = "../segno-notation" }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+
+[dev-dependencies]
+tempfile = "3"
+
+[lints]
+workspace = true

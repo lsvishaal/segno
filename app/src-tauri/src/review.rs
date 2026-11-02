@@ -7,13 +7,13 @@
 
 use std::collections::BTreeMap;
 
-use hogwash_analysis::coach::{Coach, Kind};
-use hogwash_analysis::{Analysis, Bar, Bars, Finding, Suggestion, Trace};
-use hogwash_capture::ObservedPerformance;
-use hogwash_domain::MeasureNumber;
-use hogwash_feedback::coach::{self as words, CardText};
-use hogwash_feedback::review::{bar_line, label, loop_headline, pass_line, played};
-use hogwash_notation::{ExpectedNotes, ReferencePerformance};
+use segno_analysis::coach::{Coach, Kind};
+use segno_analysis::{Analysis, Bar, Bars, Finding, Suggestion, Trace};
+use segno_capture::ObservedPerformance;
+use segno_domain::MeasureNumber;
+use segno_feedback::coach::{self as words, CardText};
+use segno_feedback::review::{bar_line, label, loop_headline, pass_line, played};
+use segno_notation::{ExpectedNotes, ReferencePerformance};
 use serde::Serialize;
 
 /// What the screen shows after a run.
@@ -321,7 +321,7 @@ pub fn of(reference: &ReferencePerformance, run: &Run, looping: Option<LoopScope
     }
 }
 
-fn card(card: &hogwash_analysis::coach::Card) -> ReviewCard {
+fn card(card: &segno_analysis::coach::Card) -> ReviewCard {
     let spot = &card.main;
     let CardText {
         title,

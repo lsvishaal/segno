@@ -1,0 +1,17 @@
+[package]
+name = "segno-midi"
+version = "0.0.0"
+edition.workspace = true
+rust-version.workspace = true
+authors.workspace = true
+license.workspace = true
+publish = false
+description = "The performer's keyboard. The only crate that talks to MIDI hardware."
+
+[dependencies]
+segno-capture = { path = "../segno-capture" }
+segno-domain = { path = "../segno-domain" }
+midir = "0.10"
+
+[lints]
+workspace = true

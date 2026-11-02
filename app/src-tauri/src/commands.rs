@@ -6,7 +6,7 @@
 //! serialisable value. The types crossing this boundary are **not** the
 //! domain's types — they are the same deliberate translation the design made
 //! for storage, for the same reason: an interface that received
-//! `hogwash_notation::Score` directly would break the moment that type was
+//! `segno_notation::Score` directly would break the moment that type was
 //! refactored, and nothing in TypeScript would notice until it ran.
 //!
 //! # What is not here
@@ -14,7 +14,7 @@
 //! Any judgement about a performance. The design says Presentation
 //! "never originates a finding of its own", and the way that is kept true is
 //! that every sentence about playing arrives already written, from
-//! `hogwash-feedback`. There is no command that returns a fragment for the
+//! `segno-feedback`. There is no command that returns a fragment for the
 //! frontend to assemble into a verdict.
 
 // Tauri's calling convention takes `State` and `AppHandle` by value: they are
@@ -26,8 +26,8 @@
     reason = "tauri commands receive State and AppHandle by value; both are handles"
 )]
 
-use hogwash_engraving::{EngravedScore, Engraver, EngravingFailure};
-use hogwash_notation::ReferencePerformance;
+use segno_engraving::{EngravedScore, Engraver, EngravingFailure};
+use segno_notation::ReferencePerformance;
 use serde::Serialize;
 use tauri::{Manager as _, State};
 use tauri_plugin_dialog::DialogExt as _;
@@ -74,7 +74,7 @@ pub fn retitle(hogwash: &mut Hogwash, id: &str, title: &str) -> Result<PieceSumm
         ));
     }
 
-    let piece_id = hogwash_domain::PieceId::new(id)
+    let piece_id = segno_domain::PieceId::new(id)
         .ok_or_else(|| format!("`{id}` is not a usable piece name."))?;
 
     if hogwash.records().piece_record(&piece_id).is_none() {
@@ -104,7 +104,7 @@ pub fn retitle(hogwash: &mut Hogwash, id: &str, title: &str) -> Result<PieceSumm
 #[tauri::command]
 pub fn history_count(id: String, state: State<'_, Shared>) -> Result<usize, Refused> {
     let hogwash = state.inner().0.lock().map_err(|_| POISONED.to_owned())?;
-    let piece_id = hogwash_domain::PieceId::new(&id)
+    let piece_id = segno_domain::PieceId::new(&id)
         .ok_or_else(|| format!("`{id}` is not a usable piece name."))?;
 
     Ok(hogwash.records().sessions_of(&piece_id))
@@ -118,7 +118,7 @@ pub fn history_count(id: String, state: State<'_, Shared>) -> Result<usize, Refu
 ///
 /// If the state is unreadable.
 #[tauri::command]
-pub fn settings(state: State<'_, Shared>) -> Result<Option<hogwash_records::Settings>, Refused> {
+pub fn settings(state: State<'_, Shared>) -> Result<Option<segno_records::Settings>, Refused> {
     let hogwash = state.inner().0.lock().map_err(|_| POISONED.to_owned())?;
     Ok(match hogwash.records().settings() {
         Ok(kept) => kept,
@@ -126,7 +126,7 @@ pub fn settings(state: State<'_, Shared>) -> Result<Option<hogwash_records::Sett
             crate::log::warn(&format!(
                 "settings not read, using the defaults: {failure:?}"
             ));
-            Some(hogwash_records::Settings::default())
+            Some(segno_records::Settings::default())
         }
     })
 }
@@ -138,7 +138,7 @@ pub fn settings(state: State<'_, Shared>) -> Result<Option<hogwash_records::Sett
 /// If the state is unreadable or the file could not be written (logged too).
 #[tauri::command]
 pub fn save_settings(
-    settings: hogwash_records::Settings,
+    settings: segno_records::Settings,
     state: State<'_, Shared>,
 ) -> Result<(), Refused> {
     let hogwash = state.inner().0.lock().map_err(|_| POISONED.to_owned())?;
@@ -204,7 +204,7 @@ pub fn delete_piece(id: String, state: State<'_, Shared>) -> Result<usize, Refus
 /// If the piece shipped with Hogwash (those cannot be deleted), or its
 /// files could not be removed.
 pub fn forget(hogwash: &mut Hogwash, id: &str) -> Result<usize, Refused> {
-    let piece_id = hogwash_domain::PieceId::new(id)
+    let piece_id = segno_domain::PieceId::new(id)
         .ok_or_else(|| format!("`{id}` is not a usable piece name."))?;
 
     if hogwash.records().piece_record(&piece_id).is_none() {
@@ -364,7 +364,7 @@ pub fn library(state: State<'_, Shared>) -> Result<Vec<PieceSummary>, Refused> {
 pub async fn open_piece(id: String, state: State<'_, Shared>) -> Result<OpenedPiece, Refused> {
     let hogwash = state.inner().0.lock().map_err(|_| POISONED.to_owned())?;
 
-    opened_piece(id, hogwash_engraving_verovio::Layout::default(), &hogwash)
+    opened_piece(id, segno_engraving_verovio::Layout::default(), &hogwash)
 }
 
 /// Re-engraves a Piece to fit the score's width on screen, `width` pixels,
@@ -390,17 +390,17 @@ pub async fn engrave_piece(
 
     opened_piece(
         id,
-        hogwash_engraving_verovio::Layout::fitting(width, zoom),
+        segno_engraving_verovio::Layout::fitting(width, zoom),
         &hogwash,
     )
 }
 
 /// The body [`open_piece`] and [`engrave_piece`] share: everything about
-/// engraving a Piece except which [`Layout`](hogwash_engraving_verovio::Layout)
+/// engraving a Piece except which [`Layout`](segno_engraving_verovio::Layout)
 /// to engrave it at.
 fn opened_piece(
     id: String,
-    layout: hogwash_engraving_verovio::Layout,
+    layout: segno_engraving_verovio::Layout,
     hogwash: &crate::state::Hogwash,
 ) -> Result<OpenedPiece, Refused> {
     let piece = hogwash
@@ -443,7 +443,7 @@ fn opened_piece(
                     .iter()
                     .zip(
                         expected
-                            .map(hogwash_notation::ExpectedNotes::notes)
+                            .map(segno_notation::ExpectedNotes::notes)
                             .unwrap_or_default(),
                     )
                     .map(|(element, note)| DrawnNote {
@@ -494,7 +494,7 @@ pub async fn export_musicxml(
     let (title, source) = {
         let hogwash = state.inner().0.lock().map_err(|_| POISONED.to_owned())?;
 
-        let piece_id = hogwash_domain::PieceId::new(&id)
+        let piece_id = segno_domain::PieceId::new(&id)
             .ok_or_else(|| format!("`{id}` is not a usable piece name."))?;
 
         let piece = hogwash
@@ -532,8 +532,8 @@ pub async fn export_musicxml(
 }
 
 /// Whether a piece's source is compressed `MusicXML` (`.mxl`, a zip) or plain
-/// (`.musicxml`) — the same signature `hogwash-acquisition` and the engraver
-/// already sniff for (see `hogwash_engraving_verovio::engraver`), sniffed
+/// (`.musicxml`) — the same signature `segno-acquisition` and the engraver
+/// already sniff for (see `segno_engraving_verovio::engraver`), sniffed
 /// again here only to suggest the right extension in the save dialog.
 fn extension_of(source: &[u8]) -> &'static str {
     if source.starts_with(b"PK") {
@@ -560,7 +560,7 @@ pub struct ImportedPiece {
 }
 
 /// Adapts [`Engraving`]'s channel handle to the [`Engraver`] port
-/// `hogwash_acquisition::assess` is written against.
+/// `segno_acquisition::assess` is written against.
 ///
 /// The mismatch is only in shape, not substance: `Engraving::engrave` takes
 /// `&self` and a `Layout` because it just posts to a channel and the engine
@@ -575,7 +575,7 @@ struct ImportEngraver<'a>(&'a Engraving);
 impl Engraver for ImportEngraver<'_> {
     fn engrave(&mut self, source: &[u8]) -> Result<EngravedScore, EngravingFailure> {
         self.0
-            .engrave(source, hogwash_engraving_verovio::Layout::default())
+            .engrave(source, segno_engraving_verovio::Layout::default())
     }
 }
 
@@ -589,7 +589,7 @@ impl Engraver for ImportEngraver<'_> {
 ///
 /// # Errors
 ///
-/// If the chosen file could not be read, or [`hogwash_acquisition::assess`]
+/// If the chosen file could not be read, or [`segno_acquisition::assess`]
 /// refused it — in which case the error is the refusal's reason and route,
 /// verbatim: this command adds no wording of its own to an
 /// explanation that is already complete.
@@ -630,7 +630,7 @@ pub async fn import_musicxml(
 /// # Errors
 ///
 /// As [`import_musicxml`]: the offered material was refused, verbatim from
-/// [`hogwash_acquisition::assess`].
+/// [`segno_acquisition::assess`].
 pub fn accept_offered(
     material: &[u8],
     file_name: Option<&str>,
@@ -660,11 +660,11 @@ pub fn accept_offered(
 
     let mut engraver = ImportEngraver(hogwash.engraving());
 
-    match hogwash_acquisition::assess(material, id.clone(), file_name, &mut engraver) {
-        hogwash_acquisition::Outcome::NotAccepted(refused) => {
+    match segno_acquisition::assess(material, id.clone(), file_name, &mut engraver) {
+        segno_acquisition::Outcome::NotAccepted(refused) => {
             Err(format!("{}\n\n{}", refused.reason(), refused.route()))
         }
-        hogwash_acquisition::Outcome::Accepted { piece, report } => {
+        segno_acquisition::Outcome::Accepted { piece, report } => {
             hogwash
                 .records()
                 .keep_piece(&id, piece.title(), piece.composer(), file_name, material)
@@ -685,9 +685,9 @@ pub fn accept_offered(
 /// A Piece, as the library screen needs it — the same shape [`library`]
 /// produces, so an import and a startup listing agree on what a summary is.
 fn summarise(
-    piece: &hogwash_library::Piece,
+    piece: &segno_library::Piece,
     hogwash: &Hogwash,
-    sessions: &[hogwash_records::SessionRecord],
+    sessions: &[segno_records::SessionRecord],
 ) -> PieceSummary {
     let record = hogwash.records().piece_record(piece.id());
 
@@ -764,7 +764,7 @@ pub fn start_attempt(
 ) -> Result<(), Refused> {
     let hogwash = state.inner().0.lock().map_err(|_| POISONED.to_owned())?;
 
-    let id = hogwash_domain::PieceId::new(&piece_id)
+    let id = segno_domain::PieceId::new(&piece_id)
         .ok_or_else(|| format!("`{piece_id}` is not a usable piece name."))?;
 
     let piece = hogwash
@@ -775,7 +775,7 @@ pub fn start_attempt(
         .ok_or_else(|| format!("There is no piece called `{piece_id}` in the library."))?;
 
     let reference = std::sync::Arc::new(piece.reference().clone());
-    let named = hogwash_capture::Instrument::new(instrument);
+    let named = segno_capture::Instrument::new(instrument);
 
     hogwash
         .practice()
@@ -815,7 +815,7 @@ pub fn start_at_bar(
     let hogwash = state.inner().0.lock().map_err(|_| POISONED.to_owned())?;
 
     let (id, reference) = reference_of(&hogwash, &piece_id)?;
-    let bar = hogwash_domain::MeasureNumber::new(measure)
+    let bar = segno_domain::MeasureNumber::new(measure)
         .ok_or_else(|| format!("There is no bar {measure}."))?;
 
     hogwash
@@ -848,8 +848,7 @@ pub fn loop_bars(
 
     let (id, reference) = reference_of(&hogwash, &piece_id)?;
     let bar = |number: u32| {
-        hogwash_domain::MeasureNumber::new(number)
-            .ok_or_else(|| format!("There is no bar {number}."))
+        segno_domain::MeasureNumber::new(number).ok_or_else(|| format!("There is no bar {number}."))
     };
     let wanted = LoopOf {
         first: bar(first)?,
@@ -904,14 +903,8 @@ const LOST: &str = "The keyboard has stopped reporting; wait for it before movin
 fn reference_of(
     hogwash: &Hogwash,
     piece_id: &str,
-) -> Result<
-    (
-        hogwash_domain::PieceId,
-        std::sync::Arc<ReferencePerformance>,
-    ),
-    Refused,
-> {
-    let id = hogwash_domain::PieceId::new(piece_id)
+) -> Result<(segno_domain::PieceId, std::sync::Arc<ReferencePerformance>), Refused> {
+    let id = segno_domain::PieceId::new(piece_id)
         .ok_or_else(|| format!("`{piece_id}` is not a usable piece name."))?;
     let piece = hogwash
         .library()
@@ -976,8 +969,8 @@ pub fn set_thru(
     hogwash
         .practice()
         .set_thru(
-            input.map(hogwash_capture::Instrument::new),
-            output.map(hogwash_midi::OutputPort::new),
+            input.map(segno_capture::Instrument::new),
+            output.map(segno_midi::OutputPort::new),
         )
         .map_err(|absent| absent.describe())
 }

@@ -51,7 +51,7 @@ PIECES = {
     "prelude-in-c": library("prelude-in-c"),
     "minuet-in-g-8va": under_an_octave_line(library("minuet-in-g")),
 }
-# Keep in step with Layout::as_options in crates/hogwash-engraving-verovio.
+# Keep in step with Layout::as_options in crates/segno-engraving-verovio.
 OPTIONS = (
     '{"pageWidth":1400,"scale":100,"adjustPageHeight":true,"breaks":"auto",'
     '"header":"none","footer":"none","svgViewBox":true}'

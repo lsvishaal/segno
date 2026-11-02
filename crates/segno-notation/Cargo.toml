@@ -1,0 +1,15 @@
+[package]
+name = "segno-notation"
+version = "0.0.0"
+edition.workspace = true
+rust-version.workspace = true
+authors.workspace = true
+license.workspace = true
+publish = false
+description = "Written music: Score, Measure, Note, and the Reference Performance derived from a Score. Pure — no I/O, no file formats."
+
+[dependencies]
+segno-domain = { path = "../segno-domain" }
+
+[lints]
+workspace = true

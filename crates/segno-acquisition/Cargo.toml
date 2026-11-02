@@ -1,0 +1,18 @@
+[package]
+name = "segno-acquisition"
+version = "0.0.0"
+edition.workspace = true
+rust-version.workspace = true
+authors.workspace = true
+license.workspace = true
+publish = false
+description = "Resolving offered material into a practisable Piece or an explained refusal. Pure — it reads no file."
+
+[dependencies]
+segno-domain = { path = "../segno-domain" }
+segno-engraving = { path = "../segno-engraving" }
+segno-library = { path = "../segno-library" }
+segno-notation = { path = "../segno-notation" }
+
+[lints]
+workspace = true

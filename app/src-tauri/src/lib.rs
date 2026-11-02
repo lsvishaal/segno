@@ -8,7 +8,7 @@
 //!
 //! - **Rust decides everything.** Which notes were expected, which were
 //!   played, what the feedback says. Every sentence the performer reads about
-//!   their own playing is produced by `hogwash-feedback` and crosses as a
+//!   their own playing is produced by `segno-feedback` and crosses as a
 //!   finished string.
 //! - **The frontend draws.** It receives locations and words, and turns them
 //!   into elements and classes. It judges nothing.
@@ -64,7 +64,7 @@ pub fn run() -> Result<(), tauri::Error> {
                 log::start(&folder);
                 engraving::Engraving::start_in(app.path().resource_dir().ok()).and_then(
                     |engraving| {
-                        let records = hogwash_records::Records::under(&folder);
+                        let records = segno_records::Records::under(&folder);
                         let practice = practice::Practice::start(records.clone(), move |event| {
                             drop(handle.emit(PRACTICE_CHANNEL, event));
                         })?;

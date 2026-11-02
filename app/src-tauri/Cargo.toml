@@ -1,5 +1,5 @@
 [package]
-name = "hogwash-app"
+name = "segno-app"
 version = "0.0.0"
 edition.workspace = true
 rust-version.workspace = true
@@ -11,25 +11,25 @@ description = "The application shell: Tauri commands over the Rust core, and the
 # `main.rs` is a thin wrapper around `lib.rs` so the command layer can be
 # tested, and so a future mobile target has a library entry point to call.
 [lib]
-name = "hogwash_app_lib"
+name = "segno_app_lib"
 crate-type = ["staticlib", "cdylib", "rlib"]
 
 [build-dependencies]
 tauri-build = { version = "2", features = [] }
 
 [dependencies]
-hogwash-acquisition = { path = "../../crates/hogwash-acquisition" }
-hogwash-analysis = { path = "../../crates/hogwash-analysis" }
-hogwash-capture = { path = "../../crates/hogwash-capture" }
-hogwash-domain = { path = "../../crates/hogwash-domain" }
-hogwash-engraving = { path = "../../crates/hogwash-engraving" }
-hogwash-engraving-verovio = { path = "../../crates/hogwash-engraving-verovio" }
-hogwash-feedback = { path = "../../crates/hogwash-feedback" }
-hogwash-library = { path = "../../crates/hogwash-library" }
-hogwash-midi = { path = "../../crates/hogwash-midi" }
-hogwash-notation = { path = "../../crates/hogwash-notation" }
-hogwash-practice = { path = "../../crates/hogwash-practice" }
-hogwash-records = { path = "../../crates/hogwash-records" }
+segno-acquisition = { path = "../../crates/segno-acquisition" }
+segno-analysis = { path = "../../crates/segno-analysis" }
+segno-capture = { path = "../../crates/segno-capture" }
+segno-domain = { path = "../../crates/segno-domain" }
+segno-engraving = { path = "../../crates/segno-engraving" }
+segno-engraving-verovio = { path = "../../crates/segno-engraving-verovio" }
+segno-feedback = { path = "../../crates/segno-feedback" }
+segno-library = { path = "../../crates/segno-library" }
+segno-midi = { path = "../../crates/segno-midi" }
+segno-notation = { path = "../../crates/segno-notation" }
+segno-practice = { path = "../../crates/segno-practice" }
+segno-records = { path = "../../crates/segno-records" }
 
 tauri = { version = "2", features = [] }
 tauri-plugin-dialog = "2"
@@ -38,8 +38,8 @@ serde_json = "1"
 sha2 = "0.10"
 
 [dev-dependencies]
-hogwash-library = { path = "../../crates/hogwash-library" }
-hogwash-records = { path = "../../crates/hogwash-records" }
+segno-library = { path = "../../crates/segno-library" }
+segno-records = { path = "../../crates/segno-records" }
 
 [lints]
 workspace = true

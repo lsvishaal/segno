@@ -1,0 +1,16 @@
+[package]
+name = "segno-engraving"
+version = "0.0.0"
+edition.workspace = true
+rust-version.workspace = true
+authors.workspace = true
+license.workspace = true
+publish = false
+description = "The port between written music and something drawn. Pure — defines what an engraver must provide, and implements none."
+
+[dependencies]
+segno-domain = { path = "../segno-domain" }
+segno-notation = { path = "../segno-notation" }
+
+[lints]
+workspace = true

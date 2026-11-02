@@ -9,7 +9,7 @@
 #
 # Two things are asserted:
 #
-#   1. hogwash-domain has NO dependencies at all — not on another hogwash
+#   1. segno-domain has NO dependencies at all — not on another hogwash
 #      crate, not on anything from crates.io. It is shared vocabulary
 # and nothing else.
 #
@@ -20,11 +20,11 @@
 #      determinism, and they must stay testable with no device and no window
 #      attached.
 #
-#      hogwash-records is NOT on that list, and hogwash-midi and
-#      hogwash-engraving-verovio are not either. They are adapters: a
+#      segno-records is NOT on that list, and segno-midi and
+#      segno-engraving-verovio are not either. They are adapters: a
 #      filesystem, a device, a C library. That is what an adapter is for.
 #
-#      hogwash-capture is on that list despite owning a concept fed by live
+#      segno-capture is on that list despite owning a concept fed by live
 #      MIDI. The concept is not the hardware: Observed Performance
 #      is a record of sounding pitches, and the instrument belongs behind a
 #      port in a separate adapter crate. Without that split, every test of
@@ -39,15 +39,15 @@ cd "$(dirname "$0")/.."
 
 # Crates that must remain free of the world outside the domain.
 PURE_CRATES=(
-    hogwash-domain
-    hogwash-notation
-    hogwash-capture
-    hogwash-practice
-    hogwash-analysis
-    hogwash-feedback
-    hogwash-engraving
-    hogwash-library
-    hogwash-acquisition
+    segno-domain
+    segno-notation
+    segno-capture
+    segno-practice
+    segno-analysis
+    segno-feedback
+    segno-engraving
+    segno-library
+    segno-acquisition
 )
 
 # Anything that reaches a device, a disk, a screen or a scheduler.
@@ -74,19 +74,19 @@ deps_of() {
         | tail -n +2 | awk '{print $1}' | sort -u
 }
 
-# --- 1. hogwash-domain depends on nothing -----------------------------------
-if crate_exists hogwash-domain; then
-    stray=$(deps_of hogwash-domain | grep -v '^$' || true)
+# --- 1. segno-domain depends on nothing -----------------------------------
+if crate_exists segno-domain; then
+    stray=$(deps_of segno-domain | grep -v '^$' || true)
     if [ -n "$stray" ]; then
-        echo "ARCH VIOLATION: hogwash-domain must have zero dependencies."
+        echo "ARCH VIOLATION: segno-domain must have zero dependencies."
         echo "  found:"
         echo "$stray" | sed 's/^/    /'
         failed=1
     else
-        echo "ok  hogwash-domain has no dependencies"
+        echo "ok  segno-domain has no dependencies"
     fi
 else
-    echo "--  hogwash-domain does not exist yet, skipped"
+    echo "--  segno-domain does not exist yet, skipped"
 fi
 
 # --- 2. pure crates stay pure -----------------------------------------------
@@ -146,7 +146,7 @@ done
 # crate that genuinely needs `unsafe` can only get it by declining the
 # workspace lint table and declaring its own.
 #
-# Exactly one crate does: hogwash-engraving-verovio, which calls Verovio's C
+# Exactly one crate does: segno-engraving-verovio, which calls Verovio's C
 # functions. That exception is reviewed, documented at every call
 # site, and quarantined behind a safe API. What must not happen is a second
 # one appearing quietly, because "we already have an unsafe crate" is how a
@@ -154,7 +154,7 @@ done
 #
 # The check is on Cargo.toml rather than on the source: a crate cannot write
 # `unsafe` at all without first opting out here, so this is the doorway.
-EXPECTED_EXCEPTION="hogwash-engraving-verovio"
+EXPECTED_EXCEPTION="segno-engraving-verovio"
 
 # `app/src-tauri` is included explicitly. It is a workspace member like any
 # other, and it is where an `unsafe` block would be least surprising and most
@@ -166,7 +166,7 @@ for manifest in crates/*/Cargo.toml app/src-tauri/Cargo.toml; do
     [ -f "$manifest" ] || continue
 
     # From the manifest, not the directory: `app/src-tauri` holds a crate
-    # called `hogwash-app`, and a violation message naming the folder would
+    # called `segno-app`, and a violation message naming the folder would
     # send someone looking for a crate that does not exist.
     crate=$(awk -F'"' '/^name *= *"/ { print $2; exit }' "$manifest")
 

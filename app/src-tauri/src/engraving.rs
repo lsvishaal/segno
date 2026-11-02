@@ -3,7 +3,7 @@
 //! # Why this exists
 //!
 //! `VerovioEngraver` holds a raw pointer to a C toolkit, so it is neither
-//! `Send` nor `Sync` — deliberately. `hogwash-engraving-verovio` says as much:
+//! `Send` nor `Sync` — deliberately. `segno-engraving-verovio` says as much:
 //! nothing establishes that Verovio's toolkit may be used from more than one
 //! thread, and claiming otherwise would be exactly the kind of unfounded
 //! `unsafe impl` that makes a raw pointer dangerous.
@@ -26,8 +26,8 @@
 use std::sync::mpsc::{Sender, SyncSender, channel, sync_channel};
 use std::thread;
 
-use hogwash_engraving::{EngravedScore, Engraver, EngravingFailure};
-use hogwash_engraving_verovio::Layout;
+use segno_engraving::{EngravedScore, Engraver, EngravingFailure};
+use segno_engraving_verovio::Layout;
 
 use crate::startup::{Startup, Unavailable};
 
@@ -72,7 +72,7 @@ impl Engraving {
         let (started, ready) = sync_channel::<Result<(), Unavailable>>(0);
 
         thread::Builder::new()
-            .name("hogwash-engraver".to_owned())
+            .name("segno-engraver".to_owned())
             .spawn(move || {
                 // Created *on this thread*, and never moved off it. This is
                 // the line the whole module exists to make true.

@@ -11,7 +11,7 @@
 
 use std::fmt::Write as _;
 
-use hogwash_domain::PieceId;
+use segno_domain::PieceId;
 use sha2::{Digest, Sha256};
 
 /// One piece that ships with Hogwash.

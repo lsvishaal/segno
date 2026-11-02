@@ -238,7 +238,7 @@ STARTER · INTERMEDIATE — around Grades 1–4
   - "Went well" chips
   - Details: big numbers, a per-bar chart, small numbers
   - Practise again, Show on the score, Library
-- **The coach's cards** (rules in `crates/hogwash-analysis/src/coach.rs`, which
+- **The coach's cards** (rules in `crates/segno-analysis/src/coach.rs`, which
   owns the thresholds; at most 3 cards, judged per pass so one fumble isn't a card):
   - **Going into bar N:** the pause sits just before the bar's first note.
   - **Jump in bar N:** a hesitation or wrong key after a leap of more than an
@@ -431,7 +431,7 @@ Targets to **measure** (measured numbers are dated below), not claims.
 | Key press → mark on screen | < 30 ms on your machine | Log MIDI timestamp vs. paint (devtools performance), 50 presses |
 | Opening the Prelude (engrave + show) | < 800 ms | Timer around `open_piece` + first paint |
 | Reflow after zoom/resize | < 300 ms | Timer around `engrave_piece` |
-| Loading 50 sessions + weak bars | < 100 ms | Unit benchmark in `hogwash-analysis` |
+| Loading 50 sessions + weak bars | < 100 ms | Unit benchmark in `segno-analysis` |
 | Cold start to library | < 1.5 s | Stopwatch on the AppImage |
 | Idle CPU | ~0% | `top` with the app open, no input |
 | AppImage size | < 60 MB | `ls -lh` |

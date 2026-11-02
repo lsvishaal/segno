@@ -70,10 +70,10 @@ e2e *args: _require-verovio
     rm -rf target/e2e/app && mkdir -p target/e2e/app
     (cd target/e2e/app && ../../release/bundle/appimage/Hogwash_*.AppImage --appimage-extract >/dev/null)
     HOGWASH_VEROVIO_LIB="{{verovio_lib}}" HOGWASH_VEROVIO_DATA="{{verovio_data}}" \
-        cargo run --quiet --package hogwash-cli -- expected app/src-tauri/library/minuet-in-g.musicxml > target/e2e/minuet.expected.json
+        cargo run --quiet --package segno-cli -- expected app/src-tauri/library/minuet-in-g.musicxml > target/e2e/minuet.expected.json
     HOGWASH_VEROVIO_LIB="{{verovio_lib}}" HOGWASH_VEROVIO_DATA="{{verovio_data}}" \
-        cargo run --quiet --package hogwash-cli -- expected app/src-tauri/library/prelude-in-c.musicxml > target/e2e/prelude.expected.json
-    cargo build --quiet --package hogwash-midi --example vkbd
+        cargo run --quiet --package segno-cli -- expected app/src-tauri/library/prelude-in-c.musicxml > target/e2e/prelude.expected.json
+    cargo build --quiet --package segno-midi --example vkbd
     node scripts/e2e/run.mjs "${scenarios[@]}"
 
 # alias for `run`
@@ -96,7 +96,7 @@ check-all: ci provided-test engraving-test midi-test e2e
 # real MIDI through the ALSA sequencer: notes stamped in order, an unplug noticed, Thru forwarding (Linux)
 [group('check')]
 midi-test:
-    cargo test --package hogwash-midi -- --ignored
+    cargo test --package segno-midi -- --ignored
 
 # the full gate — if this passes locally it passes in CI
 [group('check')]
@@ -227,7 +227,7 @@ engraving-test: _require-verovio
     scores="${HOGWASH_TEST_SCORES:-{{justfile_directory()}}/test-scores}"
     [ -d "$scores" ] || echo "$scores not found: the personal-score Gymnopédie test is skipped."
     HOGWASH_VEROVIO_LIB="{{verovio_lib}}" HOGWASH_VEROVIO_DATA="{{verovio_data}}" \
-        cargo test --package hogwash-engraving-verovio --package hogwash-analysis -- --ignored
+        cargo test --package segno-engraving-verovio --package segno-analysis -- --ignored
 
 # the shipped practice pieces and importing, against a real engine (personal scores from test-scores/ or HOGWASH_TEST_SCORES, skipped when absent)
 [group('verovio')]
@@ -237,7 +237,7 @@ provided-test: _require-verovio
     scores="${HOGWASH_TEST_SCORES:-{{justfile_directory()}}/test-scores}"
     [ -d "$scores" ] || echo "$scores not found: the 8 personal-score import tests are skipped."
     HOGWASH_VEROVIO_LIB="{{verovio_lib}}" HOGWASH_VEROVIO_DATA="{{verovio_data}}" \
-        cargo test --package hogwash-app -- --ignored
+        cargo test --package segno-app -- --ignored
 
 # The requirement for engraving: the same score must place its notes identically across processes
 [group('verovio')]
@@ -249,10 +249,10 @@ engraving-determinism: _require-verovio
 [group('verovio')]
 replay score events *flags: _require-verovio
     @HOGWASH_VEROVIO_LIB="{{verovio_lib}}" HOGWASH_VEROVIO_DATA="{{verovio_data}}" \
-        cargo run --quiet --package hogwash-cli -- replay "{{score}}" "{{events}}" {{flags}}
+        cargo run --quiet --package segno-cli -- replay "{{score}}" "{{events}}" {{flags}}
 
 # prints what the cursor will require for a MusicXML file, as a replayable (perfect) events file
 [group('verovio')]
 expected score: _require-verovio
     @HOGWASH_VEROVIO_LIB="{{verovio_lib}}" HOGWASH_VEROVIO_DATA="{{verovio_data}}" \
-        cargo run --quiet --package hogwash-cli -- expected "{{score}}"
+        cargo run --quiet --package segno-cli -- expected "{{score}}"
