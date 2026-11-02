@@ -86,7 +86,7 @@ impl Hogwash {
         // A session file that does not read costs only itself: the rest of
         // the history is used, and why that one was skipped is said.
         for line in skipped(&unreadable) {
-            eprintln!("{line}");
+            crate::log::warn(&line);
         }
         let practised: BTreeSet<PieceId> =
             sessions.into_iter().map(|session| session.piece).collect();
@@ -101,10 +101,10 @@ impl Hogwash {
 
         for id in surplus {
             if let Err(failure) = records.discard_score(&id) {
-                eprintln!(
-                    "hogwash: a duplicate of {} could not be removed: {failure:?}",
+                crate::log::warn(&format!(
+                    "a duplicate of {} could not be removed: {failure:?}",
                     id.as_str()
-                );
+                ));
             }
         }
 
@@ -134,10 +134,10 @@ impl Hogwash {
                     ));
                 }
                 Err(failure) => {
-                    eprintln!(
-                        "hogwash: imported piece {} could not be read: {failure:?}",
+                    crate::log::warn(&format!(
+                        "imported piece {} could not be read: {failure:?}",
                         id.as_str()
-                    );
+                    ));
                 }
             }
         }
@@ -304,14 +304,14 @@ fn skipped(unreadable: &[hogwash_records::RecordsFailure]) -> Vec<String> {
         .iter()
         .map(|failure| match failure {
             hogwash_records::RecordsFailure::Unreadable { path, detail } => {
-                format!("hogwash: skipped the practice record {}: {detail}", path.display())
+                format!("skipped the practice record {}: {detail}", path.display())
             }
             hogwash_records::RecordsFailure::FromTheFuture { path, schema } => format!(
-                "hogwash: skipped the practice record {}: written by a newer Hogwash (schema {schema})",
+                "skipped the practice record {}: written by a newer Hogwash (schema {schema})",
                 path.display()
             ),
             hogwash_records::RecordsFailure::Storage(failure) => {
-                format!("hogwash: a practice record could not be read: {failure}")
+                format!("a practice record could not be read: {failure}")
             }
         })
         .collect()

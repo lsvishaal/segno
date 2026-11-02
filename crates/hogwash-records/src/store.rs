@@ -140,6 +140,12 @@ impl Records {
         }
     }
 
+    /// The folder everything is kept under.
+    #[must_use]
+    pub fn root(&self) -> &Path {
+        &self.root
+    }
+
     /// Where practice history lives.
     #[must_use]
     pub fn history(&self) -> PathBuf {

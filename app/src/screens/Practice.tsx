@@ -34,6 +34,7 @@ import { BEFORE_STARTING, cursorFor, dotFor } from "./overlayEvents";
 import { SettingsPanel } from "./PracticeSettings";
 import { ProgressScreen, type PractiseRange } from "./Progress";
 import { REFLOW_THRESHOLD, clampScale, loadZoom, saveZoom, scoreWidth, stepScale } from "./zoom";
+import { remember, setting } from "../settings";
 
 /** How long to wait after the last zoom or width change before re-engraving —
  * a real Verovio pass, so not on every wheel tick or resize frame. */
@@ -1012,42 +1013,21 @@ function InstrumentPicker({
   );
 }
 
-const MARKS = "hogwash.marks";
-
 /** Whether marks stay while playing: on unless turned off. */
 function loadMarks(): boolean {
-  try {
-    return localStorage.getItem(MARKS) !== "off";
-  } catch {
-    return true;
-  }
+  return setting("marks");
 }
 
 function saveMarks(on: boolean): void {
-  try {
-    localStorage.setItem(MARKS, on ? "on" : "off");
-  } catch {
-    // Not remembered this time; nothing else depends on it.
-  }
+  remember({ marks: on });
 }
-
-const KEYBOARD = "hogwash.keyboard";
 
 /** The keyboard last started on, if connected; else the first connected one. */
 function pickKeyboard(available: readonly InstrumentSummary[]): string | null {
-  let last: string | null = null;
-  try {
-    last = localStorage.getItem(KEYBOARD);
-  } catch {
-    // Nothing remembered: the first one will do.
-  }
+  const last = setting("keyboard");
   return available.find((instrument) => instrument.name === last)?.name ?? available[0]?.name ?? null;
 }
 
 function saveKeyboard(name: string): void {
-  try {
-    localStorage.setItem(KEYBOARD, name);
-  } catch {
-    // Not remembered this time; the first connected one is used instead.
-  }
+  remember({ keyboard: name });
 }

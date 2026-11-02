@@ -46,7 +46,9 @@ What works today:
 ## Principles
 
 - **Local only.** No accounts, no network calls, no telemetry. Your music and
-  history stay on your machine (`~/.local/share/com.hogwash.practice`).
+  history stay on your machine (`~/.local/share/com.hogwash.practice`: your
+  imported scores, practice history, `settings.json`, and `hogwash.log` for
+  warnings and errors).
 - **No gamification.** No XP, streaks or badges. Feedback says where and what,
   never how good.
 - **The cursor waits for you.** Pauses are judged against your own pace and the

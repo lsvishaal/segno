@@ -4,6 +4,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { AttemptSummary, OpenedPiece, PracticeEvent, ReviewBar, ReviewCard } from "../bridge";
 import type { CursorState, Dot, ScoreHandle, ScoreReview } from "../components/Score";
 import { PracticeScreen } from "./Practice";
+import { DEFAULT_SETTINGS, setting, useSettings } from "../settings";
 
 // The score itself is drawn from Verovio's SVG and has its own tests; here
 // only the practice loop around it is under test, so the score only records
@@ -46,6 +47,7 @@ const bridge = vi.hoisted(() => ({
   startAtBar: vi.fn(),
   startAttempt: vi.fn(),
   progress: vi.fn(),
+  saveSettings: vi.fn(() => Promise.resolve()),
 }));
 
 /** What the practice thread says, delivered as it would be. */
@@ -82,7 +84,7 @@ class QuietResizeObserver {
 
 beforeEach(() => {
   vi.stubGlobal("ResizeObserver", QuietResizeObserver);
-  vi.stubGlobal("localStorage", { getItem: () => null, setItem: () => undefined });
+  useSettings(DEFAULT_SETTINGS);
 
   bridge.instruments.mockResolvedValue([{ name: "Digital Piano" }]);
   bridge.listenToPractice.mockImplementation((listener: (event: PracticeEvent) => void) => {
@@ -655,14 +657,7 @@ describe("practising from the Progress page", () => {
     unobserve() {}
     disconnect() {}
   }
-  const remembering = (name: string | null) => {
-    const setItem = vi.fn();
-    vi.stubGlobal("localStorage", {
-      getItem: (key: string) => (key === "hogwash.keyboard" ? name : null),
-      setItem,
-    });
-    return setItem;
-  };
+  const remembering = (name: string | null) => useSettings({ ...DEFAULT_SETTINGS, keyboard: name });
   const openWith = async (practise: { from: number; to: number } | null) => {
     vi.stubGlobal("ResizeObserver", SizedResizeObserver);
     await act(async () => {
@@ -714,12 +709,13 @@ describe("practising from the Progress page", () => {
   });
 
   it("remembers the keyboard started on", async () => {
-    const setItem = remembering(null);
+    remembering(null);
     await renderScreen();
 
     await startPracticing();
 
-    expect(setItem).toHaveBeenCalledWith("hogwash.keyboard", "Digital Piano");
+    expect(bridge.saveSettings).toHaveBeenCalledWith({ ...DEFAULT_SETTINGS, keyboard: "Digital Piano" });
+    expect(setting("keyboard")).toBe("Digital Piano");
   });
 
   it("the header's Progress shows the page in place of the score, and back again", async () => {
@@ -777,8 +773,7 @@ describe("live marks", () => {
   });
 
   it("turned off in Settings: the brief flash instead, remembered", async () => {
-    const stored = new Map<string, string>([["hogwash.marks", "off"]]);
-    vi.stubGlobal("localStorage", { getItem: (key: string) => stored.get(key) ?? null, setItem: (key: string, value: string) => stored.set(key, value) });
+    useSettings({ ...DEFAULT_SETTINGS, marks: false });
     await renderScreen();
     await startPracticing();
     await act(async () => {
@@ -787,6 +782,6 @@ describe("live marks", () => {
 
     expect(score.markPlayed).not.toHaveBeenCalled();
     expect(drawn.last?.dot).toEqual({ kind: "correct", position: 36, pitch: 67 });
-    expect(stored.get("hogwash.marks")).toBe("off");
+    expect(setting("marks")).toBe(false);
   });
 });

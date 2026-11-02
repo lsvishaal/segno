@@ -9,6 +9,12 @@ All notable changes a user could notice. Format:
 Everything so far, before the first preview (v0.1).
 
 ### Added
+- **Settings are kept with your history:** marks, the remembered keyboard and
+  zoom move to `settings.json` in the data folder (brought over once from where
+  they were kept before).
+- **A log file:** warnings, errors and crashes go to `hogwash.log` in the data
+  folder (at most about 2 MB). If the system gives no data folder, Hogwash says
+  so instead of saving in the current folder.
 - **Library:**
   - bundled pieces on Beginner and Intermediate shelves
   - MusicXML and MXL import, with clear refusals for MIDI, PDF and damaged files

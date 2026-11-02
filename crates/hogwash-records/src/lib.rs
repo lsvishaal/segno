@@ -9,7 +9,9 @@
 //! So this crate's job is not to be clever. It is to not lose anything.
 
 mod atomic;
+mod settings;
 mod store;
 mod stored;
 
+pub use settings::Settings;
 pub use store::{AttemptRecord, Ended, PieceRecord, Records, RecordsFailure, SessionRecord};

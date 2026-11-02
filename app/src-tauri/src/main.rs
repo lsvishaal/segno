@@ -9,7 +9,9 @@ fn main() -> ExitCode {
     match hogwash_app_lib::run() {
         Ok(()) => ExitCode::SUCCESS,
         Err(failure) => {
-            eprintln!("hogwash: the application window could not be created: {failure}");
+            hogwash_app_lib::log::error(&format!(
+                "the application window could not be created: {failure}"
+            ));
             ExitCode::FAILURE
         }
     }

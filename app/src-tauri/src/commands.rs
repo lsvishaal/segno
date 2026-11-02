@@ -110,6 +110,54 @@ pub fn history_count(id: String, state: State<'_, Shared>) -> Result<usize, Refu
     Ok(hogwash.records().sessions_of(&piece_id))
 }
 
+/// The settings kept, or `None` when there are none yet (the front end then
+/// brings over what it kept itself before). A file that can't be read, or
+/// one from a newer Hogwash, gives the defaults and a line in the log.
+///
+/// # Errors
+///
+/// If the state is unreadable.
+#[tauri::command]
+pub fn settings(state: State<'_, Shared>) -> Result<Option<hogwash_records::Settings>, Refused> {
+    let hogwash = state.inner().0.lock().map_err(|_| POISONED.to_owned())?;
+    Ok(match hogwash.records().settings() {
+        Ok(kept) => kept,
+        Err(failure) => {
+            crate::log::warn(&format!(
+                "settings not read, using the defaults: {failure:?}"
+            ));
+            Some(hogwash_records::Settings::default())
+        }
+    })
+}
+
+/// Keeps `settings`, beside the history.
+///
+/// # Errors
+///
+/// If the state is unreadable or the file could not be written (logged too).
+#[tauri::command]
+pub fn save_settings(
+    settings: hogwash_records::Settings,
+    state: State<'_, Shared>,
+) -> Result<(), Refused> {
+    let hogwash = state.inner().0.lock().map_err(|_| POISONED.to_owned())?;
+    hogwash
+        .records()
+        .keep_settings(&settings)
+        .map_err(|failure| {
+            let line = format!("settings not saved: {failure:?}");
+            crate::log::warn(&line);
+            line
+        })
+}
+
+/// A line from the front end for the log: an error it caught.
+#[tauri::command]
+pub fn log_line(line: String) {
+    crate::log::error(&format!("window: {line}"));
+}
+
 /// A piece's Progress page: its sessions bar by bar, where each bar stands
 /// now, and what to work on next.
 ///

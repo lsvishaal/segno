@@ -5,6 +5,7 @@
  * Zoom reflows the music to the score's width (Rust's `Layout::fitting`):
  * 100% is Verovio's natural size, and a bigger zoom fits fewer bars per line.
  */
+import { remember, setting } from "../settings";
 
 export const MIN_SCALE = 50;
 export const MAX_SCALE = 200;
@@ -15,7 +16,6 @@ export const SCORE_MAX_WIDTH = 1600;
 /** A width change smaller than this (a scrollbar appearing) does not re-engrave. */
 export const REFLOW_THRESHOLD = 20;
 
-const STORED = "hogwash.zoom";
 
 /** The width the score is engraved for, given the room it has. */
 export function scoreWidth(available: number): number {
@@ -24,21 +24,12 @@ export function scoreWidth(available: number): number {
 
 /** The zoom last chosen, or the default. */
 export function loadZoom(): number {
-  try {
-    const stored = Number(localStorage.getItem(STORED));
-    return stored ? clampScale(stored) : DEFAULT_SCALE;
-  } catch {
-    return DEFAULT_SCALE;
-  }
+  return clampScale(setting("zoom") || DEFAULT_SCALE);
 }
 
 /** Remembers the zoom for every piece, across restarts. */
 export function saveZoom(scale: number): void {
-  try {
-    localStorage.setItem(STORED, String(scale));
-  } catch {
-    // Not remembered this time; nothing else depends on it.
-  }
+  remember({ zoom: scale });
 }
 
 /** Keeps a staff size within what the slider (and the backend) allow. */

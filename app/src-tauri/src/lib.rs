@@ -27,6 +27,7 @@ use tauri::{Emitter as _, Manager as _};
 pub mod commands;
 pub mod engraving;
 pub mod history;
+pub mod log;
 pub mod practice;
 pub mod provided;
 pub mod review;
@@ -59,23 +60,26 @@ pub fn run() -> Result<(), tauri::Error> {
             // explained rather than fatal. So the failure becomes state the
             // interface can render as a screen, and the window opens either
             // way. A program that exited here would have nowhere to say why.
-            let started = engraving::Engraving::start_in(app.path().resource_dir().ok()).and_then(
-                |engraving| {
-                    let records =
-                        hogwash_records::Records::under(&Startup::data_directory(app.path()));
-                    let practice = practice::Practice::start(records.clone(), move |event| {
-                        drop(handle.emit(PRACTICE_CHANNEL, event));
-                    })?;
+            let started = Startup::data_directory(app.path()).and_then(|folder| {
+                log::start(&folder);
+                engraving::Engraving::start_in(app.path().resource_dir().ok()).and_then(
+                    |engraving| {
+                        let records = hogwash_records::Records::under(&folder);
+                        let practice = practice::Practice::start(records.clone(), move |event| {
+                            drop(handle.emit(PRACTICE_CHANNEL, event));
+                        })?;
 
-                    state::Hogwash::start(engraving, records, practice)
-                },
-            );
+                        state::Hogwash::start(engraving, records, practice)
+                    },
+                )
+            });
 
             match started {
                 Ok(hogwash) => {
                     app.manage(state::Shared(std::sync::Mutex::new(hogwash)));
                 }
                 Err(unavailable) => {
+                    log::error(&format!("{}: {}", unavailable.summary, unavailable.detail));
                     app.manage(state::Failed(unavailable));
                 }
             }
@@ -99,6 +103,9 @@ pub fn run() -> Result<(), tauri::Error> {
             commands::rename_piece,
             commands::history_count,
             commands::progress,
+            commands::settings,
+            commands::save_settings,
+            commands::log_line,
             commands::delete_piece,
             commands::output_ports,
             commands::set_thru,

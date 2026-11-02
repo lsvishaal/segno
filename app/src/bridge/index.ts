@@ -15,6 +15,8 @@ import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import type { UnlistenFn } from "@tauri-apps/api/event";
 
+import type { Settings } from "../settings";
+
 import type {
   AttemptSummary,
   Bar,
@@ -92,6 +94,21 @@ export function engravePiece(id: string, zoom: number, width: number): Promise<O
 /** Gives an imported Piece a new title, kept across restarts. */
 export function renamePiece(id: string, title: string): Promise<PieceSummary> {
   return invoke<PieceSummary>("rename_piece", { id, title });
+}
+
+/** The settings kept in settings.json, or null when there are none yet. */
+export function settings(): Promise<Settings | null> {
+  return invoke<Settings | null>("settings");
+}
+
+/** Keeps the settings in settings.json. */
+export function saveSettings(settings: Settings): Promise<void> {
+  return invoke<void>("save_settings", { settings });
+}
+
+/** Writes a line to Hogwash's log file. */
+export function logLine(line: string): Promise<void> {
+  return invoke<void>("log_line", { line });
 }
 
 /** A piece's Progress page: sessions bar by bar, each bar now, what to work on next. */

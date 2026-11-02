@@ -130,11 +130,31 @@ impl Startup {
     /// Given by the platform rather than chosen: the design keeps history
     /// local, and a program that invented its own location would put a
     /// performer's records somewhere their backups do not look.
-    #[must_use]
-    pub fn data_directory(resolver: &tauri::path::PathResolver<tauri::Wry>) -> PathBuf {
-        resolver
-            .app_data_dir()
-            .unwrap_or_else(|_| PathBuf::from("."))
+    ///
+    /// # Errors
+    ///
+    /// When the platform can't say: Hogwash then says so, rather than
+    /// keeping records in whatever folder it was started from.
+    pub fn data_directory(
+        resolver: &tauri::path::PathResolver<tauri::Wry>,
+    ) -> Result<PathBuf, Unavailable> {
+        Self::data_directory_from(
+            resolver
+                .app_data_dir()
+                .map_err(|failure| failure.to_string()),
+        )
+    }
+
+    /// [`Self::data_directory`] with the platform's answer handed in.
+    fn data_directory_from(found: Result<PathBuf, String>) -> Result<PathBuf, Unavailable> {
+        found.map_err(|reason| Unavailable {
+            summary: "Hogwash couldn't find a folder to keep your practice in.".to_owned(),
+            detail: format!(
+                "Your system didn't say where an application's data belongs ({reason}), \
+                 so nothing was saved anywhere else instead."
+            ),
+            looked_in: vec!["the system's application data folder".to_owned()],
+        })
     }
 }
 
@@ -143,6 +163,26 @@ mod tests {
     use std::path::{Path, PathBuf};
 
     use super::Startup;
+
+    #[test]
+    fn with_no_data_folder_it_says_so_and_never_uses_the_current_one() {
+        let failed =
+            Startup::data_directory_from(Err("HOME is not set".to_owned())).expect_err("no folder");
+
+        assert_eq!(
+            failed.summary,
+            "Hogwash couldn't find a folder to keep your practice in."
+        );
+        assert!(
+            failed.detail.contains("HOME is not set"),
+            "{}",
+            failed.detail
+        );
+        assert_eq!(
+            Startup::data_directory_from(Ok(PathBuf::from("/data"))).ok(),
+            Some(PathBuf::from("/data"))
+        );
+    }
 
     #[test]
     fn a_packaged_engine_is_found_before_the_environment_and_beside_the_binary() {

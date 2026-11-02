@@ -1,5 +1,6 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it } from "vitest";
 
+import { DEFAULT_SETTINGS, useSettings } from "../settings";
 import {
   DEFAULT_SCALE,
   MAX_SCALE,
@@ -53,22 +54,9 @@ describe("the score's width", () => {
 });
 
 describe("remembered zoom", () => {
-  beforeEach(() => {
-    const stored = new Map<string, string>();
-    vi.stubGlobal("localStorage", {
-      getItem: (key: string) => stored.get(key) ?? null,
-      setItem: (key: string, value: string) => void stored.set(key, value),
-    });
-  });
-  afterEach(() => vi.unstubAllGlobals());
+  beforeEach(() => useSettings(DEFAULT_SETTINGS));
 
   it("starts at the default", () => {
-    expect(loadZoom()).toBe(DEFAULT_SCALE);
-  });
-
-  it("falls back to the default when storage is unavailable", () => {
-    vi.stubGlobal("localStorage", undefined);
-    saveZoom(150);
     expect(loadZoom()).toBe(DEFAULT_SCALE);
   });
 
@@ -79,3 +67,4 @@ describe("remembered zoom", () => {
     expect(loadZoom()).toBe(MAX_SCALE);
   });
 });
+
