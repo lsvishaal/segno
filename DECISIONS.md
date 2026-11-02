@@ -5,20 +5,20 @@ decision (kept current), the **D-list as first written** (options and reasoning,
 kept as written), and the **log** (append-only: date · decision · why · what it
 replaced). A new decision is a log line, plus a status row if it has a D-number.
 
-## Status (updated 2026-11-02)
+## Status (updated 2026-11-02 evening)
 
 | ID | Topic | Status |
 |---|---|---|
-| D1 | Ship dates | **Open.** Working to (b): v0.1 preview 8 Nov, v1.0 13 Dec; not yet confirmed |
+| D1 | Ship dates | **Decided 2 Nov:** no fixed dates; a milestone ends when its gates pass, reviewed weekly in chat (ROADMAP.md) |
 | D2 | Licence | Recommended: Apache-2.0 until MIDI import is next; not yet confirmed |
-| D3 | Platforms | **Decided 25 Oct:** Linux only for v1.0; Windows (and Windows CI) return with Next 6 |
+| D3 | Platforms | **Decided 2 Nov:** Linux and Windows from the first tester release (M-Test); unsigned Windows builds for testers, signing a Public gate; macOS later |
 | D4 | Prelude in C source | **Decided 25 Oct:** swap to the OpenWTC edition (M0.3, on the v0.1 checklist) |
 | D5 | Store or recompute per-bar stats | **Decided by implementation 24 Oct:** recompute from raw events |
 | D6 | Practice log | **Open.** Recommended (b): per-piece log, dates and minutes, no streaks |
 | D7 | Computer-keyboard fallback | Recommended: yes, v1.0 (M3.12), labelled "for trying Hogwash" |
-| D8 | The name | **Decided 2 Nov:** keep "Hogwash"; the identifier stays `com.hogwash.practice` |
+| D8 | The name | **Decided 2 Nov (evening):** "Segno"; identifier `com.segno.practice` (rename in M-Base) |
 | D9 | Velocity | **Decided by implementation 20 Oct:** stored, not analysed until after v1.0 |
-| D10 | What "weak" means over time | **Decided 25 Oct**, thresholds 26 Oct (provisional), built 26 Oct (M2.9): see the log; replaces "average of the last 3 sessions of the piece" and the quartile ranking in the code |
+| D10 | What "weak" means over time | **Decided 25 Oct**, thresholds 26 Oct (provisional), built 26 Oct (M2.9): see the log; replaces "average of the last 3 sessions of the piece" and the quartile ranking in the code; thresholds stay provisional until dogfood data exists |
 | D11 | Clean pass in a loop | **Decided by implementation 22 Oct:** every position right, no wrong notes |
 | D12 | Bundled library for v1.0 | Recommended: 12–15 pieces across levels (M3.18) |
 | D13 | Where Listen's sound comes from | **Open** (reopened 24 Oct). "Built-in synth" is no longer on the Never list |
@@ -115,3 +115,10 @@ _Date · decision · why · what it replaced._
 - 2026-11-02 · A demo history for viewing and testing: real pieces played through the virtual keyboard with deliberate mistakes, dated by a clock hook, kept in `target/demo-data` (never the real folder), opened with `just demo` · something realistic to look at without touching real practice · three Minuet sessions on one day
 - 2026-11-02 · Settings (marks, keyboard, zoom) move from the webview's localStorage to `settings.json` (with a schema number) in the app data folder, read from localStorage once; warnings, errors and panics go to `hogwash.log` there (1 MB, one older file kept); with no app data folder the app says so instead of using the current folder · the 2 Nov storage audit: on Windows localStorage is in a different folder, there was no log, and the fallback to "." could put records anywhere · localStorage, stderr only, "."
 - 2026-11-02 · The demo clock: `HOGWASH_CLOCK_FILE` names a file holding an offset in milliseconds added to the shell's session and attempt start stamps and to the "now" the screens count from; unset, nothing changes. Note timings still come from ALSA. The demo history is deterministic in its sessions, dates (to the minute), mistakes and the word on every bar, not in exact milliseconds; `just demo` opens a fresh copy of it · dates without hand-written files, and no invented timestamps · a cargo feature (a second AppImage build)
+- 2026-11-02 · D8 changed: the name is "Segno" (SEH-nyoh; the 𝄋 repeat sign), identifier `com.segno.practice`; `HOGWASH_*` environment variables become `SEGNO_*` with no fallback, and the CLI becomes `segno-cli` · "hogwash" means nonsense, which works against a tool that asks to be trusted; Segno is musical, short, and unused as a practice-app name in a web check · "keep Hogwash" (earlier on 2 Nov)
+- 2026-11-02 · Brand colour: oxblood, provisional. Not applied during the freeze; applied only after screenshots of Library, Practice and Results show it doesn't read as wrong-note red. No purple or violet · the accent green is too close to correct-note green · the green accent
+- 2026-11-02 · D1 changed: no fixed dates; quality over speed. A milestone ends when its gates pass; progress is reviewed weekly in chat; a milestone with no gate progress at 2 weekly reviews in a row means cut scope. The cut order stays as a priority list · quality over speed · v0.1 on 8 Nov, v1.0 on 13 Dec, the deadline guard
+- 2026-11-02 · D3 changed: Windows joins Linux as a supported platform from the first tester release; macOS later. Unsigned Windows builds are fine for testers; signing is a Public gate · the owner's call (2 Nov evening) · Linux only for v1.0, Windows with Next 6
+- 2026-11-02 · Milestones replace v0.1 and v1.0: M-Base (checkpoint `stable-base-1`), M-Win (Windows parity), M-Test (tester release, Linux + Windows; was v0.1), M-Public (was v1.0); each with gates, listed in ROADMAP.md · gates instead of dates · the dated v0.1 checklist, timeline and v1.0 section
+- 2026-11-02 · Stable base B (demo history) and C (UI tour): the owner decides after the Phase 1 audit · they're not M-Base gates · both planned as part of the freeze
+- 2026-11-02 · Level thresholds (D10) stay provisional until dogfood data exists · the self-use week produced no sessions · a re-check at the 1 Nov cut-check
