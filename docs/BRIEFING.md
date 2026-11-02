@@ -27,7 +27,7 @@
    - a library with shelves and Continue
    - wait-mode practice; start from any bar; loop bars
    - Results after each run with up to 3 coach cards
-   - a per-piece **Progress page**: what to work on next, every session bar by bar
+   - a per-piece **Progress page**: what to practise next, a word for every bar, graphs
 6. **Now:** a feature freeze until the stable base is tagged (2 Nov): storage fixes
    (done), a demo history, a UI tour, a base check. Then the v0.1 launch tasks.
 7. **v0.1 preview:** Sun 8 Nov 2026. **v1.0:** Sun 13 Dec 2026. The active milestone
