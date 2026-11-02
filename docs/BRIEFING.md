@@ -1,6 +1,6 @@
 # Hogwash — briefing for Claude chat
 
-> Generated 2026-10-31 (after M2.10) from `README.md`, `ROADMAP.md`, `DECISIONS.md`, `CLAUDE.md`
+> Generated 2026-11-02 (after stable base part A) from `README.md`, `ROADMAP.md`, `DECISIONS.md`, `CLAUDE.md`
 > and `docs/`. It makes no claim those files don't. Regenerated at the end of every
 > milestone or phase, and before a release.
 
@@ -28,15 +28,15 @@
    - wait-mode practice; start from any bar; loop bars
    - Results after each run with up to 3 coach cards
    - a per-piece **Progress page**: what to work on next, every session bar by bar
-6. **Next:** the v0.1 launch tasks (release build, clean-system test, README, the
-   name). M2.9–M2.11 (levels, the Progress page, live marks) are built.
+6. **Now:** a feature freeze until the stable base is tagged (2 Nov): storage fixes
+   (done), a demo history, a UI tour, a base check. Then the v0.1 launch tasks.
 7. **v0.1 preview:** Sun 8 Nov 2026. **v1.0:** Sun 13 Dec 2026. The active milestone
    is the v0.1 checklist below.
 8. **Deadline guard** (Progress page by Sun 1 Nov): met on 31 Oct; the on-score tint
    is gone.
 9. **One developer**, who is also the main user: a self-taught adult pianist.
-10. **Open decisions:** D1 dates, D6 practice log, D8 the name (needed for v0.1), D13
-    Listen's sound.
+10. **Open decisions:** D1 dates, D6 practice log, D13 Listen's sound. D8 is
+    decided: the name stays "Hogwash".
 
 ## Who it's for (`docs/PRODUCT.md`)
 - **Primary:** the self-taught adult with a digital piano who learns pieces they
@@ -44,11 +44,8 @@
   time, so the hard bars stay hard.
 - **Secondary:** a returning player. **Tertiary:** a student between lessons ("the 3
   bars you struggled with this week").
-- **Not for:**
-  - complete beginners
-  - fans of falling notes
-  - people without a MIDI keyboard
-  - other instruments
+- **Not for:** complete beginners, fans of falling notes, people without a MIDI
+  keyboard, other instruments.
 
 ## Product rules (`docs/PRODUCT.md`)
 - **Three screens:** Library, Practice, and a per-piece Progress page. Settings and
@@ -61,18 +58,10 @@
 - **The cursor waits.** **Local-first:** no accounts, network or telemetry.
   **Everything free.** **Only lawfully redistributable** bundled scores.
 - **Deterministic analysis:** same performance + same score = identical results.
-- **Never:**
-  - accounts, sync or telemetry
-  - XP or streaks
-  - accuracy as the headline
-  - drills or lessons
-  - falling notes
-  - PDF scanning
-  - locked features
-  - copyrighted arrangements
-  - an in-app store
-  - AI-generated advice
-  - A built-in synth is *not* on the list: D13 is open.
+- **Never:** accounts, sync or telemetry; XP or streaks; accuracy as the headline;
+  drills or lessons; falling notes; PDF scanning; locked features; copyrighted
+  arrangements; an in-app store; AI-generated advice. A built-in synth is *not* on
+  the list: D13 is open.
 
 ## Competitors (`docs/PRODUCT.md`)
 - **MidiSlayer** (closest; paid; drills first):
@@ -100,7 +89,8 @@
 - the cursor waits (chords, ties, repeats, grace notes)
 - click a bar to start there; Shift-click or L to loop, with a clean-passes counter
   and "Join it back up"
-- R restarts; zoom (Ctrl+wheel); note names; MIDI Thru; remembers the keyboard
+- R restarts; zoom (Ctrl+wheel); note names; MIDI Thru; remembers the keyboard,
+  zoom and marks in `settings.json` beside the history
 - a 60 s grace period when the keyboard disconnects
 - auto-finish 1.5 s after the last note
 - **marks while playing:** each right key's note turns green, a wrong key is a red head
@@ -165,7 +155,12 @@ written rhythm, and hunting for one note counts as at most 3 wrong notes.
   notes, stops, tempo, time played.
 - **Not yet known:** which hand a note is in; key signatures in the steps.
 
-## Decided 25–31 Oct (`DECISIONS.md`)
+**Data folder** (`~/.local/share/com.hogwash.practice`): imported scores (copied in,
+named by a hash of their bytes), `history/` (one JSON file per session, versioned),
+`settings.json` (versioned), `hogwash.log` (warnings, errors, panics; ~2 MB at most).
+No data folder: Hogwash says so rather than saving elsewhere.
+
+## Decided 25 Oct – 2 Nov (`DECISIONS.md`)
 - **D10:** difficulty stays a total per pass, not per note; a stop counts only in a
   bar you'd begun.
 - **One shared rule:** every "Practise bars …" loop starts one bar before the trouble,
@@ -175,12 +170,15 @@ written rhythm, and hunting for one note counts as at most 3 wrong notes.
 - **Checking (31 Oct):** Claude Code checks visuals itself from screenshots of the
   real AppImage driven by the e2e kit (`just shots`); the owner's checklist covers
   only how it feels on the piano.
-- **Moved to v1.0:**
-  - hands separately
-  - per-piece state
-  - chords held together
-  - Learn/Play modes
-  - "Practise my weak bars" (which should rotate between passages)
+- **Progress page (1–2 Nov):** the piece map with a word per bar and line graphs
+  replaced the bars × sessions grid, which wasn't readable to a pianist.
+- **2 Nov:** D8 closed (keep "Hogwash", `com.hogwash.practice`); feature freeze until
+  the stable base is tagged; a demo history from real pieces played through the
+  virtual keyboard, dated by a clock hook (`HOGWASH_CLOCK_FILE`), in
+  `target/demo-data`, opened with `just demo`; settings and a log file in the data
+  folder.
+- **Moved to v1.0:** hands separately, per-piece state, chords held together,
+  Learn/Play modes, "Practise my weak bars" (which should rotate between passages).
 
 ## v0.1 checklist (`ROADMAP.md`)
 - **M0.2 part 1 (done):** the five personal scores are untracked, kept in the
@@ -188,7 +186,7 @@ written rhythm, and hunting for one note counts as at most 3 wrong notes.
 - **M0.3:** swap the Prelude for the OpenWTC edition.
 - **M2.9, M2.10, M2.11 (done):** D10 absolute levels, the Progress page, live marks.
 - **M1.3:** auto-detect a keyboard plugged in later (remembering it is done).
-- **D8:** the name.
+- **D8 (decided 2 Nov):** keep "Hogwash".
 - **M4.1:** a release build made by CI from a tag.
 - **M4.2:** a clean-system test.
 - **M4.3:** playable in 3 clicks.
@@ -224,12 +222,11 @@ written rhythm, and hunting for one note counts as at most 3 wrong notes.
 | D2 | Licence | recommended Apache-2.0 until MIDI import is next |
 | D6 | Practice log | open; recommended per-piece dates and minutes, no streaks |
 | D7 | Computer-keyboard fallback | recommended for v1.0 |
-| D8 | The name | open; needed for v0.1 |
 | D12 | Bundled library | recommended 12–15 pieces for v1.0 |
 | D13 | Listen's sound | open |
 
 Decided: D3 Linux only (Windows CI returns with Next 6), D4 Prelude swap, D5
-recompute, D9 velocity stored, D10, D11 clean pass.
+recompute, D8 keep "Hogwash", D9 velocity stored, D10, D11 clean pass.
 
 ## How the worker works (`CLAUDE.md`)
 - Plan first and wait for approval; one phase at a time; stop and report.
