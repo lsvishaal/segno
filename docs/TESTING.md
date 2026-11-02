@@ -100,5 +100,5 @@ Before each release, play through these by hand:
 
 ### 22.4 The real test
 
-Seven days of self-use (ROADMAP.md, self-use week), then one outside pianist (M4.9), then three
-before v1.0. Their hesitations are the backlog.
+The dogfood gate (ROADMAP.md, M-Test: ≥ 10 sessions over ≥ 2 weeks), then one outside pianist
+per OS (M4.9), then three testers for a week before the public release (M-Public). Their hesitations are the backlog.

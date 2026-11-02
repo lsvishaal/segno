@@ -9,8 +9,9 @@ practise it, and remembers which bars give you trouble over time.
 
 ## Status
 
-**A working preview, not yet released.** It runs on Linux. The first preview
-(v0.1) is planned for 8 November 2026; see `ROADMAP.md`. There is no installer
+**A working preview, not yet released.** It runs on Linux. The first tester
+release (Linux and Windows) comes when its gates pass; there are no fixed dates
+(see `ROADMAP.md`). There is no installer
 yet. Build it from source (below), or run `just release` to make an AppImage
 for your own machine.
 

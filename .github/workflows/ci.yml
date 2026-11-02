@@ -9,7 +9,7 @@ env:
   CARGO_TERM_COLOR: always
 
 jobs:
-  # Linux only (D3). Windows CI returns with Next 6.
+  # Linux only for now. Windows CI comes with M-Win (D3).
   ci:
     runs-on: ubuntu-24.04
     timeout-minutes: 15

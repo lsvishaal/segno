@@ -9,7 +9,7 @@ them." Dates and the active milestone: `ROADMAP.md`.
 ## Where things live
 | What | Where |
 |---|---|
-| The plan: v0.1 checklist, milestones, task IDs, Parking lot | `ROADMAP.md` |
+| The plan: gated milestones (M-Base, M-Win, M-Test, M-Public), task IDs, Parking lot | `ROADMAP.md` |
 | Why things are as they are; open decisions (D-numbers) | `DECISIONS.md` |
 | User-facing changes | `CHANGELOG.md` (Unreleased on top) |
 | Who it's for, product rules, Never list, competitors | `docs/PRODUCT.md` |

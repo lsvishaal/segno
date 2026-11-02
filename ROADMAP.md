@@ -18,136 +18,81 @@ What used to be here (as-built notes, the 6 Oct inventory, the feature catalogue
 
 | | |
 |---|---|
-| Active milestone | **v0.1 preview** (the checklist below) |
-| v0.1 preview | **Sunday 8 November 2026** |
-| v1.0 public launch | **Sunday 13 December 2026** (D1) |
+| Active milestone | **M-Base** (checkpoint `stable-base-1`) |
+| Dates | None (D1): a milestone ends when its gates pass |
+
+**Gates, not dates (D1, 2 Nov).** Progress is reviewed weekly in chat. A milestone
+with no gate progress at 2 weekly reviews in a row means cut scope, in the cut
+order below.
+
+**Cut order (priority list; cut from the bottom):**
+1. Never cut: M1.1 timestamps, M1.5 start from bar, M1.6 looping, M2.1 per-bar
+   stats, weak bars over time (the Progress page), M4.1 release build.
+2. Then the gates in milestone order (M-Base, M-Win, M-Test, M-Public).
+3. Then M-Public's scope list, bottom first.
 
 ---
 
-## v0.1 checklist (Sun 8 Nov)
+## Milestones
 
-- [x] **M0.2 part 1** Personal `.mxl` scores untracked, kept in `test-scores/`; `resources` narrowed — 26 Oct
-- [ ] **M0.3** Swap the Prelude for the OpenWTC edition (D4).
-- [x] **M2.9** D10 absolute weak levels from each bar's last 3 sessions — 26 Oct
-- [x] **M2.11** Live marks while playing; key → mark 15 ms median on the Prelude — 26 Oct
-- [x] **M2.10** The per-piece Progress page — 31 Oct
-- [ ] **M1.3** Auto-detect a keyboard plugged in later (every 3 s, plus Rescan).
-      Remembering the keyboard is done (31 Oct, with M2.10).
-- [ ] **D8** The name decided (keep "Hogwash" or rename).
-- [ ] **M4.1** Release build, built by CI from a version tag.
-- [ ] **M4.2** Test the AppImage on a clean system.
-- [ ] **M4.3** First run playable within 3 clicks.
-- [ ] **M4.6** README for a stranger.
-- [ ] **M4.9** One outside pianist tries it.
-- [ ] **M4.8** Tag `v0.1.0`; GitHub release with the AppImage and checksums.
+### M-Base — checkpoint `stable-base-1`
+- [ ] Named Segno everywhere (D8): code, app, docs, CI, the GitHub repo
+- [ ] Docs match code; the dead-reference grep is empty (absorbs M4.5)
+- [ ] All test tiers green (`just check-all`)
+- [ ] `just e2e` green 3× in a row
+- [ ] A fresh clone builds and passes `just ci`
+- [ ] A clean first run works (empty data folder → library → a starter piece)
+- [ ] Tag `stable-base-1` pushed (not a release)
+- [ ] CI green on the tagged commit
+- [ ] Stable base B (demo history) and C (UI tour): the owner decides after the Phase 1 audit
 
-**Deadline guard:** if M2.10 (Progress page) isn't done by **Sun 1 Nov**, stop. Keep
-the on-score tint for v0.1 and ship the launch tasks instead.
+### M-Win — Windows parity (D3)
+- [ ] CI builds and runs the Rust and UI tests on Windows
+- [ ] Verovio builds for Windows in CI
+- [ ] The data folder is in the proper Windows location
+- [ ] MIDI in and Thru work with a real keyboard
+- [ ] Engraving and the determinism check pass on Windows
+- [ ] A written manual checklist for what the Linux-only e2e kit can't cover
+- [ ] Checked by the owner on a real Windows PC with the FP-10
 
----
+### M-Test — tester release, Linux + Windows (was v0.1)
+- [ ] **M4.1 · L** CI builds the AppImage and a Windows installer from a tag, with checksums (never cut).
+      `just release` works locally since 18 Oct. Still open: an older base system, the CI job, Windows.
+- [ ] **M4.2 · S** Clean-machine test on both (a fresh user or VM)
+- [ ] **M4.3 · S** First piece playable in ≤ 3 clicks
+- [ ] **M1.3 · S** A keyboard plugged in after launch is found (every 3 s, plus Rescan); one-click
+      start; visible device indicator. Remembering the keyboard: done 31 Oct
+- [ ] **M4.10 · S** No raw error text anywhere
+- [ ] **M4.6 · M** README for strangers (outline in `docs/RELEASE.md`)
+- [ ] **M4.11 · S** A short "please try this" card
+- [ ] **M4.12 · M** Send feedback + Copy diagnostics
+- [ ] **M0.3 · S** Swap the Prelude for the OpenWTC edition (D4); required before any distribution
+- [ ] **M4.13 · S** `just e2e` within its 180 s budget (196 s on 2 Nov)
+- [ ] **Dogfood gate:** the owner used the app ≥ 10 sessions over ≥ 2 weeks, and every
+      `annoyances.md` entry is fixed, parked or rejected
+- [ ] **M4.9 · S** One outside pianist per OS tried it while being watched; their blockers fixed
+- [ ] **M4.8 · S** Tag `v0.1.0`; GitHub release with both builds, checksums and notes
 
-## Timeline
+### M-Public — public release (was v1.0)
+- [ ] ≥ 3 testers practised a week without a blocker
+- [ ] Windows signing decided
+- [ ] Site and trailer
+- [ ] M0.2 part 2 · S History purge (`git filter-repo`) + force-push, in its own session (blocks going public)
+- [ ] D6 practice log decided
 
-| Week | Dates | Work | Checkpoint |
-|---|---|---|---|
-| 1 | 6–11 Oct | M0 housekeeping | — |
-| 2 | 12–18 Oct | M1 practice loop | Loop bars 9–12 (done 22 Oct) |
-| 3 | 19–25 Oct | M1.4 results + coach, M2.1–M2.3, M2.8, library | Weak bars on the Minuet (done 25 Oct) |
-| 4 | 26 Oct – 1 Nov | Docs cleanup, CI, M2.9–M2.11, M1.3; **self-use week** | **Cut-check / deadline guard Sun 1 Nov** |
-| 5 | 2–8 Nov | M4.1–M4.3, M4.6, M4.8, M4.9, D8, M0.3 | **v0.1 preview Sun 8 Nov** |
-| 6–10 | 9 Nov – 13 Dec | M3 polish and the v1.0 list | **v1.0 Sun 13 Dec** |
-
-**Self-use week (26 Oct – 1 Nov):** practise with Hogwash every day for at least
-15 minutes, on the Minuet and one piece you want to learn. Note every friction in
-`annoyances.md` (`date · where · what`). Day 7: did you reach for it on your own?
-Did the weak bars match your sense of the hard bars? Which three annoyances first?
-
-**Never cut:** M1.1 timestamps, M1.5 start from bar, M1.6 looping, M2.1 per-bar
-stats, weak bars over time (the Progress page), M4.1 release build.
-
----
-
-## M0 — Housekeeping
-
-- [x] M0.1 Push to the remote — tracking fixed 25 Oct (`origin` over HTTPS, upstream set)
-- [x] M0.2 part 1 Personal `.mxl` scores untracked, kept in `test-scores/` — 26 Oct
-- [ ] M0.2 part 2 · S History purge (`git filter-repo`) + force-push, in its own session. **Blocker before the repo goes public**, not a v0.1 item
-- [ ] M0.3 Swap the Prelude for the OpenWTC edition (D4)
-- [x] M0.4 Update `CLAUDE.md`
-- [x] M0.5 `docs/` gone (re-created 25 Oct under the docs protocol: what is and what is decided, no specs)
-- [x] M0.6 Start `annoyances.md`
-- [ ] M0.7 Decide D1, D6, D8 (all three open; D8 is on the v0.1 checklist)
-
-## M1 — The practice loop actually loops
-
-- [x] M1.1 Timestamps and velocity on every played note — 20 Oct
-- [x] M1.2 Leaving the practice screen ends and saves the attempt — 18 Oct
-- [ ] **M1.3 · S** One-click start; visible device indicator (remembering the keyboard: done 31 Oct);
-      auto-detect a keyboard plugged in later (every 3 s, plus a Rescan button)
-- [x] M1.4 Results after a run, with the coach's cards — 24 Oct
-- [x] M1.5 Start from any bar — 22 Oct
-- [x] M1.6 Loop a range of bars — 22 Oct
-- [x] M1.8 Restart without leaving (R) — 18 Oct
-- Moved to v1.0 (25 Oct): M1.7 hands separately, M1.9 per-piece state, M1.10 chords
-  held together, M1.11 Learn / Play modes (see "v1.0" below)
-
-## M2 — The differentiator: weak bars
-
-The definitions (pace, pause, into-bar pause, break, wrong-note cap, gave up,
-passes, difficulty, levels) are owned by the doc comments in
-`crates/hogwash-analysis/src/bars.rs` and `coach.rs`. They are not restated here.
-
-- [x] M2.1 Per-bar stats in analysis — 24 Oct
-- [x] M2.2 Per-piece history across sessions — 25 Oct
-- [-] M2.3 Weak-bar tint on the score — 25 Oct, replaced by the Progress page (M2.10);
-      the tint and the W key are removed in M2.10
-- [-] M2.4 Bar detail popover — 25 Oct, replaced by the Progress page's bar detail
-- [ ] M2.5 "Practise my weak bars" — moved to v1.0 (it should rotate between the weak
-      passages, interleaved, not loop one until clean)
-- [-] M2.6 History panel — 25 Oct, replaced by the Progress page
-- [-] M2.7 Per-bar trend — 25 Oct, replaced by the Progress page's bar detail
-- [x] M2.8 Library card shows the weakest bars and when last practised — 25 Oct
-- [x] M2.9 D10 absolute levels (0.5 s / 2 / 5 / 10, provisional) from each bar's own last 3 sessions; ≥ 2 passes for judgements; per-session cells; library cards and the tint use it — 26 Oct
-- [x] M2.10 The per-piece Progress page: header, Work on next (up to 3, looped from the bar before), every session bar by bar with a Now row of heights, bar detail (1 Nov: redone as Practise next, a piece map with a word per bar, and a bar's line graphs); from the cards, Continue, Results and the practice header; Practise from the library starts at once on the remembered keyboard; the on-score tint, legend and W removed — 31 Oct
-- [x] M2.11 Live marks while playing (per key in a chord, wrong keys ringed, at most 3 at one place), cleared on a new attempt and each loop pass, kept after Results until the next Start; setting "Marks while playing"; key → mark 15 ms median — 26 Oct
-
-## M4 — Preview release v0.1
-
-- [ ] **M4.1 · L** Linux release build (never cut).
-      - AppImage (and `.deb`), with Verovio bundled as a separate library.
-      - Built by CI from a version tag, not locally.
-      - `just release` works locally since 18 Oct.
-      - Still open: building on an older base system, `.deb`, and the CI job.
-- [ ] **M4.2 · S** Test the AppImage on a clean system (a fresh user or VM).
-- [ ] **M4.3 · S** First run: playable within 3 clicks.
-- [x] M4.4 Helpful refusals for `.mid`, `.kar`, `.pdf` and other files
-- [~] M4.5 Remove dead spec references from code comments — finished in the 25 Oct
-      docs cleanup
-- [ ] **M4.6 · M** README for a stranger (outline in `docs/RELEASE.md`).
-- [x] M4.7 Version number and About
-- [ ] **M4.8 · S** Tag `v0.1.0`; GitHub release with the AppImage, checksums and notes.
-- [ ] **M4.9 · S** One outside pianist: send it to one person and watch them use it.
-
-## v1.0 — Polish to the public launch (9 Nov – 13 Dec)
-
-Moved from v0.1 (25 Oct):
+Scope (moved from v0.1 on 25 Oct, and the M3 polish):
 - [ ] M1.7 · M Hands separately (Both / Right / Left; the other staff dimmed and not waited for)
 - [ ] M1.9 · S Remember per-piece state (zoom, hands, loop, last bar)
 - [ ] M1.10 · M Chords held together (all notes down at the same moment)
 - [ ] M1.11 · M Learn / Play modes (Learn: the 3rd wrong note in a bar restarts the
       bar; suggest note names). Later: bar-gated Learn, where you can't move on until
       the bar is clean.
-- [ ] M2.5 · M Practise my weak bars, rotating between passages
-
-M3:
+- [ ] M2.5 · M Practise my weak bars, rotating between passages (interleaved, not one looped until clean)
 - [ ] M3.1 · L The toolbar (one row)
 - [ ] M3.2 · M Focus mode while playing (the header collapses)
 - [ ] M3.3 · M Auto-scroll that follows the cursor smoothly
 - [ ] M3.4 · M Current-position band through both staves
-- [-] M3.5 End-of-attempt panel around the heatmap — 25 Oct, replaced by Results (M1.4)
-      and the Progress page (M2.10)
 - [ ] M3.6 · M Keyboard shortcuts and a `?` overlay
-- [x] M3.7 Gentle motion pass (120–200 ms, ease-out) — 25 Oct
 - [~] M3.8 Library cards as sheet-music covers — shelves, small-caps composer and serif
       title done 25 Oct; cream paper and the one-line musical hook still open
 - [ ] M3.9 · S Search and sort in the library
@@ -166,16 +111,76 @@ M3:
 
 ---
 
-## Next (after v1.0, in order)
+## Done so far (history)
 
-Don't start these before v1.0 ships. Details of each are in the archive snapshot.
+Open tasks from these lists now live under the milestones above.
+
+## M0 — Housekeeping
+
+- [x] M0.1 Push to the remote — tracking fixed 25 Oct (`origin` over HTTPS, upstream set)
+- [x] M0.2 part 1 Personal `.mxl` scores untracked, kept in `test-scores/` — 26 Oct
+- M0.2 part 2 → M-Public
+- M0.3 → M-Test
+- [x] M0.4 Update `CLAUDE.md`
+- [x] M0.5 `docs/` gone (re-created 25 Oct under the docs protocol: what is and what is decided, no specs)
+- [x] M0.6 Start `annoyances.md`
+- [~] M0.7 Decide D1, D6, D8 — D1 and D8 decided 2 Nov; D6 → M-Public
+
+## M1 — The practice loop actually loops
+
+- [x] M1.1 Timestamps and velocity on every played note — 20 Oct
+- [x] M1.2 Leaving the practice screen ends and saves the attempt — 18 Oct
+- M1.3 → M-Test
+- [x] M1.4 Results after a run, with the coach's cards — 24 Oct
+- [x] M1.5 Start from any bar — 22 Oct
+- [x] M1.6 Loop a range of bars — 22 Oct
+- [x] M1.8 Restart without leaving (R) — 18 Oct
+- Moved to v1.0 (25 Oct): M1.7 hands separately, M1.9 per-piece state, M1.10 chords
+  held together, M1.11 Learn / Play modes (now M-Public scope)
+
+## M2 — The differentiator: weak bars
+
+The definitions (pace, pause, into-bar pause, break, wrong-note cap, gave up,
+passes, difficulty, levels) are owned by the doc comments in
+`crates/hogwash-analysis/src/bars.rs` and `coach.rs`. They are not restated here.
+
+- [x] M2.1 Per-bar stats in analysis — 24 Oct
+- [x] M2.2 Per-piece history across sessions — 25 Oct
+- [-] M2.3 Weak-bar tint on the score — 25 Oct, replaced by the Progress page (M2.10);
+      the tint and the W key are removed in M2.10
+- [-] M2.4 Bar detail popover — 25 Oct, replaced by the Progress page's bar detail
+- M2.5 → M-Public scope
+- [-] M2.6 History panel — 25 Oct, replaced by the Progress page
+- [-] M2.7 Per-bar trend — 25 Oct, replaced by the Progress page's bar detail
+- [x] M2.8 Library card shows the weakest bars and when last practised — 25 Oct
+- [x] M2.9 D10 absolute levels (0.5 s / 2 / 5 / 10, provisional) from each bar's own last 3 sessions; ≥ 2 passes for judgements; per-session cells; library cards and the tint use it — 26 Oct
+- [x] M2.10 The per-piece Progress page: header, Work on next (up to 3, looped from the bar before), every session bar by bar with a Now row of heights, bar detail (1 Nov: redone as Practise next, a piece map with a word per bar, and a bar's line graphs); from the cards, Continue, Results and the practice header; Practise from the library starts at once on the remembered keyboard; the on-score tint, legend and W removed — 31 Oct
+- [x] M2.11 Live marks while playing (per key in a chord, wrong keys ringed, at most 3 at one place), cleared on a new attempt and each loop pass, kept after Results until the next Start; setting "Marks while playing"; key → mark 15 ms median — 26 Oct
+
+## M4 — Release tasks
+
+- M4.1 → M-Test
+- M4.2 → M-Test
+- M4.3 → M-Test
+- [x] M4.4 Helpful refusals for `.mid`, `.kar`, `.pdf` and other files
+- M4.5 (dead spec references; `[~]` 25 Oct) → M-Base, "docs match code"
+- M4.6 → M-Test
+- [x] M4.7 Version number and About
+- M4.8 → M-Test
+- M4.9 → M-Test
+
+---
+
+## Next (after M-Public, in order)
+
+Don't start these before M-Public. Details of each are in the archive snapshot.
 
 - **Next 1** · Tempo mode and a metronome (timing judged early/late)
 - **Next 2** · Listen (sound source: D13)
 - **Next 3** · MIDI file import (research: `docs/archive/MIDI-IMPORT.md`; licence: D2)
 - **Next 4** · `.mscz` import
 - **Next 5** · A daily practice plan across pieces
-- **Next 6** · Windows build, then macOS; Windows CI returns here
+- **Next 6** · macOS (Windows moved to M-Win, D3)
 - **Next 7** · Dynamics feedback (velocity is already stored, D9)
 - **Next 8** · Practice notes per bar
 - **Next 9** · Fingering
@@ -207,6 +212,7 @@ _One dated line per idea. Reviewed between milestones; survivors move into a mil
 - 2026-10-18 · Drag to select a loop range, snapping to notes or bars
 - 2026-10-25 · Screen-switch fades (~0.4 s) may be the felt lag; consider shortening · done 26 Oct: a 120 ms cross-fade
 - 2026-10-25 · AppImage is 115 MB against a 60 MB budget (`docs/DESIGN.md`); look at what's in it · 26 Oct: WebKit 95 MB, JavaScriptCore 40 MB, ICU data 32 MB, plus AV1/JPEG-XL codecs (libaom, SvtAv1, rav1e, jxl, openraw, dav1d) pulled from this rolling distro; revisit with the CI build on Ubuntu (M4.1)
-- 2026-10-26 · Windows/macOS builds and an optional portable mode (data next to the app); macOS needs signing. After v1.0, with Next 6.
-- 2026-10-26 · Re-check level thresholds (0.5 s / 2 / 5 / 10) against the self-use week's data at the 1 Nov cut-check.
+- 2026-10-26 · Windows/macOS builds and an optional portable mode (data next to the app); macOS needs signing. Windows → M-Win (D3, 2 Nov); macOS and portable mode later.
+- 2026-10-26 · Re-check level thresholds (0.5 s / 2 / 5 / 10) against the self-use week's data at the 1 Nov cut-check · 2 Nov: provisional until dogfood data exists (D10)
 - 2026-11-01 · Play on the computer keyboard when no MIDI keyboard is connected ("x is middle C"; a PianoBooster idea).
+- 2026-11-02 · Accent green #16a34a is close to correct-note green #2f6f4e; the oxblood change fixes it.
