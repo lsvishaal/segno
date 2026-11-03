@@ -63,7 +63,29 @@ if [ ! -s "$workdir/first" ] || ! grep -q "^bar " "$workdir/first"; then
     exit 1
 fi
 
+# The analysis of a real piece with a pickup, replayed in two processes: its
+# own notes, from the beginning and as a loop from the pickup to bar 1.
+cargo build --quiet --package segno-cli
+cli="target/debug/segno-cli"
+pickup="app/src-tauri/tests/fixtures/schlusslied-des-narren.musicxml"
+"$cli" expected "$pickup" > "$workdir/pickup-notes.json" 2>/dev/null
+for run in first second; do
+    "$cli" replay "$pickup" "$workdir/pickup-notes.json" 2>/dev/null > "$workdir/pickup-$run"
+    "$cli" replay "$pickup" "$workdir/pickup-notes.json" --loop 0-1 2>/dev/null >> "$workdir/pickup-$run"
+done
+if ! cmp -s "$workdir/pickup-first" "$workdir/pickup-second"; then
+    echo "DETERMINISM VIOLATION: the piece with a pickup replayed twice differed."
+    diff "$workdir/pickup-first" "$workdir/pickup-second" || true
+    exit 1
+fi
+if ! grep -q "Pickup\|pickup" "$workdir/pickup-first"; then
+    echo "HARNESS VACUOUS: the pickup replay never reached the pickup."
+    head -20 "$workdir/pickup-first"
+    exit 1
+fi
+
 echo "ok  the same score engraved identically in two separate processes"
+echo "ok  a piece with a pickup replayed identically in two separate processes"
 echo "ok  the engraving placed notes, so the comparison is meaningful"
 echo
 echo "Engraving determinism check passed."

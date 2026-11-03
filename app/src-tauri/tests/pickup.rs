@@ -115,6 +115,11 @@ fn a_piece_with_a_pickup_imports() {
 
     assert_eq!(imported.piece.title, "Schlusslied des Narren");
     assert_eq!(imported.piece.bars, printed_numbers(&fixture()).len());
+
+    // Export writes the kept file as it is, so the pickup survives the round
+    // trip byte for byte.
+    let id = segno_domain::PieceId::new(&imported.piece.id).expect("an id");
+    assert_eq!(segno.source_of(&id), Some(fixture().into_bytes()));
 }
 
 // A lettered bar number is refused in the owner's words (E3). The fixture

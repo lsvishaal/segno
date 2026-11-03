@@ -77,7 +77,12 @@ pub(crate) fn replay(score: &Path, events: &Path, start: Start) -> Result<String
         Start::Bar(number) => reference
             .first_position_of(bar(number)?)
             .map(|from| from..reference.len())
-            .ok_or_else(|| format!("bar {number} has nothing to start at"))?,
+            .ok_or_else(|| {
+                format!(
+                    "{} has nothing to start at",
+                    segno_feedback::review::bar_name(MeasureNumber::printed(number))
+                )
+            })?,
         Start::Loop(first, last) => reference
             .range_of(bar(first)?, bar(last)?)
             .ok_or_else(|| format!("bars {first}-{last} are not played in a row"))?,
@@ -100,7 +105,15 @@ pub(crate) fn replay(score: &Path, events: &Path, start: Start) -> Result<String
         let time = time_us.map_or_else(|| "        ".to_owned(), seconds);
         let (bar, wanted) = expected.as_ref().map_or_else(
             || ("-".to_owned(), "(end of piece)".to_owned()),
-            |expected| (expected.measure().get().to_string(), names(expected)),
+            |expected| {
+                let bar = expected.measure();
+                let bar = if bar.is_pickup() {
+                    "pickup".to_owned()
+                } else {
+                    bar.get().to_string()
+                };
+                (bar, names(expected))
+            },
         );
         let outcome = if tolerated {
             "tolerated (grace note or ornament), held".to_owned()
@@ -110,7 +123,7 @@ pub(crate) fn replay(score: &Path, events: &Path, start: Start) -> Result<String
 
         let _ = writeln!(
             out,
-            "{time} bar {bar:>3}  step {at:>4}  expected {wanted:<18} played {:>3} {:<4} {outcome}",
+            "{time} bar {bar:>6}  step {at:>4}  expected {wanted:<18} played {:>3} {:<4} {outcome}",
             u8::from(pitch),
             sharp_name(pitch),
         );

@@ -64,7 +64,9 @@ layout, real files written by the running app, and timing.
 - Measure layout with `barBox`, which waits for the bar to stop moving.
 
 **Real pieces only.** Tests use the Minuet in G, the Prelude in C (both in
-`app/src-tauri/library/`), the fixtures in `app/src/components/__fixtures__`
+`app/src-tauri/library/`), the CC0 OpenScore piece with a pickup in
+`app/src-tauri/tests/fixtures/` (PROVENANCE.md; the `pickup` e2e scenario and
+`tests/pickup.rs`), the fixtures in `app/src/components/__fixtures__`
 (made by `scripts/score-fixtures.py`), or pieces you supplied. Never invented
 notes. Your own scores aren't redistributable: they live in the ignored
 `test-scores/` (or `SEGNO_TEST_SCORES`), and the tests that read them are

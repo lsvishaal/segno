@@ -8,7 +8,7 @@ import fs from "node:fs";
 import * as w from "./wd.mjs";
 import { ROOT, DIR, APP, SHOTS, log, results, resetData, useKeyboard, appExited } from "./lib.mjs";
 
-const ALL = ["practice", "whole-piece", "flash", "marks", "timing", "start-from-bar", "loop", "review", "progress", "settings", "library", "unplug"];
+const ALL = ["practice", "whole-piece", "flash", "marks", "timing", "start-from-bar", "loop", "review", "progress", "settings", "library", "pickup", "unplug"];
 const chosen = process.argv.slice(2).length ? process.argv.slice(2) : ALL;
 fs.mkdirSync(SHOTS, { recursive: true });
 
