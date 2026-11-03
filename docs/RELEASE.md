@@ -12,9 +12,10 @@ How a release is made and launched.
 2. A 20-second GIF: loop a bar, the counter reaches 3, then the Progress page.
 3. **What it does** — five bullets: waits for you · start anywhere · loop bars ·
    remembers your weak bars · free and local.
-4. **Install (Linux)** — AppImage: download, `chmod +x`, run (include the
+4. **Install** — Linux, AppImage: download, `chmod +x`, run (include the
    lowercase-extension and FUSE notes from your own CachyOS experience).
-   `.deb` for Debian/Ubuntu.
+   `.deb` for Debian/Ubuntu (if still wanted; owner to confirm). Windows: the
+   installer (unsigned for testers, D3).
 5. **Getting music** — bundled pieces; MusicXML from MuseScore Studio
    (File → Export), OpenScore, Mutopia; why MIDI and PDF aren't read directly.
 6. **Honest comparison** — a short table: Segno vs MidiSlayer vs
@@ -74,8 +75,13 @@ How a release is made and launched.
 ### 24.6 How a release is built (decided 25 Oct)
 
 Releases are built by **CI from a version tag** (`v0.1.0`), not on this machine:
-pushing the tag runs a workflow that builds the AppImage (and `.deb`), attaches
-the files and their checksums to a GitHub release, and fails if the build isn't
-reproducible from the tag. Until that workflow exists (M4.1), `just release`
-builds the same AppImage locally for testing only.
+pushing the tag runs a workflow that builds the AppImage and a Windows installer
+(NSIS) (D3), attaches the files and their checksums to a GitHub release, and
+fails if the build isn't reproducible from the tag. A `.deb` only if still wanted
+(owner to confirm). The Linux build runs on an older base system, for libstdc++
+compatibility. Until that workflow exists (M4.1), `just release` builds the same
+AppImage locally for testing only.
+
+M4.1 is time-boxed to 2 days. If it fails, write down why, then choose between
+static linking (with LGPL relink instructions) and Verovio as WASM.
 

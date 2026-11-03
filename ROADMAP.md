@@ -53,21 +53,23 @@ First task after the checkpoint: the Verovio DLL spike (a `windows-latest` CI jo
 `verovio.dll` at the pinned commit and runs the engraving tests; ~½ day).
 
 - [ ] CI builds and runs the Rust and UI tests on Windows
-- [ ] Verovio builds for Windows in CI
-- [ ] The data folder is in the proper Windows location
+- [ ] Verovio builds for Windows in CI and loads from the installed bundle
+- [ ] The data folder is in the proper Windows location (`%APPDATA%\com.segno.practice`)
 - [ ] MIDI in and Thru work with a real keyboard
 - [ ] Engraving and the determinism check pass on Windows
 - [ ] A written manual checklist for what the Linux-only e2e kit can't cover
-- [ ] Checked by the owner on a real Windows PC with the FP-10
+- [ ] Checked by the owner on their dual-boot Windows install with the FP-10 (a VM only for installer smoke tests, never MIDI sign-off)
 
 ### M-Test — tester release, Linux + Windows (was v0.1)
 - [ ] **M4.1 · L** CI builds the AppImage and a Windows installer from a tag, with checksums (never cut).
       `just release` works locally since 18 Oct. Still open: an older base system, the CI job, Windows.
-- [ ] **M4.2 · S** Clean-machine test on both (a fresh user or VM)
+- [ ] **M4.2 · S** Clean-machine test on both: Windows on the owner's second laptop, kept free of dev tools; Linux on a fresh VM or live USB
 - [ ] **M4.3 · S** First piece playable in ≤ 3 clicks
 - [ ] **M1.3 · S** A keyboard plugged in after launch is found (every 3 s, plus Rescan); one-click
       start; visible device indicator. Remembering the keyboard: done 31 Oct
 - [ ] **D14 · M** Opt-in updates: asked once on first run; daily version check, one-click install (Tauri updater); "Check for updates" in About (plugins approved 3 Nov, Q6)
+- [x] Bundled pieces keep a fixed ID across edits (Phase 2.5) — 3 Nov
+- [x] Pickup bars + printed bar numbers (Phase 2.6) — 3 Nov
 - [ ] **M4.10 · S** No raw error text anywhere
 - [ ] **M4.6 · M** README for strangers (outline in `docs/RELEASE.md`)
 - [ ] **M4.11 · S** A short "please try this" card
@@ -230,10 +232,11 @@ _One dated line per idea. Reviewed between milestones; survivors move into a mil
 - 2026-11-03 · P6 Design refresh (oxblood, modern UI), milestone M-Design → DECISIONS Proposals (to discuss)
 - 2026-11-03 · P7 Library UX → DECISIONS Proposals (to discuss)
 - 2026-11-03 · P8 Bundled starter repertoire → DECISIONS Proposals (to discuss)
-- 2026-11-03 · Lettered bar numbers ("12a"): refused for now (E3); support when a real file needs it
+- 2026-11-03 · Lettered bar numbers ("12a", MuseScore's "X1"): refused for now (E3); review before M-Test: 3 of 80 sampled OpenScore files use them
 - 2026-11-03 · A pickup joined with a short last bar across a repeat (E4); revisit with a real file (OpenScore Lieder's Kinkel "Gondellied", Op. 8 No. 3, is one)
 - 2026-11-03 · Cadenzas and free (unmetred) bars (E4); revisit with a real file
 - 2026-11-03 · A short bar mid-piece already keeps its printed number (checked 3 Nov on a probe); a test when a real file appears
 - 2026-11-03 · Für Elise (the owner's file) repeats back into its pickup (0, 1–8, 0, 1–7, 9): the E4 case; with it
 - 2026-11-03 · Playing the CC0 Schumann fixture exactly as written scores 3 notes wrong (bars 16 and 28, voice + piano); look into it (not pickup-related)
 - 2026-11-03 · Pickup numbered ≥ 1 (implicit / metcon="false"): handle when a real file needs it
+- 2026-11-03 · e2e can't run in GitHub CI (it needs a display and ALSA); it runs locally

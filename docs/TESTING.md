@@ -100,7 +100,15 @@ Before each release, play through these by hand:
 2. Für Elise (two staves sounding together)
 3. Minuet in G (repeats, two hands) — with a loop across the repeat
 4. Prelude in C (68 ties) — start from bar 20
-5. One imported piece with a pickup bar
+5. An imported piece with a pickup (Für Elise locally, `test-scores/`): start from
+   the pickup and loop pickup–bar 1
+6. Re-import an edited file → **Update** keeps its history and Progress
+
+**Test machines** (DECISIONS, 3 Nov): Windows MIDI sign-off on the owner's
+dual-boot Windows install with the FP-10; a VM only for installer smoke tests,
+never MIDI sign-off; the Windows clean-machine test (M4.2) on the owner's second
+laptop, kept free of dev tools; the Linux clean-machine test on a fresh VM or
+live USB. The e2e kit runs locally only: GitHub CI has no display or ALSA.
 
 ### 22.4 The real test
 
