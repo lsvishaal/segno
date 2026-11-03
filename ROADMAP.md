@@ -42,8 +42,8 @@ order below.
 - [x] `just e2e` green 3× in a row — 3 Nov (329, 199, 164 s; 165 checks; none skipped)
 - [x] A fresh clone builds and passes `just ci` — 3 Nov (231 s from cold)
 - [x] A clean first run works (empty data folder → library → a starter piece) — 3 Nov (library in 1.1–1.3 s)
-- [ ] Tag `stable-base-1` pushed (not a release)
-- [ ] CI green on the tagged commit
+- [x] Tag `stable-base-1` pushed (not a release) — 3 Nov, on 499450f
+- [x] CI green on the tagged commit — 3 Nov, https://github.com/lsvishaal/segno/actions/runs/41669595757
 - [x] **Phase 2.5 · M** Durable identity and history (DECISIONS 3 Nov): permanent piece IDs, sessions keep their score version, replay per version — built and tested 3 Nov (commits 1–6); Q3 re-import choice and CLI `bars` per version done 3 Nov (7a, 7b); Q4 moved to Phase 2.6
 - [x] **Phase 2.6 · M** Pickups and irregular bars: the bar numbers shown are the printed ones; a pickup is "Pickup" (DECISIONS 3 Nov). Includes the Für Elise (WoO 59) pickup test (Q4) — done 3 Nov: a CC0 OpenScore fixture, the `pickup` e2e scenario, the owner's Für Elise locally
 - [-] Stable base B (demo history) and C (UI tour) — 3 Nov, deferred until after `stable-base-1`; B comes before the M-Test README and screenshots (M4.6, M3.20)
