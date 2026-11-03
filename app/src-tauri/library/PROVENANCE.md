@@ -39,6 +39,18 @@ carry the title and composer only as page text). The notes are untouched.
 
 **Attribution obligations: none.**
 
+## Test fixtures (not bundled)
+
+Used only by tests; never shipped in the app.
+
+| File | Work | Composer | Source | Status of the music | Status of this file |
+|---|---|---|---|---|---|
+| `tests/fixtures/schlusslied-des-narren.musicxml` | Schlusslied des Narren, Op. 127 No. 5 (voice and piano) | Robert Schumann (d. 1856) | OpenScore Lieder, CC0 corpus: `scores/Schumann,_Robert/5_Lieder_und_Gesänge,_Op.127/5_Schlusslied_des_Narren/lc6828018.mxl` at commit `40d212cea9f858c4e83e8bfa46ce729ef939606a` of https://github.com/OpenScore/Lieder | Public domain worldwide | CC0 1.0: the repository's licence, and the file's own `<rights>OpenScore (CC0)</rights>`; transcribed from IMSLP #271937 |
+
+Changed only by unpacking `score.xml` from the `.mxl` (blob `1a0b076`, checked against
+the repository). It opens with a pickup (bar `0`, `implicit="yes"`) and ends on a
+short bar, which is why it's here (Phase 2.6).
+
 ## What each is for
 
 Each exercises something the practice loop has to get right.

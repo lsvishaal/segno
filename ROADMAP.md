@@ -230,3 +230,7 @@ _One dated line per idea. Reviewed between milestones; survivors move into a mil
 - 2026-11-03 · P6 Design refresh (oxblood, modern UI), milestone M-Design → DECISIONS Proposals (to discuss)
 - 2026-11-03 · P7 Library UX → DECISIONS Proposals (to discuss)
 - 2026-11-03 · P8 Bundled starter repertoire → DECISIONS Proposals (to discuss)
+- 2026-11-03 · Lettered bar numbers ("12a"): refused for now (E3); support when a real file needs it
+- 2026-11-03 · A pickup joined with a short last bar across a repeat (E4); revisit with a real file (OpenScore Lieder's Kinkel "Gondellied", Op. 8 No. 3, is one)
+- 2026-11-03 · Cadenzas and free (unmetred) bars (E4); revisit with a real file
+- 2026-11-03 · A short bar mid-piece already keeps its printed number (checked 3 Nov on a probe); a test when a real file appears
