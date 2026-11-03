@@ -240,3 +240,4 @@ _One dated line per idea. Reviewed between milestones; survivors move into a mil
 - 2026-11-03 · Playing the CC0 Schumann fixture exactly as written scores 3 notes wrong (bars 16 and 28, voice + piano); look into it (not pickup-related)
 - 2026-11-03 · Pickup numbered ≥ 1 (implicit / metcon="false"): handle when a real file needs it
 - 2026-11-03 · e2e can't run in GitHub CI (it needs a display and ALSA); it runs locally
+- 2026-11-03 · Flatpak/AUR packaging: after M-Public, if users ask
