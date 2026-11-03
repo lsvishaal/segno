@@ -10,14 +10,13 @@ Everything so far, before the first preview (v0.1).
 
 ### Changed
 - **Renamed to Segno.** The window, About and library say Segno; your practice lives in
-  `~/.local/share/com.segno.practice` (move the old `com.hogwash.practice` folder there to keep
-  your history).
+  `~/.local/share/com.segno.practice`. History and settings from before the rename aren't
+  carried over.
 - **A Little Chord Study is no longer bundled:** five starter pieces remain.
 
 ### Added
 - **Settings are kept with your history:** marks, the remembered keyboard and
-  zoom move to `settings.json` in the data folder (brought over once from where
-  they were kept before).
+  zoom move to `settings.json` in the data folder.
 - **A log file:** warnings, errors and crashes go to `segno.log` in the data
   folder (at most about 2 MB). If the system gives no data folder, Segno says
   so instead of saving in the current folder.

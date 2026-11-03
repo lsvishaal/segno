@@ -38,42 +38,18 @@ export function useSettings(settings: Settings): void {
   current = settings;
 }
 
-/**
- * Loads the settings kept. The first time there are none, the values this
- * window kept itself before (localStorage, until 2 Nov 2026) are brought
- * over once and saved.
- */
+/** Loads the settings kept. The first time there are none, the defaults are saved. */
 export async function loadSettings(): Promise<void> {
   try {
     const kept = await settings();
     if (kept) {
       current = kept;
     } else {
-      current = fromLocalStorage();
+      current = DEFAULT_SETTINGS;
       await saveSettings(current);
     }
   } catch {
     // Startup failed, so there is nothing to keep them in: the defaults.
-  }
-}
-
-/**
- * What the window kept in localStorage before settings.json.
- *
- * The keys keep the app's old name on purpose: builds from before the rename
- * to Segno wrote them, and this one-time migration has to find them
- * (DECISIONS.md, 3 Nov).
- */
-export function fromLocalStorage(): Settings {
-  try {
-    const zoom = Number(localStorage.getItem("hogwash.zoom"));
-    return {
-      marks: localStorage.getItem("hogwash.marks") !== "off",
-      keyboard: localStorage.getItem("hogwash.keyboard"),
-      zoom: zoom || DEFAULT_SETTINGS.zoom,
-    };
-  } catch {
-    return DEFAULT_SETTINGS;
   }
 }
 
