@@ -63,9 +63,9 @@ impl Suggestion {
         };
         let (mut first, mut last) = (trouble, trouble);
         while last.get() - first.get() + 1 < MOST_BARS {
-            if let Some(before) = earlier(first).filter(|&before| hard(before)) {
+            if let Some(before) = reference.bar_before(first).filter(|&before| hard(before)) {
                 first = before;
-            } else if let Some(after) = later(last).filter(|&after| hard(after)) {
+            } else if let Some(after) = reference.bar_after(last).filter(|&after| hard(after)) {
                 last = after;
             } else {
                 break;
@@ -79,7 +79,8 @@ impl Suggestion {
         let into = trouble != start
             && hardest.pause_us > 0
             && 2 * hardest.into_bar_pause_us >= hardest.pause_us;
-        let widened = earlier(first)
+        let widened = reference
+            .bar_before(first)
             .filter(|_| into && first == trouble && last.get() - first.get() + 1 < MOST_BARS)
             .unwrap_or(first);
 
@@ -112,8 +113,12 @@ impl Suggestion {
                 .is_some()
                 .then_some((first, last))
         };
-        let before = earlier(first).filter(|&bar| reference.first_position_of(bar).is_some());
-        let after = later(last).filter(|&bar| reference.first_position_of(bar).is_some());
+        let before = reference
+            .bar_before(first)
+            .filter(|&bar| reference.first_position_of(bar).is_some());
+        let after = reference
+            .bar_after(last)
+            .filter(|&bar| reference.first_position_of(bar).is_some());
 
         let (first, last) = wider(before.unwrap_or(first), after.unwrap_or(last))
             .or_else(|| wider(before.unwrap_or(first), last))
@@ -121,14 +126,6 @@ impl Suggestion {
             .unwrap_or((first, last));
         Self::Widen { first, last }
     }
-}
-
-fn earlier(bar: MeasureNumber) -> Option<MeasureNumber> {
-    MeasureNumber::new(bar.get().checked_sub(1)?)
-}
-
-fn later(bar: MeasureNumber) -> Option<MeasureNumber> {
-    MeasureNumber::new(bar.get().checked_add(1)?)
 }
 
 #[cfg(test)]

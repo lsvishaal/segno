@@ -248,7 +248,7 @@ pub fn of(reference: &ReferencePerformance, run: &Run, looping: Option<LoopScope
         .map(|segment| segment.start)
         .min()
         .unwrap_or(first.start);
-    let loop_bars = looping.and_then(|scope| Some((bar(scope.first)?, bar(scope.last)?)));
+    let loop_bars = looping.map(|scope| (bar(scope.first), bar(scope.last)));
     let (start, end) = loop_bars.unwrap_or_else(|| {
         let end = reference
             .iter()
@@ -308,8 +308,11 @@ pub fn of(reference: &ReferencePerformance, run: &Run, looping: Option<LoopScope
     Review {
         headline,
         numbers,
-        bars: (start.get()..=end.get())
-            .filter_map(bar)
+        bars: reference
+            .written()
+            .iter()
+            .copied()
+            .filter(|measure| (start..=end).contains(measure))
             .map(|measure| column(measure, bars.get(measure), reference))
             .collect(),
         passes,
@@ -404,8 +407,8 @@ fn better_passes(passes: &[ReviewPass]) -> Option<String> {
 #[must_use]
 pub fn widened(first: u32, last: u32, reference: &ReferencePerformance) -> Option<Suggested> {
     suggested(&Suggestion::after_the_goal(
-        bar(first)?,
-        bar(last)?,
+        bar(first),
+        bar(last),
         reference,
     ))
 }
@@ -546,8 +549,9 @@ fn count(n: usize) -> u32 {
     u32::try_from(n).unwrap_or(u32::MAX)
 }
 
-fn bar(number: u32) -> Option<MeasureNumber> {
-    MeasureNumber::new(number)
+/// A printed bar number: 0 is the pickup.
+const fn bar(number: u32) -> MeasureNumber {
+    MeasureNumber::printed(number)
 }
 
 #[cfg(test)]

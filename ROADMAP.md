@@ -234,3 +234,5 @@ _One dated line per idea. Reviewed between milestones; survivors move into a mil
 - 2026-11-03 · A pickup joined with a short last bar across a repeat (E4); revisit with a real file (OpenScore Lieder's Kinkel "Gondellied", Op. 8 No. 3, is one)
 - 2026-11-03 · Cadenzas and free (unmetred) bars (E4); revisit with a real file
 - 2026-11-03 · A short bar mid-piece already keeps its printed number (checked 3 Nov on a probe); a test when a real file appears
+- 2026-11-03 · Für Elise (the owner's file) repeats back into its pickup (0, 1–8, 0, 1–7, 9): the E4 case; with it
+- 2026-11-03 · Playing the CC0 Schumann fixture exactly as written scores 3 notes wrong (bars 16 and 28, voice + piano); look into it (not pickup-related)

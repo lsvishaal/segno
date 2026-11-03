@@ -127,6 +127,9 @@ pub struct ReferencePerformance {
     /// What the last step tolerates at "the next step", which is past the
     /// end: the tail of a trill on the final note.
     after_the_end: Vec<Pitch>,
+    /// Every bar in written order, the pickup first if there is one: what
+    /// "the bar before" and "the bar after" mean (DECISIONS, 3 Nov).
+    written: Vec<MeasureNumber>,
 }
 
 impl ReferencePerformance {
@@ -193,7 +196,34 @@ impl ReferencePerformance {
             beats,
             openings,
             after_the_end: carried,
+            written: score
+                .measures()
+                .iter()
+                .map(crate::Measure::number)
+                .collect(),
         }
+    }
+
+    /// The bar written before `bar`: for bar 1 of a piece with a pickup, the
+    /// pickup. Written order, not arithmetic, so a gap in the numbering or a
+    /// pickup is followed as printed.
+    #[must_use]
+    pub fn bar_before(&self, bar: MeasureNumber) -> Option<MeasureNumber> {
+        let at = self.written.iter().position(|&written| written == bar)?;
+        self.written.get(at.checked_sub(1)?).copied()
+    }
+
+    /// Every bar in written order, the pickup first if there is one.
+    #[must_use]
+    pub fn written(&self) -> &[MeasureNumber] {
+        &self.written
+    }
+
+    /// The bar written after `bar`.
+    #[must_use]
+    pub fn bar_after(&self, bar: MeasureNumber) -> Option<MeasureNumber> {
+        let at = self.written.iter().position(|&written| written == bar)?;
+        self.written.get(at + 1).copied()
     }
 
     /// How many ticks the Score writes between step `index - 1` and step

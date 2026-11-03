@@ -940,8 +940,9 @@ pub fn start_at_bar(
     let segno = state.inner().0.lock().map_err(|_| POISONED.to_owned())?;
 
     let (id, reference) = reference_of(&segno, &piece_id)?;
-    let bar = segno_domain::MeasureNumber::new(measure)
-        .ok_or_else(|| format!("There is no bar {measure}."))?;
+    // Printed numbers: 0 is the pickup. A bar the piece doesn't have is
+    // refused below, by the practice thread.
+    let bar = segno_domain::MeasureNumber::printed(measure);
 
     segno
         .practice()
@@ -972,8 +973,9 @@ pub fn loop_bars(
     let segno = state.inner().0.lock().map_err(|_| POISONED.to_owned())?;
 
     let (id, reference) = reference_of(&segno, &piece_id)?;
-    let bar = |number: u32| {
-        segno_domain::MeasureNumber::new(number).ok_or_else(|| format!("There is no bar {number}."))
+    // Printed numbers: 0 is the pickup.
+    let bar = |number: u32| -> Result<segno_domain::MeasureNumber, Refused> {
+        Ok(segno_domain::MeasureNumber::printed(number))
     };
     let wanted = LoopOf {
         first: bar(first)?,

@@ -194,7 +194,7 @@ impl Coach {
 
         Self {
             cards,
-            went_well: went_well(&bars, usual),
+            went_well: went_well(reference, &bars, usual),
         }
     }
 }
@@ -420,7 +420,7 @@ fn join_neighbours(reference: &ReferencePerformance, spots: Vec<Spot>) -> Vec<Sp
         let neighbour = joined.iter_mut().find(|other| {
             matches!(other.kind, Kind::FastNotes { .. } | Kind::SlowBars)
                 && std::mem::discriminant(&other.kind) == std::mem::discriminant(&spot.kind)
-                && after(other.last) == Some(spot.first)
+                && reference.bar_after(other.last) == Some(spot.first)
                 && other.last.get() - other.first.get() + 1 < MOST_BARS
         });
         if let Some(other) = neighbour {
@@ -481,7 +481,8 @@ fn big_step(reference: &ReferencePerformance, bars: &Bars, accuracy: Option<u32>
     let first = *trouble.first()?;
     let last = (0..MOST_BARS - 1)
         .try_fold(first, |bar, _| {
-            after(bar)
+            reference
+                .bar_after(bar)
                 .filter(|next| bars.get(*next).is_some())
                 .ok_or(bar)
         })
@@ -502,7 +503,7 @@ fn big_step(reference: &ReferencePerformance, bars: &Bars, accuracy: Option<u32>
 
 /// Runs of two or more bars with no wrong key, no pause and no stop, and
 /// one run of three or more at an even tempo.
-fn went_well(bars: &Bars, usual: Option<u64>) -> Vec<WentWell> {
+fn went_well(reference: &ReferencePerformance, bars: &Bars, usual: Option<u64>) -> Vec<WentWell> {
     let ranges = |keep: &dyn Fn(&crate::bars::Bar) -> bool, least: u32| {
         let mut found: Vec<(MeasureNumber, MeasureNumber)> = Vec::new();
         for (measure, bar) in bars.iter() {
@@ -510,7 +511,7 @@ fn went_well(bars: &Bars, usual: Option<u64>) -> Vec<WentWell> {
                 continue;
             }
             match found.last_mut() {
-                Some((_, last)) if after(*last) == Some(measure) => *last = measure,
+                Some((_, last)) if reference.bar_after(*last) == Some(measure) => *last = measure,
                 _ => found.push((measure, measure)),
             }
         }
@@ -568,9 +569,10 @@ fn most_common(offsets: &[i8], keep: impl Fn(&i8) -> bool) -> Option<i8> {
         .map(|(offset, _)| offset)
 }
 
-/// The bars to loop to practise trouble in `first` to `last`: from one bar
-/// before it (practise from a bar before the error, Duke, Simmons & Cash
-/// 2009), clamped at bar 1. If that can't be looped in a row (a repeat in
+/// The bars to loop to practise trouble in `first` to `last`: from the bar
+/// written before it (practise from a bar before the error, Duke, Simmons &
+/// Cash 2009): for bar 1, the pickup if there is one; for the first bar,
+/// itself. If that can't be looped in a row (a repeat in
 /// the way), `first` to `last`; failing that, `first` alone.
 #[must_use]
 pub fn practise_range(
@@ -579,18 +581,10 @@ pub fn practise_range(
     last: MeasureNumber,
 ) -> (MeasureNumber, MeasureNumber) {
     let loopable = |from: MeasureNumber| reference.range_of(from, last).is_some();
-    [before(first).unwrap_or(first), first]
+    [reference.bar_before(first).unwrap_or(first), first]
         .into_iter()
         .find(|&from| loopable(from))
         .map_or((first, first), |from| (from, last))
-}
-
-fn before(bar: MeasureNumber) -> Option<MeasureNumber> {
-    MeasureNumber::new(bar.get().checked_sub(1)?)
-}
-
-fn after(bar: MeasureNumber) -> Option<MeasureNumber> {
-    MeasureNumber::new(bar.get().checked_add(1)?)
 }
 
 #[cfg(test)]

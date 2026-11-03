@@ -197,31 +197,34 @@ impl Progress {
             {
                 continue;
             }
-            let mut first = measure;
-            while first > 1 && marked.contains(&(first - 1)) {
-                first -= 1;
+            // Neighbours in written order: the pickup is bar 1's.
+            let marked_bar =
+                |bar: Option<MeasureNumber>| bar.filter(|bar| marked.contains(&bar.get()));
+            let mut first = MeasureNumber::printed(measure);
+            while let Some(before) = marked_bar(reference.bar_before(first)) {
+                first = before;
             }
-            let mut last = measure;
-            while marked.contains(&(last + 1)) {
-                last += 1;
+            let mut last = MeasureNumber::printed(measure);
+            while let Some(after) = marked_bar(reference.bar_after(last)) {
+                last = after;
             }
-            passages.push((first, last));
+            passages.push((first.get(), last.get()));
         }
         passages
             .into_iter()
-            .filter_map(|(first, last)| {
+            .map(|(first, last)| {
                 let (from, to) = practise_range(
                     reference,
-                    MeasureNumber::new(first)?,
-                    MeasureNumber::new(last)?,
+                    MeasureNumber::printed(first),
+                    MeasureNumber::printed(last),
                 );
-                Some(Passage {
+                Passage {
                     first,
                     last,
                     from: from.get(),
                     to: to.get(),
                     facts: self.facts(first..=last),
-                })
+                }
             })
             .collect()
     }
@@ -229,7 +232,7 @@ impl Progress {
     /// What happened in `bars` lately, per pass of each, added up.
     fn facts(&self, bars: std::ops::RangeInclusive<u32>) -> String {
         let (mut pause_us, mut wrong_milli, mut stops) = (0, 0, 0);
-        for bar in bars.filter_map(|measure| self.now.get(MeasureNumber::new(measure)?)) {
+        for bar in bars.filter_map(|measure| self.now.get(MeasureNumber::printed(measure))) {
             let passes = u64::from(bar.passes.max(1));
             pause_us += bar.pause_us / passes;
             wrong_milli += u64::from(bar.wrong) * 1000 / passes;
@@ -250,7 +253,7 @@ impl Progress {
             .iter()
             .filter_map(|session| session.bars.iter().find(|cell| cell.measure == measure))
             .collect();
-        let now = self.now.get(MeasureNumber::new(measure)?)?;
+        let now = self.now.get(MeasureNumber::printed(measure))?;
         if now.passes < 2 {
             return Some(ONCE.to_owned());
         }

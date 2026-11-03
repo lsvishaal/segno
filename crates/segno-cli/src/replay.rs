@@ -70,9 +70,8 @@ pub(crate) fn replay(score: &Path, events: &Path, start: Start) -> Result<String
     let events = events_from(&text)?;
 
     let reference = Arc::new(ReferencePerformance::derived_from(engraved.score()));
-    let bar = |number: u32| {
-        MeasureNumber::new(number).ok_or_else(|| format!("`{number}` is not a bar number"))
-    };
+    // Printed numbers: 0 is the pickup.
+    let bar = |number: u32| -> Result<MeasureNumber, String> { Ok(MeasureNumber::printed(number)) };
     let steps = match start {
         Start::Beginning => 0..reference.len(),
         Start::Bar(number) => reference
