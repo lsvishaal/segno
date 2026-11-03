@@ -1,7 +1,9 @@
 {
-  "schema": 4,
-  "id": "minuet-1792270830806",
-  "piece": "minuet",
+  "schema": 5,
+  "id": "minuet-in-g-1792270830806",
+  "piece": "minuet-in-g",
+  "version": "53f88fc9b8889397",
+  "rules": 1,
   "started": "1792270830806",
   "closed": false,
   "attempts": [

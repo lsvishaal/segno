@@ -267,6 +267,10 @@ mod tests {
         let good = SessionRecord {
             id: format!("{}-1", minuet.as_str()),
             piece: minuet.clone(),
+            version: segno_records::fingerprint(
+                crate::provided::provided(&minuet).expect("bundled").source,
+            ),
+            rules: segno_analysis::RULES,
             started: "1".to_owned(),
             closed: false,
             attempts: vec![AttemptRecord {

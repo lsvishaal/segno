@@ -34,6 +34,9 @@ fn session(id: &str) -> SessionRecord {
     SessionRecord {
         id: id.to_owned(),
         piece: piece(),
+        // The Minuet in G's fingerprint, as in the format fixture.
+        version: "53f88fc9b8889397".to_owned(),
+        rules: 1,
         started: "2026-08-03T19:00:00Z".to_owned(),
         closed: false,
         attempts: vec![
@@ -186,7 +189,7 @@ fn a_record_from_a_newer_version_is_refused_rather_than_guessed_at() {
 
     let path = directory.path().join("history").join("one.json");
     let text = std::fs::read_to_string(&path).expect("reads");
-    std::fs::write(&path, text.replace("\"schema\": 4", "\"schema\": 99")).expect("writes");
+    std::fs::write(&path, text.replace("\"schema\": 5", "\"schema\": 99")).expect("writes");
 
     let (sessions, unreadable) = records.sessions().expect("the directory is readable");
 

@@ -28,15 +28,14 @@ use serde::{Deserialize, Serialize};
 /// understood is worse than one that could not be opened, because the first
 /// silently reports the wrong thing about a performer's practice.
 ///
-/// - **1**: each attempt's notes as bare key numbers, `"played": [74, 67]`.
-///   Still read; never written.
-/// - **2**: each note an object, with when and how hard it was struck and
-///   when it came up, plus the sustain pedal and when the attempt began.
-///   Still read; never written.
-/// - **3**: as 2, plus where each attempt started and how it ended.
-///   Still read; never written.
-/// - **4**: as 3, plus, for one pass of a loop, where the loop ends (`to`,
-///   exclusive), and the ending `"pass"`:
+/// - **1–4** (to 2 Nov 2026): not read. Segno's history started fresh at
+///   the rename (DECISIONS, 3 Nov); a file in one of these is refused.
+/// - **5**: the session names its piece by its permanent ID, the `version`
+///   of the score it was played on (its fingerprint, kept in `versions/`),
+///   and the analysis `rules` it was played under. Each attempt says when it
+///   began, where it started and how it ended; for one pass of a loop, where
+///   the loop ends (`to`, exclusive). Each note says when and how hard it was
+///   struck and when it came up; the sustain pedal is kept:
 ///
 /// ```json
 /// { "began_ms": 1792270830806, "from": 36, "to": 41, "reached": 41, "ended": "pass",
@@ -49,11 +48,10 @@ use serde::{Deserialize, Serialize};
 /// played order, repeats included), never bar numbers. Times are
 /// microseconds since the attempt began; `began_ms` is Unix time in
 /// milliseconds, like a session's `started`. A note's timing fields are
-/// absent where they were never known (it came from a schema 1 file), and
-/// `released_us` is absent if the key was still down when the attempt ended.
-/// Read from schemas 1 and 2, `from` is 0 and `ended` is absent (unknown).
-/// `to` is absent for an attempt that was not a loop's pass.
-pub(crate) const SESSION_SCHEMA: u32 = 4;
+/// absent where they were never known, and `released_us` is absent if the
+/// key was still down when the attempt ended. `to` is absent for an attempt
+/// that was not a loop's pass.
+pub(crate) const SESSION_SCHEMA: u32 = 5;
 
 /// How an attempt ended, as stored. Each name is fixed by its `rename`, so
 /// renaming a variant cannot change what is on disk; a name not listed here
@@ -92,6 +90,12 @@ pub enum Ended {
 ///   Segno's history started fresh at the rename.
 pub(crate) const PIECE_SCHEMA: u32 = 2;
 
+/// Only a record's schema, read before the rest.
+#[derive(Debug, Deserialize)]
+pub(crate) struct Schema {
+    pub(crate) schema: u32,
+}
+
 /// One practice session, as stored.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub(crate) struct StoredSession {
@@ -101,6 +105,10 @@ pub(crate) struct StoredSession {
     pub(crate) id: String,
     /// Which Piece was practised (the design — exactly one).
     pub(crate) piece: String,
+    /// The fingerprint of the score it was played on, kept in `versions/`.
+    pub(crate) version: String,
+    /// Which analysis rules it was played under (`segno_analysis::RULES`).
+    pub(crate) rules: u32,
     /// When it began, as the caller reported it.
     ///
     /// A string in whatever form the caller chose, because the design keeps
@@ -144,9 +152,6 @@ pub(crate) struct StoredAttempt {
     /// Every change of the sustain pedal, in order.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub(crate) pedal: Vec<StoredPedal>,
-    /// Schema 1's notes: bare key numbers. Read, never written.
-    #[serde(default, skip_serializing)]
-    pub(crate) played: Vec<u8>,
 }
 
 /// One played note, as stored.
@@ -238,20 +243,10 @@ pub(crate) fn stored_performance(
 /// have reported: a key or velocity out of range, or timing that is only
 /// partly there. Refused rather than repaired, for the same reason a record
 /// from a newer version is.
-pub(crate) fn read_performance(
-    schema: u32,
-    attempt: &StoredAttempt,
-) -> Result<ObservedPerformance, String> {
+pub(crate) fn read_performance(attempt: &StoredAttempt) -> Result<ObservedPerformance, String> {
     let mut observed = ObservedPerformance::new();
     let key =
         |note: u8| Pitch::new(note).ok_or_else(|| format!("{note} is not a note any key produces"));
-
-    if schema == 1 {
-        for &note in &attempt.played {
-            observed.record(key(note)?);
-        }
-        return Ok(observed);
-    }
 
     for note in &attempt.notes {
         let pitch = key(note.key)?;

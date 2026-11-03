@@ -765,17 +765,7 @@ pub fn start_attempt(
 ) -> Result<(), Refused> {
     let segno = state.inner().0.lock().map_err(|_| POISONED.to_owned())?;
 
-    let id = segno_domain::PieceId::new(&piece_id)
-        .ok_or_else(|| format!("`{piece_id}` is not a usable piece name."))?;
-
-    let piece = segno
-        .library()
-        .pieces()
-        .into_iter()
-        .find(|piece| *piece.id() == id)
-        .ok_or_else(|| format!("There is no piece called `{piece_id}` in the library."))?;
-
-    let reference = std::sync::Arc::new(piece.reference().clone());
+    let (id, reference) = reference_of(&segno, &piece_id)?;
     let named = segno_capture::Instrument::new(instrument);
 
     segno
@@ -900,11 +890,19 @@ pub fn loop_target(target: Option<u32>, state: State<'_, Shared>) -> Result<(), 
 /// Why the start cannot move while the keyboard is lost.
 const LOST: &str = "The keyboard has stopped reporting; wait for it before moving.";
 
-/// The piece called `piece_id`, and what playing it expects.
+/// The piece called `piece_id` as it is practised now (its score's version
+/// kept in the data folder, so the session can always be replayed against
+/// it), and what playing it expects.
 fn reference_of(
     segno: &Segno,
     piece_id: &str,
-) -> Result<(segno_domain::PieceId, std::sync::Arc<ReferencePerformance>), Refused> {
+) -> Result<
+    (
+        crate::practice::Played,
+        std::sync::Arc<ReferencePerformance>,
+    ),
+    Refused,
+> {
     let id = segno_domain::PieceId::new(piece_id)
         .ok_or_else(|| format!("`{piece_id}` is not a usable piece name."))?;
     let piece = segno
@@ -914,7 +912,14 @@ fn reference_of(
         .find(|piece| *piece.id() == id)
         .ok_or_else(|| format!("There is no piece called `{piece_id}` in the library."))?;
     let reference = std::sync::Arc::new(piece.reference().clone());
-    Ok((id, reference))
+    let source = segno
+        .source_of(&id)
+        .ok_or_else(|| format!("The score of `{piece_id}` is missing."))?;
+    let version = segno
+        .records()
+        .keep_version(&source)
+        .map_err(|failure| format!("Could not keep this score's version: {failure:?}"))?;
+    Ok((crate::practice::Played { id, version }, reference))
 }
 
 /// A MIDI output device, as the picker needs it.

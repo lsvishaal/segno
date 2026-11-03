@@ -228,7 +228,7 @@ enum Command {
         reply: SyncSender<Result<Vec<Instrument>, NoInstrument>>,
     },
     Start {
-        piece_id: PieceId,
+        piece_id: Played,
         reference: Arc<ReferencePerformance>,
         instrument: Instrument,
         reply: SyncSender<Result<(), NoInstrument>>,
@@ -238,13 +238,13 @@ enum Command {
         reply: SyncSender<Result<AttemptSummary, NotPracticing>>,
     },
     StartAt {
-        piece_id: PieceId,
+        piece_id: Played,
         reference: Arc<ReferencePerformance>,
         measure: MeasureNumber,
         reply: SyncSender<Result<StartPoint, NoStart>>,
     },
     LoopBars {
-        piece_id: PieceId,
+        piece_id: Played,
         reference: Arc<ReferencePerformance>,
         wanted: LoopOf,
         reply: SyncSender<Result<LoopRange, NoStart>>,
@@ -325,7 +325,7 @@ impl Practice {
     /// [`NoInstrument`] if the instrument could not be opened.
     pub fn start_attempt(
         &self,
-        piece_id: PieceId,
+        piece_id: Played,
         reference: Arc<ReferencePerformance>,
         instrument: Instrument,
     ) -> Result<(), NoInstrument> {
@@ -376,7 +376,7 @@ impl Practice {
     /// or the keyboard is lost.
     pub fn start_at_bar(
         &self,
-        piece_id: PieceId,
+        piece_id: Played,
         reference: Arc<ReferencePerformance>,
         measure: MeasureNumber,
     ) -> Result<StartPoint, NoStart> {
@@ -405,7 +405,7 @@ impl Practice {
     /// to strike, or the keyboard is lost.
     pub fn loop_bars(
         &self,
-        piece_id: PieceId,
+        piece_id: Played,
         reference: Arc<ReferencePerformance>,
         wanted: LoopOf,
     ) -> Result<LoopRange, NoStart> {
@@ -484,9 +484,20 @@ impl Practice {
     }
 }
 
+/// A piece as it is practised: its permanent ID, and the version of its score
+/// (the fingerprint kept in the data folder) that attempts are judged against.
+/// A new version starts a new session.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Played {
+    /// Which piece.
+    pub id: PieceId,
+    /// Which version of its score.
+    pub version: String,
+}
+
 /// One piece's practice sitting, and enough about it to keep a record.
 struct OpenSession {
-    piece_id: PieceId,
+    piece_id: Played,
     id: String,
     started: String,
     session: PracticeSession,
@@ -1001,7 +1012,7 @@ impl Ongoing {
 /// Opens a session on `piece_id`, unless one is already open on it.
 fn open_session(
     session: &mut Option<OpenSession>,
-    piece_id: PieceId,
+    piece_id: Played,
     reference: Arc<ReferencePerformance>,
 ) {
     if session
@@ -1014,7 +1025,7 @@ fn open_session(
     let stamp = unix_ms();
 
     *session = Some(OpenSession {
-        id: format!("{}-{stamp}", piece_id.as_str()),
+        id: format!("{}-{stamp}", piece_id.id.as_str()),
         started: stamp.to_string(),
         piece_id,
         session: PracticeSession::open(reference),
@@ -1033,7 +1044,7 @@ fn open_session(
 fn start_at(
     session: &mut Option<OpenSession>,
     ongoing: &mut Option<Ongoing>,
-    piece_id: PieceId,
+    piece_id: Played,
     reference: Arc<ReferencePerformance>,
     measure: MeasureNumber,
     records: &Records,
@@ -1079,7 +1090,7 @@ fn start_at(
 fn loop_bars(
     session: &mut Option<OpenSession>,
     ongoing: &mut Option<Ongoing>,
-    piece_id: PieceId,
+    piece_id: Played,
     reference: Arc<ReferencePerformance>,
     wanted: LoopOf,
     records: &Records,
@@ -1217,7 +1228,9 @@ fn finish(
 
         let record = SessionRecord {
             id: open.id.clone(),
-            piece: open.piece_id.clone(),
+            piece: open.piece_id.id.clone(),
+            version: open.piece_id.version.clone(),
+            rules: segno_analysis::RULES,
             started: open.started.clone(),
             closed: false,
             attempts: open
@@ -1268,7 +1281,7 @@ mod tests {
     use segno_records::{Ended, Records};
 
     use super::{
-        Command, Ending, Kept, LoopOf, LoopRange, NoStart, Ongoing, OpenSession, Practice,
+        Command, Ending, Kept, LoopOf, LoopRange, NoStart, Ongoing, OpenSession, Played, Practice,
         PracticeEvent, Sink, drain, end, finish, handle, loop_bars, start_at,
     };
 
@@ -1310,7 +1323,7 @@ mod tests {
             .into_iter()
             .find(|piece| piece.title() == "Minuet in G Major")
             .expect("the Minuet is on the shelf");
-        let id = minuet.id().clone();
+        let id = played(minuet.id());
 
         let mut session = Some(OpenSession {
             piece_id: id.clone(),
@@ -1330,14 +1343,14 @@ mod tests {
         };
         let nothing = session.as_ref().expect("open").session.begin_attempt();
         drop(finish(&mut session, nothing, stop, &records, false, None));
-        assert_eq!(records.sessions_of(&id), 0, "an empty attempt was kept");
+        assert_eq!(records.sessions_of(&id.id), 0, "an empty attempt was kept");
 
         // D5 is the first note of the Minuet.
         let mut one = session.as_ref().expect("open").session.begin_attempt();
         one.play(Pitch::new(74).expect("D5 is a piano key"));
         drop(finish(&mut session, one, stop, &records, false, None));
         assert_eq!(
-            records.sessions_of(&id),
+            records.sessions_of(&id.id),
             1,
             "an attempt with a note was not kept"
         );
@@ -1355,13 +1368,7 @@ mod tests {
     }
 
     /// The real Minuet, through the real engine, and an empty history.
-    fn minuet(
-        name: &str,
-    ) -> (
-        Records,
-        segno_domain::PieceId,
-        Arc<segno_notation::ReferencePerformance>,
-    ) {
+    fn minuet(name: &str) -> (Records, Played, Arc<segno_notation::ReferencePerformance>) {
         let directory = std::env::temp_dir().join(format!("segno-practice-{name}"));
         drop(std::fs::remove_dir_all(&directory));
         let records = Records::under(&directory);
@@ -1378,9 +1385,19 @@ mod tests {
             .expect("the Minuet is on the shelf");
         (
             records,
-            piece.id().clone(),
+            played(piece.id()),
             Arc::new(piece.reference().clone()),
         )
+    }
+
+    /// A bundled piece as practised: its tag and its file's fingerprint.
+    fn played(id: &segno_domain::PieceId) -> Played {
+        Played {
+            id: id.clone(),
+            version: segno_records::fingerprint(
+                crate::provided::provided(id).expect("bundled").source,
+            ),
+        }
     }
 
     fn practising(reference: &Arc<segno_notation::ReferencePerformance>) -> Ongoing {
@@ -1427,7 +1444,7 @@ mod tests {
         assert_eq!((point.position, point.measure), (36, 9));
         assert_eq!(session.as_ref().expect("open").from, 36);
         assert!(ongoing.is_none());
-        assert_eq!(records.sessions_of(&id), 0);
+        assert_eq!(records.sessions_of(&id.id), 0);
     }
 
     #[test]
@@ -1450,7 +1467,7 @@ mod tests {
             .expect("a bar with notes");
         }
 
-        assert_eq!(records.sessions_of(&id), 0);
+        assert_eq!(records.sessions_of(&id.id), 0);
         assert_eq!(ongoing.expect("still practising").attempt.from(), 36);
     }
 
@@ -1565,7 +1582,7 @@ mod tests {
         assert_eq!(refused, Err(NoStart::InstrumentLost));
         assert!(session.is_none());
         assert_eq!(ongoing.expect("still waiting").attempt.from(), 0);
-        assert_eq!(records.sessions_of(&id), 0);
+        assert_eq!(records.sessions_of(&id.id), 0);
     }
 
     #[test]
@@ -1678,7 +1695,7 @@ mod tests {
         let open = session.expect("open");
         assert_eq!(open.from, 36);
         assert_eq!(open.looping.expect("looping").pass.range(), 36..44);
-        assert_eq!(records.sessions_of(&id), 0);
+        assert_eq!(records.sessions_of(&id.id), 0);
     }
 
     // Bars 15-18 run over the end of the first repeat: only the second time

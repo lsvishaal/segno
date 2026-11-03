@@ -44,3 +44,11 @@ pub use analysis::{Analysis, Summary};
 pub use bars::{Bar, Bars, StepTrace, Timing, Trace};
 pub use finding::Finding;
 pub use suggestion::Suggestion;
+
+/// Which rules judged an attempt: bump this whenever a change here would
+/// judge an already-kept attempt differently (what counts as a pause, a
+/// wrong note, a level). Each session records the number it was played
+/// under. Results are still recomputed with today's rules (D5) and the
+/// performer is not told (DECISIONS, 3 Nov, Q5); the number is kept so a
+/// change can be traced in the data.
+pub const RULES: u32 = 1;

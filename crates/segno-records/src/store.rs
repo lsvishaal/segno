@@ -9,7 +9,7 @@ use segno_domain::PieceId;
 use crate::atomic;
 pub use crate::stored::Ended;
 use crate::stored::{
-    PIECE_SCHEMA, SESSION_SCHEMA, StoredAttempt, StoredPiece, StoredSession, read_id,
+    PIECE_SCHEMA, SESSION_SCHEMA, Schema, StoredAttempt, StoredPiece, StoredSession, read_id,
     read_performance, stored_performance,
 };
 
@@ -60,6 +60,11 @@ pub struct SessionRecord {
     pub id: String,
     /// Which Piece was practised (the design — exactly one).
     pub piece: PieceId,
+    /// The fingerprint of the score it was played on, kept in
+    /// [`Records::versions`]: its attempts are judged against that version.
+    pub version: String,
+    /// Which analysis rules it was played under (`segno_analysis::RULES`).
+    pub rules: u32,
     /// When it began, as the caller reported it.
     ///
     /// Supplied, never read from a clock. The design keeps the clock out of
@@ -273,6 +278,8 @@ impl Records {
             schema: SESSION_SCHEMA,
             id: session.id.clone(),
             piece: session.piece.as_str().to_owned(),
+            version: session.version.clone(),
+            rules: session.rules,
             started: session.started.clone(),
             closed: session.closed,
             attempts: session
@@ -288,7 +295,6 @@ impl Records {
                         ended: attempt.ended,
                         notes,
                         pedal,
-                        played: Vec::new(),
                     }
                 })
                 .collect(),
@@ -548,19 +554,30 @@ impl Records {
 
     fn read_session(path: &Path) -> Result<SessionRecord, RecordsFailure> {
         let text = fs::read_to_string(path)?;
+        let unreadable = |detail: String| RecordsFailure::Unreadable {
+            path: path.to_path_buf(),
+            detail,
+        };
 
-        let stored: StoredSession =
-            serde_json::from_str(&text).map_err(|failure| RecordsFailure::Unreadable {
-                path: path.to_path_buf(),
-                detail: failure.to_string(),
-            })?;
-
-        if stored.schema > SESSION_SCHEMA {
+        // The schema first, so a file from another version is named as one
+        // rather than as a missing field.
+        let schema = serde_json::from_str::<Schema>(&text)
+            .map_err(|failure| unreadable(failure.to_string()))?
+            .schema;
+        if schema > SESSION_SCHEMA {
             return Err(RecordsFailure::FromTheFuture {
                 path: path.to_path_buf(),
-                schema: stored.schema,
+                schema,
             });
         }
+        if schema < SESSION_SCHEMA {
+            return Err(unreadable(format!(
+                "schema {schema} is from before Segno's history started fresh (3 Nov 2026), so it is not read"
+            )));
+        }
+
+        let stored: StoredSession =
+            serde_json::from_str(&text).map_err(|failure| unreadable(failure.to_string()))?;
 
         let piece = read_id(&stored.piece).ok_or_else(|| RecordsFailure::Unreadable {
             path: path.to_path_buf(),
@@ -570,12 +587,11 @@ impl Records {
         let mut attempts = Vec::new();
 
         for attempt in stored.attempts {
-            let played = read_performance(stored.schema, &attempt).map_err(|detail| {
-                RecordsFailure::Unreadable {
+            let played =
+                read_performance(&attempt).map_err(|detail| RecordsFailure::Unreadable {
                     path: path.to_path_buf(),
                     detail,
-                }
-            })?;
+                })?;
 
             // An attempt cannot have got less far than where it started, nor
             // a loop's pass further than the loop's end.
@@ -613,6 +629,8 @@ impl Records {
         Ok(SessionRecord {
             id: stored.id,
             piece,
+            version: stored.version,
+            rules: stored.rules,
             started: stored.started,
             closed: stored.closed,
             attempts,

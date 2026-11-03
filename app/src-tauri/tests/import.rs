@@ -412,6 +412,8 @@ fn a_deleted_piece_and_its_history_are_gone_after_a_restart() {
         .keep(&segno_records::SessionRecord {
             id: "practised-once".to_owned(),
             piece: canon_id.clone(),
+            version: segno_records::fingerprint(&canon_source),
+            rules: segno_analysis::RULES,
             started: "1".to_owned(),
             closed: true,
             attempts: Vec::new(),

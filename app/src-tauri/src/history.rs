@@ -412,6 +412,11 @@ fn cell(measure: u32, bar: &Bar) -> Cell {
 
 #[cfg(test)]
 mod tests {
+    /// The fingerprint of a bundled piece's file: the version its sessions
+    /// are played on.
+    fn version(piece: &segno_domain::PieceId) -> String {
+        segno_records::fingerprint(crate::provided::provided(piece).expect("bundled").source)
+    }
     use std::sync::Arc;
     use std::time::Instant;
 
@@ -496,6 +501,8 @@ mod tests {
         let session = SessionRecord {
             id: id.to_owned(),
             piece: piece.clone(),
+            version: version(piece),
+            rules: segno_analysis::RULES,
             started: "2026-10-25T10:00:00Z".to_owned(),
             closed: true,
             attempts,
@@ -545,6 +552,8 @@ mod tests {
         let session = |id: &str, started: &str| SessionRecord {
             id: id.to_owned(),
             piece: piece.clone(),
+            version: version(&piece),
+            rules: segno_analysis::RULES,
             started: started.to_owned(),
             closed: true,
             attempts: vec![run(&minuet, stall, 12_000_000)],
@@ -573,6 +582,8 @@ mod tests {
         let session = |attempt| SessionRecord {
             id: "once".to_owned(),
             piece: piece.clone(),
+            version: version(&piece),
+            rules: segno_analysis::RULES,
             started: "1761300000000".to_owned(),
             closed: true,
             attempts: vec![attempt],
@@ -624,6 +635,8 @@ mod tests {
             .map(|(day, attempt)| SessionRecord {
                 id: format!("day{day}"),
                 piece: piece.clone(),
+                version: version(piece),
+                rules: segno_analysis::RULES,
                 started: (1_761_300_000_000 + 86_400_000 * day as u64).to_string(),
                 closed: true,
                 attempts: vec![attempt],
