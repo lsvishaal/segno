@@ -111,7 +111,7 @@ Commands:
 8. **An idea mid-task:** one dated line in the ROADMAP Parking lot. Nothing else.
 
 ## Product principles (detail in `docs/PRODUCT.md`)
-- Local-first: no accounts, no network calls, no telemetry.
+- Local-first: no accounts, no telemetry, no network calls except the opt-in update check (D14).
 - No gamification: no XP, streaks or badges. Accuracy % and tempo may appear, never
   as the headline; show facts, never the combined difficulty number.
 - Helping the user decide what to practise is the product.

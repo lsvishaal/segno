@@ -57,7 +57,7 @@ These are settled. Reopen one only with new evidence, and log it in DECISIONS.md
 | **No gamification.** No XP, ranks, levels, streaks, points or badges. | It optimises for opening the app, not for getting better. Motivation should come from watching a bar improve. |
 | **Factual feedback.** Location + measurement, never praise or judgment. Accuracy % and tempo may appear, never as the headline (24 Oct). | "Bar 9: stalled 4 s, 2 wrong notes" is useful. "Great job!" is noise, and "You struggled" stings. |
 | **The cursor waits.** Wait mode is the core experience. | It's what makes reading practice possible at your own speed. Tempo comes later, as a graduation step. |
-| **Local-first.** No accounts, no network, no telemetry. | Your practice history is personal. It also means nothing to host, nothing to break. |
+| **Local-first.** No accounts, no telemetry, no network except the opt-in update check (D14: only the latest version number, from GitHub). | Your practice history is personal. It also means nothing to host, nothing to break. |
 | **Everything is free.** No locked features, ever. | MidiSlayer charges $50 to play a public-domain Bach prelude. Being the free version is the point. |
 | **Users bring their own music.** Segno bundles only lawfully redistributable scores. | Shipping copyrighted arrangements gets a repo taken down. |
 | **Integration over invention.** Verovio engraves, midir talks MIDI, MusicXML is the source of truth. | Every hour spent rebuilding a solved problem is an hour not spent on weak bars. |

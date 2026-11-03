@@ -44,6 +44,8 @@ order below.
 - [ ] A clean first run works (empty data folder → library → a starter piece)
 - [ ] Tag `stable-base-1` pushed (not a release)
 - [ ] CI green on the tagged commit
+- [ ] **Phase 2.5 · M** Durable identity and history (DECISIONS 3 Nov): permanent piece IDs, sessions keep their score version, replay per version
+- [ ] **S** Re-import the owner's 3 scores (Canon in D, Metro 2033, "Untitled") into the real folder, after Phase 2.5
 - [-] Stable base B (demo history) and C (UI tour) — 3 Nov, deferred until after `stable-base-1`; B comes before the M-Test README and screenshots (M4.6, M3.20)
 
 ### M-Win — Windows parity (D3)
@@ -65,6 +67,7 @@ First task after the checkpoint: the Verovio DLL spike (a `windows-latest` CI jo
 - [ ] **M4.3 · S** First piece playable in ≤ 3 clicks
 - [ ] **M1.3 · S** A keyboard plugged in after launch is found (every 3 s, plus Rescan); one-click
       start; visible device indicator. Remembering the keyboard: done 31 Oct
+- [ ] **D14 · M** Opt-in updates: asked once on first run; daily version check, one-click install (Tauri updater); "Check for updates" in About
 - [ ] **M4.10 · S** No raw error text anywhere
 - [ ] **M4.6 · M** README for strangers (outline in `docs/RELEASE.md`)
 - [ ] **M4.11 · S** A short "please try this" card

@@ -5,7 +5,7 @@ decision (kept current), the **D-list as first written** (options and reasoning,
 kept as written), and the **log** (append-only: date · decision · why · what it
 replaced). A new decision is a log line, plus a status row if it has a D-number.
 
-## Status (updated 2026-11-02 evening)
+## Status (updated 2026-11-03)
 
 | ID | Topic | Status |
 |---|---|---|
@@ -22,6 +22,7 @@ replaced). A new decision is a log line, plus a status row if it has a D-number.
 | D11 | Clean pass in a loop | **Decided by implementation 22 Oct:** every position right, no wrong notes |
 | D12 | Bundled library for v1.0 | Recommended: 12–15 pieces across levels (M3.18) |
 | D13 | Where Listen's sound comes from | **Open** (reopened 24 Oct). "Built-in synth" is no longer on the Never list |
+| D14 | Updates | **Decided 3 Nov:** opt-in. First run asks once; yes = a daily check of the latest version number on GitHub and a one-click install (Tauri updater); "Check for updates" always in About; never silent. An M-Test gate |
 
 ---
 
@@ -124,3 +125,8 @@ _Date · decision · why · what it replaced._
 - 2026-11-02 · Level thresholds (D10) stay provisional until dogfood data exists · the self-use week produced no sessions · a re-check at the 1 Nov cut-check
 - 2026-11-03 · Stable base B (demo history) and C (UI tour) are deferred until after `stable-base-1`; B comes before the M-Test README and screenshots (M4.6, M3.20) · neither is an M-Base gate, and B adds a shell hook during the freeze · "the owner decides after the Phase 1 audit"
 - 2026-11-03 · The old localStorage keys `hogwash.zoom`, `hogwash.marks` and `hogwash.keyboard` keep their names through the rename · the one-time settings migration reads them by name; renaming them would silently lose the owner's settings · renaming every "hogwash"
+- 2026-11-03 · The owner's data starts fresh: only the owner's own imported MusicXML files matter, and Claude re-imports them (Canon in D, Metro 2033 Main Menu Theme, "Untitled"; not the generated "Ode to Joy Level 1") after Phase 2.5. The owner parks the old folder as a backup. No code reads pre-Segno history, settings or webview storage · the owner is the only user so far · keeping old history readable through aliases and old-format readers (the first Phase 2.5 draft)
+- 2026-11-03 · The one-time localStorage → `settings.json` migration and the three `hogwash.*` keys are removed; with no `settings.json`, the defaults are used and saved · fresh start · the 3 Nov line keeping the old keys
+- 2026-11-03 · A Little Chord Study is no longer bundled; files Claude writes (scores, fixtures) are marked as Claude's in PROVENANCE or a header comment · Claude wrote it for testing; the owner keeps only pieces they chose · bundling it
+- 2026-11-03 · Phase 2.5, durable identity: every piece has a permanent ID (bundled: a fixed tag in a manifest, e.g. `minuet-in-g`; imported: an ID given once at import). The content hash stays, only to spot duplicate imports and to name a version. Every session records the piece ID and the score version (content hash) it was played on; that version is kept in the data folder's content-addressed score store (bundled ones copied in on first play); analysis replays each session against its own version, so editing a score never changes past results. Progress combines sessions per bar number across versions and says so plainly when a new version changes the bar count or structure · any edit to a score orphaned its history, and under D5 old attempts would be re-judged against edited notes · piece ID = SHA-256 of the file (first 16 hex)
+- 2026-11-03 · D14 decided: updates are opt-in. First run asks once whether to check for new versions (only the latest version number is fetched from GitHub; nothing else is sent). Yes = a daily check offering a one-click install via the Tauri updater; "Check for updates" is always in About. No silent updates. The product rule "no network" becomes "no network except the opt-in update check"; an M-Test gate · testers need fixes without hunting for downloads · no update mechanism
