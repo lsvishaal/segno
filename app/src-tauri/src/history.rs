@@ -2,7 +2,8 @@
 //! session by session, to say which bars are hard for this performer now.
 
 use std::cmp::Reverse;
-use std::collections::BTreeSet;
+use std::collections::{BTreeMap, BTreeSet};
+use std::sync::Arc;
 
 use segno_analysis::coach::practise_range;
 use segno_analysis::{Bar, Bars};
@@ -33,9 +34,46 @@ pub fn last_practised(sessions: &[SessionRecord], piece: &PieceId) -> Option<u64
 pub struct Progress {
     /// How many attempts (runs and loop passes) this is from.
     pub runs: usize,
+    /// The sessions on a version with today's bar structure, bar by bar.
     pub sessions: Vec<SessionBars>,
     /// Each bar's own last three sessions in which it was played, added up.
     pub now: Bars,
+    /// Sessions on a version whose bars don't match today's: counted in the
+    /// totals, never mixed into the bars (DECISIONS, 3 Nov, Q2).
+    pub earlier: usize,
+    /// Their time on the notes.
+    pub earlier_played_us: u64,
+    /// When the score's bars last changed (Segno kept today's version), if
+    /// there are earlier sessions.
+    pub updated_ms: Option<u64>,
+}
+
+/// The versions of a piece's score its sessions were played on.
+pub struct Versions<'a> {
+    /// The version now (its fingerprint) and what it expects.
+    pub now: String,
+    pub reference: &'a ReferencePerformance,
+    /// When Segno first kept the version now, in Unix milliseconds.
+    pub now_kept_ms: Option<u64>,
+    /// Any other version, engraved; `None` if it can't be.
+    pub older: &'a dyn Fn(&str) -> Option<Arc<ReferencePerformance>>,
+}
+
+impl std::fmt::Debug for Versions<'_> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("Versions")
+            .field("now", &self.now)
+            .field("now_kept_ms", &self.now_kept_ms)
+            .finish_non_exhaustive()
+    }
+}
+
+/// The bar each step of a version falls in, in played order. Two versions
+/// with the same structure have the same bars, so their sessions are
+/// combined by bar number; an edited note keeps it, a bar added, removed or
+/// repeated differently doesn't.
+fn structure(reference: &ReferencePerformance) -> Vec<u32> {
+    reference.iter().map(|step| step.measure().get()).collect()
 }
 
 /// One session, bar by bar.
@@ -105,9 +143,14 @@ pub struct ProgressView {
     pub composer: Option<String>,
     /// How many bars the piece has: the grid's columns.
     pub bars: usize,
-    /// Newest first.
+    /// Newest first: the sessions on today's bar structure.
     pub sessions: Vec<SessionBars>,
+    /// Every session, whatever version it was played on.
+    pub practised: usize,
     pub played_us: u64,
+    /// When the score's bars changed, if older sessions are left out of the
+    /// bars: "This piece was updated on …".
+    pub updated_ms: Option<u64>,
     pub last_practised_ms: Option<u64>,
     /// Every bar played, in bar order.
     pub now: Vec<NowBar>,
@@ -254,7 +297,14 @@ impl Progress {
             composer: piece.composer().map(str::to_owned),
             bars,
             sessions: self.sessions.iter().rev().cloned().collect(),
-            played_us: self.sessions.iter().map(|session| session.played_us).sum(),
+            practised: self.sessions.len() + self.earlier,
+            played_us: self
+                .sessions
+                .iter()
+                .map(|session| session.played_us)
+                .sum::<u64>()
+                + self.earlier_played_us,
+            updated_ms: self.updated_ms,
             last_practised_ms,
             now: self
                 .now
@@ -335,6 +385,28 @@ fn facts_per_pass(pause_us: u64, wrong_milli: u64, stops: u32) -> String {
     }
 }
 
+/// `piece`'s progress in the running app: each session replayed against the
+/// version it was played on.
+#[must_use]
+pub fn progress_of(
+    segno: &crate::state::Segno,
+    sessions: &[SessionRecord],
+    piece: &segno_library::Piece,
+) -> Progress {
+    let now = segno.version_now(piece.id()).unwrap_or_default();
+    let older = |version: &str| segno.engraved_version(version);
+    progress_in(
+        sessions,
+        piece.id(),
+        &Versions {
+            now_kept_ms: segno.records().version_kept_ms(&now),
+            now,
+            reference: piece.reference(),
+            older: &older,
+        },
+    )
+}
+
 /// Every session that can be read; none if the history folder can't be.
 #[must_use]
 pub fn sessions(records: &Records) -> Vec<SessionRecord> {
@@ -344,13 +416,14 @@ pub fn sessions(records: &Records) -> Vec<SessionRecord> {
         .unwrap_or_default()
 }
 
-/// Replays every attempt kept for `piece` against `reference`, over
-/// sessions already read (so a whole library reads them once).
+/// Replays every attempt kept for `piece` against the version of the score
+/// it was played on, over sessions already read (so a whole library reads
+/// them once). An edited score never changes a past result.
 #[must_use]
 pub fn progress_in(
     sessions: &[SessionRecord],
     piece: &PieceId,
-    reference: &ReferencePerformance,
+    versions: &Versions<'_>,
 ) -> Progress {
     let mut mine: Vec<&SessionRecord> = sessions
         .iter()
@@ -359,26 +432,50 @@ pub fn progress_in(
     let started = |session: &SessionRecord| session.started.parse::<u64>().unwrap_or(0);
     mine.sort_by_key(|session| started(session));
 
+    let today = structure(versions.reference);
+    let mut older: BTreeMap<&str, Option<(Arc<ReferencePerformance>, bool)>> = BTreeMap::new();
     let mut runs = 0;
-    let per_session: Vec<Bars> = mine
-        .iter()
-        .map(|session| {
-            let mut bars = Bars::default();
-            for attempt in &session.attempts {
-                // A score re-imported shorter leaves old attempts past its end.
-                let to = attempt.to.unwrap_or(reference.len()).min(reference.len());
-                let gave_up = matches!(attempt.ended, Some(Ended::Restart | Ended::Stop));
-                bars.add(&Bars::of(
-                    &attempt.played,
-                    reference,
-                    attempt.from.min(to)..to,
-                    gave_up,
-                ));
-                runs += 1;
-            }
-            bars
-        })
-        .collect();
+    let mut earlier = 0;
+    let mut earlier_played_us = 0;
+    let mut kept: Vec<(&SessionRecord, Bars)> = Vec::new();
+    for session in mine {
+        let (reference, same) = if session.version == versions.now {
+            (versions.reference, true)
+        } else {
+            let found = older.entry(&session.version).or_insert_with(|| {
+                (versions.older)(&session.version).map(|reference| {
+                    let same = structure(&reference) == today;
+                    (reference, same)
+                })
+            });
+            // Its version is missing or no longer reads: it still counts.
+            let Some((reference, same)) = found else {
+                earlier += 1;
+                continue;
+            };
+            (&**reference, *same)
+        };
+
+        let mut bars = Bars::default();
+        for attempt in &session.attempts {
+            let to = attempt.to.unwrap_or(reference.len()).min(reference.len());
+            let gave_up = matches!(attempt.ended, Some(Ended::Restart | Ended::Stop));
+            bars.add(&Bars::of(
+                &attempt.played,
+                reference,
+                attempt.from.min(to)..to,
+                gave_up,
+            ));
+        }
+        if same {
+            runs += session.attempts.len();
+            kept.push((session, bars));
+        } else {
+            earlier += 1;
+            earlier_played_us += bars.total().played_us;
+        }
+    }
+    let (mine, per_session): (Vec<&SessionRecord>, Vec<Bars>) = kept.into_iter().unzip();
 
     Progress {
         runs,
@@ -396,6 +493,13 @@ pub fn progress_in(
             })
             .collect(),
         now: Bars::now(&per_session),
+        earlier,
+        earlier_played_us,
+        updated_ms: if earlier > 0 {
+            versions.now_kept_ms
+        } else {
+            None
+        },
     }
 }
 
@@ -425,6 +529,27 @@ mod tests {
     use segno_records::{AttemptRecord, SessionRecord};
 
     use super::*;
+
+    /// Every session judged against `reference`, the piece's only version.
+    fn progress_in(
+        sessions: &[SessionRecord],
+        piece: &PieceId,
+        reference: &ReferencePerformance,
+    ) -> Progress {
+        fn none(_: &str) -> Option<Arc<ReferencePerformance>> {
+            None
+        }
+        super::progress_in(
+            sessions,
+            piece,
+            &Versions {
+                now: version(piece),
+                reference,
+                now_kept_ms: None,
+                older: &none,
+            },
+        )
+    }
 
     /// The real Minuet, through the real engine, and an empty history.
     fn minuet(name: &str) -> (Records, PieceId, Arc<ReferencePerformance>) {
@@ -779,6 +904,63 @@ mod tests {
             began.elapsed().as_millis() < budget,
             "{:?}",
             began.elapsed()
+        );
+    }
+
+    // Sessions on an older version of the score: with the same bars, they are
+    // combined with today's by bar number; with other bars (here, the
+    // Prelude's), or a version that can't be read, they count in the totals
+    // but stay out of the bars (DECISIONS, 3 Nov, Q2).
+    #[test]
+    #[ignore = "needs a real libverovio; run `just provided-test`"]
+    fn older_versions_are_combined_only_when_their_bars_match() {
+        let (_, piece, minuet) = minuet("versions");
+        let (_, _, prelude) = provided("versions-prelude", "Prelude in C Major");
+        let stall = minuet.len() / 2;
+        let on = |version: &str, day: u64| SessionRecord {
+            id: format!("v{day}"),
+            piece: piece.clone(),
+            version: version.to_owned(),
+            rules: segno_analysis::RULES,
+            started: (1_761_300_000_000 + 86_400_000 * day).to_string(),
+            closed: true,
+            attempts: vec![run(&minuet, stall, 12_000_000)],
+        };
+        let older = |version: &str| match version {
+            "same-bars" => Some(Arc::clone(&minuet)),
+            "other-bars" => Some(Arc::clone(&prelude)),
+            _ => None,
+        };
+        let versions = Versions {
+            now: version(&piece),
+            reference: &minuet,
+            now_kept_ms: Some(1_761_400_000_000),
+            older: &older,
+        };
+        let sessions = [
+            on("same-bars", 0),
+            on("other-bars", 1),
+            on("gone", 2),
+            on(&version(&piece), 3),
+        ];
+
+        let progress = super::progress_in(&sessions, &piece, &versions);
+
+        let combined = progress_in(
+            &[on(&version(&piece), 0), on(&version(&piece), 3)],
+            &piece,
+            &minuet,
+        );
+        assert_eq!(progress.sessions, combined.sessions);
+        assert_eq!(progress.now, combined.now);
+        assert_eq!(progress.earlier, 2);
+        assert_eq!(progress.updated_ms, Some(1_761_400_000_000));
+
+        let only_today = super::progress_in(&[on(&version(&piece), 3)], &piece, &versions);
+        assert_eq!(only_today.earlier, 0);
+        assert_eq!(
+            only_today.updated_ms, None,
+            "no line when nothing is left out"
         );
     }
 }

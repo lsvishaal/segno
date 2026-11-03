@@ -287,7 +287,13 @@ Results are described in 17.2.
 The **Progress page** (M2.10; levels and words from `app/src-tauri/src/history.rs`):
 - **Header:** composer (small caps), title (serif italic), a plain line
   "Practised 3 times · 4 min in total · last practised today", and under it
-  "Which bars need work, and whether they're getting better."
+  "Which bars need work, and whether they're getting better." The header counts every
+  session, whatever version of the score it was played on.
+- **After the score's bars change** (a new version with bars added, removed or repeated
+  differently): one muted line under the header, "This piece was updated on 3 Nov;
+  bar-by-bar progress starts from then." Everything below uses only the sessions on
+  today's bars. A version with the same bars (an edited note) is combined by bar
+  number, with no line. Each session is judged against the version it was played on.
 - **Practise next:** up to 3 rows, "Bars 6–7 — about 3.1 s of hesitation each time
   through, a wrong note 1 time in 3" with "⟲ Practise bars 5–7" (from one bar
   before, clamped at bar 1). Judged bars at level ≥ 1, worst first, neighbours

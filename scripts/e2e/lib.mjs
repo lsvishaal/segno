@@ -77,9 +77,9 @@ export function sessionFiles() {
     .sort()
     .map((file) => ({ file, ...JSON.parse(fs.readFileSync(`${HISTORY}/${file}`, "utf8")) }));
 }
-/** Each session's attempts, as note counts (schema 1 or 2). */
+/** Each session's attempts, as note counts. */
 export const sessions = () =>
-  sessionFiles().map((s) => ({ file: s.file, piece: s.piece, attempts: s.attempts.map((a) => (a.notes ?? a.played).length) }));
+  sessionFiles().map((s) => ({ file: s.file, piece: s.piece, attempts: s.attempts.map((a) => a.notes.length) }));
 export const newSessions = (before) => sessions().filter((s) => !before.some((b) => b.file === s.file));
 
 /** The Minuet's notes in the order the cursor wants them (`just expected`). */

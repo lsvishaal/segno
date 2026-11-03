@@ -40,7 +40,9 @@ const MINUET: ProgressView = {
     { startedMs: day(30), playedUs: 40_000_000, bars: [cell(5, 0), cell(6, 2, 6_200_000, 1)] },
     { startedMs: day(29), playedUs: 35_000_000, bars: [cell(5, 0), cell(6, 3, 12_400_000, 2), cell(7, 1)] },
   ],
+  practised: 2,
   playedUs: 75_000_000,
+  updatedMs: null,
   lastPractisedMs: day(30),
   now: [
     { measure: 5, level: 0 },
@@ -71,6 +73,15 @@ describe("the Progress page", () => {
     expect(screen.getByText("Minuet in G Major")).toBeTruthy();
     expect(screen.getByText(/^Practised 2 times · 1 min in total · last practised yesterday$/)).toBeTruthy();
     expect(screen.getByText("Which bars need work, and whether they're getting better.")).toBeTruthy();
+    expect(document.querySelector("[data-progress-updated]")).toBeNull();
+  });
+
+  it("when the score's bars changed: one line, and the totals still count the older sessions", async () => {
+    await show({ ...MINUET, practised: 5, playedUs: 200_000_000, updatedMs: day(29) });
+
+    expect(screen.getByText("This piece was updated on 29 Oct; bar-by-bar progress starts from then.")).toBeTruthy();
+    expect(screen.getByText(/^Practised 5 times · 3 min in total/)).toBeTruthy();
+    expect(document.querySelector("[data-piece-map]")).toBeTruthy();
   });
 
   it("lists what to practise next, each practised from the bar before", async () => {
@@ -142,7 +153,7 @@ describe("the Progress page", () => {
   });
 
   it("for a piece never played: one line and Practise, no map", async () => {
-    const onPractise = await show({ ...MINUET, sessions: [], now: [], workOnNext: [], details: [], lastPractisedMs: null, playedUs: 0 });
+    const onPractise = await show({ ...MINUET, sessions: [], now: [], workOnNext: [], details: [], lastPractisedMs: null, practised: 0, playedUs: 0 });
 
     expect(screen.getByText("Play this piece once and your progress shows here.")).toBeTruthy();
     expect(document.querySelector("[data-piece-map]")).toBeNull();

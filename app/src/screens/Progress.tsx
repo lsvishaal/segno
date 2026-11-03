@@ -128,18 +128,24 @@ function Page({
   readonly now: number;
 }) {
   const sessions = view.sessions.length;
+  const practised = view.practised;
   return (
     <>
       <header className="mt-6">
         {view.composer && <p className="text-label text-ink-muted uppercase">{view.composer}</p>}
         <h1 className="mt-1 font-serif text-heading italic">{view.title}</h1>
-        {sessions > 0 && (
+        {practised > 0 && (
           <p className="mt-2 text-sm text-ink-muted tabular-nums" data-progress-facts>
-            Practised {sessions === 1 ? "once" : `${sessions} times`} · {playedFor(view.playedUs)} in total
+            Practised {practised === 1 ? "once" : `${practised} times`} · {playedFor(view.playedUs)} in total
             {view.lastPractisedMs !== null && ` · last practised ${practisedWhen(view.lastPractisedMs, now)}`}
           </p>
         )}
         <p className="mt-1 text-sm">Which bars need work, and whether they're getting better.</p>
+        {view.updatedMs !== null && (
+          <p className="mt-1 text-sm text-ink-muted" data-progress-updated>
+            This piece was updated on {day(view.updatedMs)}; bar-by-bar progress starts from then.
+          </p>
+        )}
       </header>
 
       {sessions === 0 ? (

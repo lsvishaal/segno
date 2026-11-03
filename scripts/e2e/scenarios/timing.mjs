@@ -1,7 +1,8 @@
 // M1.1: the session file records when each note was played, how hard, when
 // it was released, and the sustain pedal; times run on across a reconnect.
+import fs from "node:fs";
 import * as w from "../wd.mjs";
-import { check, log, sessionFiles, minuet, startPractising, clickButton, play, kb } from "../lib.mjs";
+import { DATA, check, log, sessionFiles, minuet, startPractising, clickButton, play, kb } from "../lib.mjs";
 
 const GAP = 300; // ms from one press to the next
 const LONG = 5; // this note is held 1.5 s
@@ -38,7 +39,12 @@ export default async function timing() {
   const session = files.at(-1);
   const attempt = session?.attempts.at(-1);
   log("    attempt:", JSON.stringify({ began_ms: attempt?.began_ms, notes: attempt?.notes?.length, pedal: attempt?.pedal }));
-  check("the session file is schema 4", session?.schema === 4, String(session?.schema));
+  check("the session file is schema 5", session?.schema === 5, String(session?.schema));
+  check(
+    "it names the Minuet by its tag, and the version it was played on is kept",
+    session?.piece === "minuet-in-g" && fs.existsSync(`${DATA}/versions/${session?.version}.musicxml`),
+    `${session?.piece} ${session?.version}`,
+  );
   check("every note played is in it", attempt?.notes?.length === 10, String(attempt?.notes?.length));
   if (!attempt?.notes) return;
 

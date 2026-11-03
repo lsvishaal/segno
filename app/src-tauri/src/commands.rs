@@ -174,10 +174,8 @@ pub fn progress(
         .ok_or_else(|| format!("There is no piece called `{id}` in the library."))?;
     let sessions = crate::history::sessions(segno.records());
 
-    Ok(
-        crate::history::progress_in(&sessions, piece.id(), piece.reference())
-            .view(piece, crate::history::last_practised(&sessions, piece.id())),
-    )
+    Ok(crate::history::progress_of(&segno, &sessions, piece)
+        .view(piece, crate::history::last_practised(&sessions, piece.id())))
 }
 
 /// Deletes an imported Piece: its copy of the file, and every practice
@@ -702,7 +700,7 @@ fn summarise(
         file_name: record.and_then(|record| record.file_name),
         level: crate::provided::level_of(piece.id()),
         last_practised_ms: crate::history::last_practised(sessions, piece.id()),
-        weakest: crate::history::progress_in(sessions, piece.id(), piece.reference()).weakest(),
+        weakest: crate::history::progress_of(segno, sessions, piece).weakest(),
     }
 }
 

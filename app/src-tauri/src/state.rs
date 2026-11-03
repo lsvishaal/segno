@@ -13,11 +13,13 @@
 //! the session, which is exactly the "one owner" the ADR asked for — arrived
 //! at by a different route, since a webview has no frame loop to be the owner.
 
-use std::sync::Mutex;
+use std::collections::BTreeMap;
+use std::sync::{Arc, Mutex};
 
 use segno_domain::PieceId;
 use segno_engraving_verovio::Layout;
 use segno_library::{Library, Piece, title_from};
+use segno_notation::ReferencePerformance;
 use segno_records::Records;
 
 use crate::engraving::Engraving;
@@ -32,6 +34,9 @@ pub struct Segno {
     library: Library,
     records: Records,
     practice: Practice,
+    /// Older versions of scores, engraved once each when a piece's history
+    /// first needs them (`None`: that version can't be read).
+    versions: Mutex<BTreeMap<String, Option<Arc<ReferencePerformance>>>>,
 }
 
 impl Segno {
@@ -58,6 +63,14 @@ impl Segno {
         let mut refused = Vec::new();
 
         for provided in PROVIDED {
+            // Kept now, so its sessions can be replayed against it after an
+            // update changes the file, and so the date it arrived is known.
+            if let Err(failure) = records.keep_version(provided.source) {
+                crate::log::warn(&format!(
+                    "{} could not be kept as a version: {failure:?}",
+                    provided.name
+                ));
+            }
             match engraving.engrave(provided.source, Layout::default()) {
                 Ok(engraved) => {
                     let details = engraved.details();
@@ -143,7 +156,32 @@ impl Segno {
             library: Library::opened_with(first, pieces.collect()),
             records,
             practice,
+            versions: Mutex::default(),
         })
+    }
+
+    /// The fingerprint of `id`'s score as it is now.
+    #[must_use]
+    pub fn version_now(&self, id: &PieceId) -> Option<String> {
+        self.source_of(id)
+            .map(|source| segno_records::fingerprint(&source))
+    }
+
+    /// What version `version` of a score expects, engraved the first time it
+    /// is asked for and remembered; `None` if it isn't kept or doesn't read.
+    #[must_use]
+    pub fn engraved_version(&self, version: &str) -> Option<Arc<ReferencePerformance>> {
+        let mut versions = self.versions.lock().ok()?;
+        versions
+            .entry(version.to_owned())
+            .or_insert_with(|| {
+                let source = self.records.version(version)?;
+                let engraved = self.engraving.engrave(&source, Layout::default()).ok()?;
+                Some(Arc::new(ReferencePerformance::derived_from(
+                    engraved.score(),
+                )))
+            })
+            .clone()
     }
 
     /// The Pieces available to practise. Never empty.

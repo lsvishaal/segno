@@ -204,7 +204,11 @@ export interface ProgressView {
     readonly playedUs: number;
     readonly bars: readonly ProgressCell[];
   }[];
+  /** Every session, whatever version of the score it was played on. */
+  readonly practised: number;
   readonly playedUs: number;
+  /** When the score's bars changed, if older sessions are left out of the bars. */
+  readonly updatedMs: number | null;
   readonly lastPractisedMs: number | null;
   /** Each bar played: its level now, or null when it needs another pass. */
   readonly now: readonly { readonly measure: number; readonly level: number | null }[];

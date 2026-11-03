@@ -232,6 +232,18 @@ impl Records {
         Ok(version)
     }
 
+    /// When `version` was first kept, in Unix milliseconds: when Segno first
+    /// had this version of a score.
+    #[must_use]
+    pub fn version_kept_ms(&self, version: &str) -> Option<u64> {
+        let modified = fs::metadata(self.version_path(version))
+            .ok()?
+            .modified()
+            .ok()?;
+        let since = modified.duration_since(std::time::UNIX_EPOCH).ok()?;
+        u64::try_from(since.as_millis()).ok()
+    }
+
     /// The score kept as `version`, if it is here.
     #[must_use]
     pub fn version(&self, version: &str) -> Option<Vec<u8>> {
