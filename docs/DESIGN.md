@@ -371,6 +371,13 @@ back), and never opens by itself.
   **attempt** (one play-through), **session** (one sitting with a piece),
   **loop**, **clean pass**, **weak bars**, **pause** (user-facing word for
   stall), **keyboard** (the MIDI instrument), **library**.
+- **Bar numbers** are the printed ones. A **pickup** (the incomplete first bar,
+  printed 0) is never "bar 0": labels and cut-outs "Pickup", "Pickup–bar 2";
+  buttons "⟲ Practise pickup–bar 2"; sentences "from the pickup to bar 2",
+  "Going into bar 1 from the pickup"; alone "the pickup". "The bar before" is
+  the one printed before (bar 1's is the pickup), never the number minus one.
+  A lettered bar number ("12a") is refused: "This score numbers a bar 12a;
+  Segno can't open scores with lettered bar numbers yet."
 
 ---
 
@@ -395,7 +402,7 @@ back), and never opens by itself.
 | Sustain pedal (CC64) | Ignored for judging; never counts as a wrong note |
 | Notes held from the previous position | Not re-judged (ties logic already covers written ties) |
 | Piece with > 2 staves or several parts | Refuse clearly on import for v1.0: "Segno handles one piano part (two staves)." |
-| Piece with a pickup (anacrusis) bar | Bar numbering must match the printed score (test with a PD Für Elise) |
+| Piece with a pickup (anacrusis) bar | Handled 3 Nov: printed numbers, the pickup named in words (18.3); tested on a CC0 OpenScore piece and the owner's Für Elise |
 | Very long piece (300+ bars) | Engraving and history stay within budgets (section 21) |
 | Mid-bar clef change | Known limit (`docs/PRODUCT.md`, Known limits) |
 | Played an octave off everywhere | Octave-shift hint (M3.14) |

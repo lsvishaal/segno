@@ -12,6 +12,7 @@ import { cursorLine, drawingSurface, readPage } from "./scoreGeometry";
 import type { PageGeometry } from "./scoreGeometry";
 import { wrongNoteMark } from "./staffGeometry";
 import type { WrongNoteMark } from "./staffGeometry";
+import { barName } from "../bars";
 
 /** Which position the cursor is on. */
 export interface CursorState {
@@ -504,7 +505,7 @@ export function Score({
         visibility: hidden ? "hidden" : undefined,
         cursor: hovered ? "pointer" : undefined,
       }}
-      title={hovered ? `Start here (bar ${hovered.measure}) · Shift+click to loop to it` : undefined}
+      title={hovered ? `Start here (${barName(hovered.measure)}) · Shift+click to loop to it` : undefined}
       onPointerMove={onBarClick ? onPointerMove : undefined}
       onPointerLeave={() => setHovered(null)}
       onClick={onClick}

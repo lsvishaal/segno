@@ -35,6 +35,7 @@ import { SettingsPanel } from "./PracticeSettings";
 import { ProgressScreen, type PractiseRange } from "./Progress";
 import { REFLOW_THRESHOLD, clampScale, loadZoom, saveZoom, scoreWidth, stepScale } from "./zoom";
 import { remember, setting } from "../settings";
+import { barsInline, PICKUP } from "../bars";
 
 /** How long to wait after the last zoom or width change before re-engraving —
  * a real Verovio pass, so not on every wheel tick or resize frame. */
@@ -46,9 +47,10 @@ const AUTO_FINISH_MS = 1500;
 /** Clean passes in a row that end a loop, unless the performer picks otherwise. */
 const LOOP_TARGET = 3;
 
-/** Bars as a performer names them: "bar 9", "bars 9–12". */
-function barsNamed(first: number, last: number): string {
-  return first === last ? `bar ${first}` : `bars ${first}–${last}`;
+/** The loop button's bars: "6", "5–6", or with the pickup "the pickup", "pickup–bar 2". */
+function loopButtonBars(first: number, last: number): string {
+  if (first === PICKUP) return barsInline(first, last);
+  return first === last ? String(first) : `${first}–${last}`;
 }
 
 /** Whether a key press is being typed into something rather than meant for the screen. */
@@ -102,7 +104,9 @@ export function PracticeScreen({
   const [available, setAvailable] = useState<readonly InstrumentSummary[]>([]);
   const [cursor, setCursor] = useState<CursorState>(BEFORE_STARTING);
   // Where attempts start. Held by the practice thread; this is its echo.
-  const [start, setStart] = useState<StartPoint>({ position: 0, measure: 1 });
+  // The first bar played: the pickup if the piece opens with one.
+  const opening = piece.marks[0]?.measure ?? 1;
+  const [start, setStart] = useState<StartPoint>({ position: 0, measure: opening });
   // Something said about a move or a loop, for a few seconds.
   const [moveRefusal, setMoveRefusal] = useState<string | null>(null);
   // After a loop's goal: the loop a bar wider, offered beside that message.
@@ -171,7 +175,7 @@ export function PracticeScreen({
   useEffect(() => {
     setPhase({ kind: "choosing", refusal: null });
     setCursor(BEFORE_STARTING);
-    setStart({ position: 0, measure: 1 });
+    setStart({ position: 0, measure: piece.marks[0]?.measure ?? 1 });
     setLoop(null);
     setTarget(LOOP_TARGET);
     setDot(null);
@@ -317,7 +321,7 @@ export function PracticeScreen({
           break;
         case "loopDone":
           setLoop(null);
-          setMoveRefusal(`${event.passes} clean passes · ${barsNamed(event.first, event.last)}`);
+          setMoveRefusal(`${event.passes} clean passes · ${barsInline(event.first, event.last)}`);
           setWiden(event.widen);
           break;
         case "ended":
@@ -706,7 +710,7 @@ export function PracticeScreen({
               loop ? "bg-loop-band/8 text-ink hover:bg-loop-band/14" : "text-ink-muted hover:bg-ink/5 hover:text-accent"
             }`}
           >
-            {loop ? `⟲ Loop ${loop.first === loop.last ? loop.first : `${loop.first}–${loop.last}`}` : "⟲ Loop"}
+            {loop ? `⟲ Loop ${loopButtonBars(loop.first, loop.last)}` : "⟲ Loop"}
           </button>
           {loop && (
             <>

@@ -948,7 +948,10 @@ pub fn start_at_bar(
         .practice()
         .start_at_bar(id, reference, bar)
         .map_err(|refused| match refused {
-            NoStart::NothingThere => format!("There is nothing to start at from bar {measure}."),
+            NoStart::NothingThere => format!(
+                "There is nothing to start at from {}.",
+                segno_feedback::review::bar_name(bar)
+            ),
             NoStart::InstrumentLost => LOST.to_owned(),
         })
 }
@@ -974,12 +977,13 @@ pub fn loop_bars(
 
     let (id, reference) = reference_of(&segno, &piece_id)?;
     // Printed numbers: 0 is the pickup.
-    let bar = |number: u32| -> Result<segno_domain::MeasureNumber, Refused> {
-        Ok(segno_domain::MeasureNumber::printed(number))
-    };
+    let (first, last) = (
+        segno_domain::MeasureNumber::printed(first.min(last)),
+        segno_domain::MeasureNumber::printed(first.max(last)),
+    );
     let wanted = LoopOf {
-        first: bar(first)?,
-        last: bar(last)?,
+        first,
+        last,
         target,
     };
 
@@ -987,13 +991,13 @@ pub fn loop_bars(
         .practice()
         .loop_bars(id, reference, wanted)
         .map_err(|refused| match refused {
-            NoStart::NothingThere if first == last => {
-                format!("There is nothing to loop in bar {first}.")
-            }
+            NoStart::NothingThere if first == last => format!(
+                "There is nothing to loop in {}.",
+                segno_feedback::review::bar_name(first)
+            ),
             NoStart::NothingThere => format!(
-                "Bars {}–{} aren't played in a row.",
-                first.min(last),
-                first.max(last)
+                "{} aren't played in a row.",
+                segno_feedback::review::span(first, last)
             ),
             NoStart::InstrumentLost => LOST.to_owned(),
         })

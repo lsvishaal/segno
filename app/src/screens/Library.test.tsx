@@ -293,4 +293,9 @@ describe("weakestLine", () => {
     expect(weakestLine([6, 14])).toBe("weakest bars 6, 14");
     expect(weakestLine([])).toBeNull();
   });
+
+  it("names the pickup in words, never bar 0", () => {
+    expect(weakestLine([0])).toBe("weakest: the pickup");
+    expect(weakestLine([0, 9])).toBe("weakest: the pickup, bar 9");
+  });
 });

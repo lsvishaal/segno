@@ -273,9 +273,9 @@ pub(crate) fn bars(score: &Path, data: &Path, piece: &str) -> Result<String, Str
     let names: Vec<String> = hardest
         .iter()
         .take(2)
-        .map(|(measure, _, _)| measure.get().to_string())
+        .map(|(measure, _, _)| segno_feedback::review::bar_name(*measure))
         .collect();
-    let _ = writeln!(out, "\nweakest (level 3+ now): bars {}", names.join(", "));
+    let _ = writeln!(out, "\nweakest (level 3+ now): {}", names.join(", "));
     Ok(out)
 }
 

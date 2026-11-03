@@ -79,7 +79,7 @@ pub fn label(suggestion: &Suggestion) -> Option<String> {
 /// One bar, in a line: shown when pointing at it.
 #[must_use]
 pub fn bar_line(measure: MeasureNumber, bar: &Bar) -> String {
-    let mut parts = vec![format!("Bar {}", measure.get())];
+    let mut parts = vec![span(measure, measure)];
     parts.extend(bar.tempo().map(|tempo| format!("♩ = {tempo}")));
     let details = details(bar);
     if details.is_empty() {
@@ -121,11 +121,47 @@ fn details(bar: &Bar) -> Vec<String> {
     details
 }
 
-pub(crate) fn span(first: MeasureNumber, last: MeasureNumber) -> String {
-    if first == last {
-        format!("Bar {}", first.get())
+/// Bars as a label: "Bar 7", "Bars 6–7", "Pickup", "Pickup–bar 2". Never
+/// "bar 0" (DECISIONS, 3 Nov, E2).
+#[must_use]
+pub fn span(first: MeasureNumber, last: MeasureNumber) -> String {
+    match (first.is_pickup(), first == last) {
+        (true, true) => "Pickup".to_owned(),
+        (true, false) => format!("Pickup–bar {}", last.get()),
+        (false, true) => format!("Bar {}", first.get()),
+        (false, false) => format!("Bars {}–{}", first.get(), last.get()),
+    }
+}
+
+/// One bar in a sentence: "bar 7", "the pickup".
+#[must_use]
+pub fn bar_name(bar: MeasureNumber) -> String {
+    if bar.is_pickup() {
+        "the pickup".to_owned()
     } else {
-        format!("Bars {}–{}", first.get(), last.get())
+        format!("bar {}", bar.get())
+    }
+}
+
+/// Bars in a sentence: "bar 7", "bars 6–7", "the pickup", "from the pickup
+/// to bar 2".
+#[must_use]
+pub fn bars_named(first: MeasureNumber, last: MeasureNumber) -> String {
+    match (first.is_pickup(), first == last) {
+        (true, false) => format!("from the pickup to bar {}", last.get()),
+        (_, true) => bar_name(first),
+        (false, false) => format!("bars {}–{}", first.get(), last.get()),
+    }
+}
+
+/// Where, after a noun: "in bar 7", "in bars 6–7", "in the pickup", "from
+/// the pickup to bar 2".
+#[must_use]
+pub fn in_bars(first: MeasureNumber, last: MeasureNumber) -> String {
+    if first.is_pickup() && first != last {
+        bars_named(first, last)
+    } else {
+        format!("in {}", bars_named(first, last))
     }
 }
 
@@ -148,6 +184,25 @@ pub(crate) fn plural(count: u32, one: &str, many: &str) -> String {
 
 #[cfg(test)]
 mod tests {
+    use segno_domain::MeasureNumber as M;
+
+    use crate::review::{bar_name, bars_named, in_bars, span};
+
+    // E2 (DECISIONS, 3 Nov): labels "Pickup–bar 2", sentences "from the
+    // pickup to bar 2", alone "the pickup"; never "bar 0".
+    #[test]
+    fn the_pickup_has_its_own_words() {
+        let (pickup, one, two) = (M::PICKUP, M::FIRST, M::printed(2));
+        assert_eq!(span(pickup, pickup), "Pickup");
+        assert_eq!(span(pickup, two), "Pickup–bar 2");
+        assert_eq!(span(one, two), "Bars 1–2");
+        assert_eq!(bar_name(pickup), "the pickup");
+        assert_eq!(bars_named(pickup, two), "from the pickup to bar 2");
+        assert_eq!(in_bars(pickup, two), "from the pickup to bar 2");
+        assert_eq!(in_bars(pickup, pickup), "in the pickup");
+        assert_eq!(in_bars(two, two), "in bar 2");
+    }
+
     use segno_analysis::{Bar, Bars, Suggestion};
     use segno_domain::MeasureNumber;
 

@@ -13,6 +13,9 @@ Everything so far, before the first preview (v0.1).
   `~/.local/share/com.segno.practice`. History and settings from before the rename aren't
   carried over.
 - **A Little Chord Study is no longer bundled:** five starter pieces remain.
+- **Pieces that open with a pickup** now open, with the bar numbers printed on the
+  score; the pickup is called "the pickup" ("Practise pickup–bar 2"). Scores that
+  number a bar with a letter ("12a") are refused, saying so.
 - **Importing a new version of one of your pieces** (same title and composer) asks:
   "Update <title> (keeps your history)" or "Add as a new piece".
 - **History survives score changes:** each session is judged against the version of the

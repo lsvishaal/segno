@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { progress, type ProgressView } from "../bridge";
 import { LineGraph } from "../components/LineGraph";
 import { practisedWhen } from "./Library";
+import { barLabel, barsInline, barsLabel } from "../bars";
 
 /** Where a Practise button on this page loops; null plays from bar 1, no loop. */
 export type PractiseRange = { readonly from: number; readonly to: number } | null;
@@ -46,14 +47,12 @@ export function playedFor(us: number): string {
   return `${Math.floor(minutes / 60)} h ${minutes % 60} min`;
 }
 
-/** "Bar 6", "Bars 6–7". */
-function barsNamed(first: number, last: number): string {
-  return first === last ? `Bar ${first}` : `Bars ${first}–${last}`;
-}
+/** "Bar 6", "Bars 6–7", "Pickup–bar 2". */
+const barsNamed = barsLabel;
 
-/** "⟲ Practise bar 1", "⟲ Practise bars 5–7". */
+/** "⟲ Practise bar 1", "⟲ Practise bars 5–7", "⟲ Practise pickup–bar 2". */
 function practiseLabel(from: number, to: number): string {
-  return from === to ? `⟲ Practise bar ${from}` : `⟲ Practise bars ${from}–${to}`;
+  return `⟲ Practise ${barsInline(from, to)}`;
 }
 
 /** "31 Oct". */
@@ -316,7 +315,7 @@ function BarOverTime({
     <div data-bar-detail className="mt-6 rounded-xl border border-rule bg-paper-raised px-5 py-4">
       <div className="flex items-start justify-between gap-6">
         <div className="min-w-0">
-          <h3 className="font-medium">Bar {measure} over time</h3>
+          <h3 className="font-medium">{barLabel(measure)} over time</h3>
           <p className="mt-1 text-sm text-ink-muted">{detail?.line ?? "Not played yet."}</p>
         </div>
         {detail && <LoopButton from={detail.from} to={detail.to} onPractise={onPractise} />}

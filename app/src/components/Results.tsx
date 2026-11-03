@@ -5,6 +5,7 @@ import { motion } from "motion/react";
 import type { Numbers, Review, ReviewBar, ReviewCard, ReviewPass } from "../bridge";
 import { BarCutout } from "./BarCutout";
 import type { CutOutRequest } from "./scoreCutout";
+import { barLabel, barName } from "../bars";
 
 /**
  * The results after a run, where the score was: what to work on (at most
@@ -309,7 +310,7 @@ function Small({ numbers }: { readonly numbers: Numbers }) {
           : seconds(numbers.longestPauseMs),
       ...(numbers.longestPauseBar === null
         ? {}
-        : { note: `bar ${numbers.longestPauseBar}` }),
+        : { note: barName(numbers.longestPauseBar) }),
     },
     {
       label: "time",
@@ -351,7 +352,7 @@ interface Point {
 
 function barPoints(bars: readonly ReviewBar[]): Point[] {
   return bars.map((bar) => ({
-    label: String(bar.measure),
+    label: bar.measure === 0 ? barLabel(0) : String(bar.measure),
     measure: bar.measure,
     tempo: bar.tempo,
     wrong: bar.wrong,
@@ -360,7 +361,7 @@ function barPoints(bars: readonly ReviewBar[]): Point[] {
     clean: false,
     line:
       bar.state === "notReached"
-        ? `Bar ${bar.measure} · not reached`
+        ? `${barLabel(bar.measure)} · not reached`
         : bar.line,
   }));
 }

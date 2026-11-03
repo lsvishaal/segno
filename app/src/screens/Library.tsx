@@ -4,6 +4,7 @@ import { AnimatePresence, motion } from "motion/react";
 
 import type { PieceSummary } from "../bridge";
 import { PieceCard } from "../components/PieceCard";
+import { barName, PICKUP } from "../bars";
 
 /** A title or name as a person reads it: no accents, case or extra spaces. */
 function loosely(text: string | null): string {
@@ -71,9 +72,10 @@ export function practisedWhen(thenMs: number, nowMs: number): string {
   });
 }
 
-/** "weakest bar 9", "weakest bars 6, 14", or nothing. */
+/** "weakest bar 9", "weakest bars 6, 14", "weakest: the pickup, bar 9", or nothing. */
 export function weakestLine(weakest: readonly number[]): string | null {
   if (weakest.length === 0) return null;
+  if (weakest.includes(PICKUP)) return `weakest: ${weakest.map(barName).join(", ")}`;
   return `weakest ${weakest.length === 1 ? "bar" : "bars"} ${weakest.join(", ")}`;
 }
 

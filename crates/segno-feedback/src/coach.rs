@@ -3,7 +3,7 @@
 
 use segno_analysis::coach::{Card, Kind, Spot, WentWell};
 
-use crate::review::{plural, seconds, span};
+use crate::review::{bar_name, bars_named, in_bars, plural, seconds, span};
 
 /// Everything a card says.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -74,7 +74,7 @@ pub fn went_well(item: &WentWell) -> String {
             format!("{} with no mistakes and no stops", span(*first, *last))
         }
         WentWell::Even { first, last } => {
-            format!("An even tempo in {}", lower(&span(*first, *last)))
+            format!("An even tempo {}", in_bars(*first, *last))
         }
     }
 }
@@ -84,8 +84,9 @@ type Words = (String, String, String, Vec<String>);
 
 fn words(spot: &Spot) -> Words {
     let facts = spot.facts;
-    let bars = lower(&span(spot.first, spot.last));
-    let n = spot.first.get();
+    let bars = bars_named(spot.first, spot.last);
+    let name = bar_name(spot.first);
+    let here = in_bars(spot.first, spot.first);
     let each = if facts.passes > 1 {
         format!(", over {} times through", facts.passes)
     } else {
@@ -96,17 +97,19 @@ fn words(spot: &Spot) -> Words {
     match spot.kind {
         Kind::IntoBar => into_bar(spot, &each),
         Kind::Jump => jump(spot, &each),
-        Kind::FastNotes { broken_chord } => fast_notes(spot, broken_chord, &bars, &each),
+        Kind::FastNotes { broken_chord } => {
+            fast_notes(spot, broken_chord, &in_bars(spot.first, spot.last), &each)
+        }
         Kind::WrongNotes => wrong_notes(spot, &each),
         Kind::RushedLongNotes => (
-            format!("Long notes in bar {n}"),
+            format!("Long notes {here}"),
             format!(
                 "You moved on early from a long note {}{each}.",
                 plural(facts.rushed, "time", "times")
             ),
             "Long notes and rests are easy to cut short when you're thinking ahead.".to_owned(),
             vec![
-                format!("Count the beats out loud as you play bar {n}."),
+                format!("Count the beats out loud as you play {name}."),
                 "Hold each long note until you've counted all of it.".to_owned(),
                 "Then play it again, counting in your head.".to_owned(),
             ],
@@ -127,22 +130,23 @@ fn words(spot: &Spot) -> Words {
             ]),
         ),
         Kind::KeepsStopping => (
-            format!("Stopping at bar {n}"),
+            format!("Stopping at {name}"),
             format!(
-                "You stopped or started again in bar {n} {}.",
+                "You stopped or started again {here} {}.",
                 plural(facts.stops, "time", "times")
             ),
             "Starting from the top each time means the hard part gets the least practice."
                 .to_owned(),
             {
-                let from = spot.drill.0.get();
+                let from = spot.drill.0;
                 vec![
-                    if from < n {
+                    if from < spot.first {
                         format!(
-                            "Loop bars {from}–{n}: starting a bar early, you arrive in bar {n} already moving."
+                            "Loop {}: starting a bar early, you arrive {here} already moving.",
+                            bars_named(from, spot.first)
                         )
                     } else {
-                        format!("Loop bar {n} instead of starting from the beginning.")
+                        format!("Loop {name} instead of starting from the beginning.")
                     },
                     "Play it 3 times in a row without stopping.".to_owned(),
                     "Then start a few bars earlier and play through.".to_owned(),
@@ -167,30 +171,39 @@ fn words(spot: &Spot) -> Words {
 }
 
 fn into_bar(spot: &Spot, each: &str) -> Words {
-    let (facts, n) = (spot.facts, spot.first.get());
-    let previous = spot.drill.0.get();
+    let facts = spot.facts;
+    let (name, previous) = (bar_name(spot.first), spot.drill.0);
+    let before = bar_name(previous);
     (
-        format!("Going into bar {n}"),
+        if previous.is_pickup() {
+            format!("Going into {name} from the pickup")
+        } else {
+            format!("Going into {name}")
+        },
         format!(
-            "You paused {} before bar {n}{each}.",
+            "You paused {} before {name}{each}.",
             seconds(facts.pause_us)
         ),
-        format!("The move from bar {previous} to bar {n} isn't automatic yet."),
+        format!("The move from {before} to {name} isn't automatic yet."),
         vec![
             format!(
-                "Play the last beat of bar {previous} and the first of bar {n}, slowly, 5 times in a row without stopping."
+                "Play the last beat of {before} and the first of {name}, slowly, 5 times in a row without stopping."
             ),
-            format!("Then play all of bars {previous}–{n}."),
+            if previous.is_pickup() {
+                format!("Then play it all, from the pickup to {name}.")
+            } else {
+                format!("Then play all of {}.", bars_named(previous, spot.first))
+            },
             "Then add a bar on each side.".to_owned(),
         ],
     )
 }
 
 fn jump(spot: &Spot, each: &str) -> Words {
-    let (facts, n) = (spot.facts, spot.first.get());
+    let facts = spot.facts;
     let steps = |lines: &[&str]| lines.iter().map(|&line| line.to_owned()).collect();
     (
-        format!("The jump in bar {n}"),
+        format!("The jump {}", in_bars(spot.first, spot.first)),
         joined(&[
             (facts.pause_us >= 100_000)
                 .then(|| format!("You paused {} at the jump", seconds(facts.pause_us))),
@@ -228,7 +241,7 @@ fn fast_notes(spot: &Spot, broken_chord: bool, bars: &str, each: &str) -> Words 
     ]);
     if broken_chord {
         (
-            format!("The fast notes in {bars}"),
+            format!("The fast notes {bars}"),
             format!("{what}{each}."),
             "These notes spell out a chord, and your hand hasn't found its shape yet.".to_owned(),
             steps(&[
@@ -239,7 +252,7 @@ fn fast_notes(spot: &Spot, broken_chord: bool, bars: &str, each: &str) -> Words 
         )
     } else {
         (
-            format!("The fast notes in {bars}"),
+            format!("The fast notes {bars}"),
             format!("{what}{each}."),
             "Your fingers haven't settled into this run yet.".to_owned(),
             steps(&[
@@ -252,9 +265,10 @@ fn fast_notes(spot: &Spot, broken_chord: bool, bars: &str, each: &str) -> Words 
 }
 
 fn wrong_notes(spot: &Spot, each: &str) -> Words {
-    let (facts, n) = (spot.facts, spot.first.get());
+    let facts = spot.facts;
+    let (name, here) = (bar_name(spot.first), in_bars(spot.first, spot.first));
     let what = format!(
-        "{} in bar {n}{}{each}.",
+        "{} {here}{}{each}.",
         capital(&plural(facts.wrong, "wrong key", "wrong keys")),
         facts.offset.map_or_else(String::new, |offset| {
             format!(", mostly {}", direction(offset))
@@ -265,22 +279,22 @@ fn wrong_notes(spot: &Spot, each: &str) -> Words {
         .is_some_and(|offset| offset.unsigned_abs() <= 2)
     {
         (
-            format!("Wrong notes in bar {n}"),
+            format!("Wrong notes {here}"),
             what,
             "Your finger landed next to the right key: your hand isn't sure of its place there yet.".to_owned(),
             vec![
-                format!("Before playing bar {n}, put your hand over its first notes and look."),
+                format!("Before playing {name}, put your hand over its first notes and look."),
                 "Play it slowly, watching which finger plays which key.".to_owned(),
                 "Play it 3 times without a mistake before going on.".to_owned(),
             ],
         )
     } else {
         (
-            format!("Wrong notes in bar {n}"),
+            format!("Wrong notes {here}"),
             what,
             "These look like reading slips: the note was misread, not mis-hit.".to_owned(),
             vec![
-                format!("Read bar {n} away from the keys, saying each note's name."),
+                format!("Read {name} away from the keys, saying each note's name."),
                 "Turn on note names if it helps, then play it slowly.".to_owned(),
                 "Play it 3 times without a mistake before going on.".to_owned(),
             ],
@@ -290,7 +304,11 @@ fn wrong_notes(spot: &Spot, each: &str) -> Words {
 
 fn button(spot: &Spot) -> String {
     let (first, last) = spot.drill;
-    format!("Practise {}", lower(&span(first, last)))
+    if first.is_pickup() && first == last {
+        "Practise the pickup".to_owned()
+    } else {
+        format!("Practise {}", lower(&span(first, last)))
+    }
 }
 
 /// Where a wrong key was, relative to the written note: a key has no
@@ -385,6 +403,81 @@ mod tests {
             "Play the last beat of bar 5 and the first of bar 6, slowly, 5 times in a row without stopping."
         );
         assert_eq!(text.button, "Practise bars 5–6");
+    }
+
+    // The pickup is "the pickup" in sentences and "Pickup–bar 1" on the button;
+    // never "bar 0" (DECISIONS, 3 Nov, E2).
+    #[test]
+    fn going_into_bar_one_from_the_pickup_says_so() {
+        let mut into = spot(
+            Kind::IntoBar,
+            1,
+            1,
+            Facts {
+                passes: 1,
+                pause_us: 2_000_000,
+                ..Facts::default()
+            },
+        );
+        into.drill = (MeasureNumber::PICKUP, bar(1));
+
+        let text = card(&Card {
+            main: into,
+            also: None,
+        });
+
+        assert_eq!(text.title, "Going into bar 1 from the pickup");
+        assert_eq!(
+            text.why,
+            "The move from the pickup to bar 1 isn't automatic yet."
+        );
+        assert_eq!(
+            text.steps[0],
+            "Play the last beat of the pickup and the first of bar 1, slowly, 5 times in a row without stopping."
+        );
+        assert_eq!(text.steps[1], "Then play it all, from the pickup to bar 1.");
+        assert_eq!(text.button, "Practise pickup–bar 1");
+        let all = format!(
+            "{} {} {} {}",
+            text.title,
+            text.what,
+            text.why,
+            text.steps.join(" ")
+        );
+        assert!(!all.contains("bar 0"), "{all}");
+    }
+
+    #[test]
+    fn trouble_in_the_pickup_itself_names_it() {
+        let mut stops = spot(
+            Kind::KeepsStopping,
+            1,
+            1,
+            Facts {
+                passes: 2,
+                stops: 2,
+                ..Facts::default()
+            },
+        );
+        stops.first = MeasureNumber::PICKUP;
+        stops.last = MeasureNumber::PICKUP;
+        stops.drill = (MeasureNumber::PICKUP, MeasureNumber::PICKUP);
+
+        let text = card(&Card {
+            main: stops,
+            also: None,
+        });
+
+        assert_eq!(text.title, "Stopping at the pickup");
+        assert_eq!(
+            text.what,
+            "You stopped or started again in the pickup 2 times."
+        );
+        assert_eq!(
+            text.steps[0],
+            "Loop the pickup instead of starting from the beginning."
+        );
+        assert_eq!(text.button, "Practise the pickup");
     }
 
     #[test]

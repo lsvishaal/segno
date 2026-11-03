@@ -1,4 +1,5 @@
 import { useLayoutEffect, useRef, useState } from "react";
+import { barsLabel } from "../bars";
 
 /** Draws a cut-out of some bars, or `null` when the score can't. */
 export type DrawCutOut = () => SVGSVGElement | null;
@@ -32,7 +33,7 @@ export function BarCutout({
     setDrawn(cut !== null);
   }, [draw]);
 
-  const label = first === last ? `Bar ${first}` : `Bars ${first}–${last}`;
+  const label = barsLabel(first, last);
 
   return (
     <button

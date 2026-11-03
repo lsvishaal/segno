@@ -64,7 +64,7 @@ export interface DrawnNote extends StaffPosition {
  * were written.
  */
 export interface Mark {
-  /** Which bar, as a performer counts them (from one). */
+  /** Which bar, as printed: from one, or 0 for a pickup. */
   readonly measure: number;
   /** Which position in the piece, counting from zero across the whole score. */
   readonly position: number;
