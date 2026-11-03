@@ -178,8 +178,12 @@ pub(crate) fn expected(score: &Path) -> Result<String, String> {
 }
 
 /// `segno-cli bars <score> <data> <piece>`: every session of the piece
-/// kept under the data folder `data`, added up bar by bar, with each bar's
-/// level now (its own last three sessions, as the app judges it). Only reads.
+/// (its id: a bundled piece's tag such as `minuet-in-g`, or an import's
+/// `imp-…`) kept under the data folder `data`, added up bar by bar, with each
+/// bar's level now (its own last three sessions, as the app judges it). Each
+/// session is replayed against the version it was played on, from
+/// `data/versions`; `score` is used for a session whose version isn't there.
+/// Unlike the app, versions with other bars are not kept apart. Only reads.
 pub(crate) fn bars(score: &Path, data: &Path, piece: &str) -> Result<String, String> {
     let engraved = engrave(score)?;
     let reference = ReferencePerformance::derived_from(engraved.score());
@@ -188,6 +192,9 @@ pub(crate) fn bars(score: &Path, data: &Path, piece: &str) -> Result<String, Str
         .sessions()
         .map_err(|failure| format!("cannot read sessions: {failure:?}"))?;
 
+    let records = Records::under(data);
+    let mut versions: std::collections::BTreeMap<String, Option<ReferencePerformance>> =
+        std::collections::BTreeMap::new();
     let mut out = header(&engraved, &reference);
     let mut mine: Vec<_> = sessions
         .iter()
@@ -198,13 +205,25 @@ pub(crate) fn bars(score: &Path, data: &Path, piece: &str) -> Result<String, Str
     let mut per_session = Vec::new();
     let mut attempts = 0;
     for session in mine {
+        let kept = versions
+            .entry(session.version.clone())
+            .or_insert_with(|| {
+                let source = records.version(&session.version)?;
+                let drawn = VerovioEngraver::from_environment()
+                    .ok()?
+                    .engrave(&source)
+                    .ok()?;
+                Some(ReferencePerformance::derived_from(drawn.score()))
+            })
+            .as_ref();
+        let reference = kept.unwrap_or(&reference);
         let mut bars = Bars::default();
         for attempt in &session.attempts {
             let to = attempt.to.unwrap_or(reference.len()).min(reference.len());
             let gave_up = matches!(attempt.ended, Some(Ended::Restart | Ended::Stop));
             bars.add(&Bars::of(
                 &attempt.played,
-                &reference,
+                reference,
                 attempt.from.min(to)..to,
                 gave_up,
             ));
