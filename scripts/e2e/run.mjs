@@ -34,8 +34,9 @@ try {
     const scenario = await import(`./scenarios/${name}.mjs`);
     const first = results.length;
     log(`\n${name}`);
-    resetData({ withMine: scenario.mine === true });
+    resetData();
     try {
+      scenario.seed?.();
       await w.start(APP);
       await scenario.default();
     } catch (error) {

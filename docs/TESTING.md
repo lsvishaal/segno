@@ -75,7 +75,9 @@ skipped, with a note, when it's absent.
   `tauri-driver`.
 - Each scenario runs with its own data folder, `target/e2e/data` via `XDG_DATA_HOME`.
   The kit waits for the previous scenario's app to exit before clearing it.
-  The real folder is never written; scenarios marked `mine` start from a copy of it.
+  The real folder is never read or written. A scenario that needs an imported piece
+  exports `seed()`, which imports a tracked score before the app starts
+  (`importScore`, through `segno-cli import`), as `library.mjs` does.
 - Screenshots go to `target/e2e/shots/`. Claude Code opens them and checks the
   screens against the change's checklist (`just shots progress marks` for the
   Progress page and the live marks).

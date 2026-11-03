@@ -9,10 +9,7 @@
 //! not a state the type has. This module is the one place that could fail to
 //! supply that first Piece, and it cannot: the bytes are in the binary.
 
-use std::fmt::Write as _;
-
 use segno_domain::PieceId;
-use sha2::{Digest, Sha256};
 
 /// One piece that ships with Segno.
 #[derive(Debug, Clone, Copy)]
@@ -104,19 +101,8 @@ pub const PROVIDED: [Provided; 5] = [
 /// to a score would orphan its history (DECISIONS, 3 Nov).
 #[must_use]
 pub fn identify(source: &[u8]) -> PieceId {
-    let digest = Sha256::digest(source);
-
-    let name = digest.iter().take(8).fold(String::new(), |mut name, byte| {
-        // `write!` into a String cannot fail. Ignored rather than unwrapped
-        // so this stays panic-free without pretending the Result matters.
-        let _ = write!(name, "{byte:02x}");
-        name
-    });
-
-    // `PieceId::new` refuses anything that is not letters, digits and dashes,
-    // which hexadecimal always is. The fallback exists so this function is
-    // total rather than because it can happen.
-    PieceId::new(&name).unwrap_or_else(|| {
+    // Hexadecimal is always a usable name; the fallback keeps this total.
+    PieceId::new(&segno_records::fingerprint(source)).unwrap_or_else(|| {
         PieceId::new("unnamed").unwrap_or_else(|| unreachable!("`unnamed` is a usable name"))
     })
 }

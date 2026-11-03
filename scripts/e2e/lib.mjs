@@ -1,6 +1,6 @@
 // What the scenarios share: where things are, the virtual keyboard, the
 // app's private data folder, and the steps every scenario takes.
-import { spawnSync } from "node:child_process";
+import { execFileSync, spawnSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
 import * as w from "./wd.mjs";
@@ -12,7 +12,6 @@ export const SHOTS = `${DIR}/shots`;
 /** The app's data, via XDG_DATA_HOME. The real folder is never written. */
 export const DATA = `${DIR}/data/com.segno.practice`;
 export const HISTORY = `${DATA}/history`;
-const REAL = `${process.env.HOME}/.local/share/com.segno.practice`;
 
 export const log = (...a) => console.log(...a);
 export const results = [];
@@ -26,11 +25,18 @@ let keyboard = null;
 export const useKeyboard = (stdin) => (keyboard = stdin);
 export const kb = (...lines) => keyboard.write(lines.join("\n") + "\n");
 
-/** An empty data folder, or (`withMine`) a copy of the real one. */
-export function resetData({ withMine = false } = {}) {
+/** An empty data folder. Never a copy of the owner's: a scenario that needs
+ * an import seeds its own (`importScore`). */
+export function resetData() {
   fs.rmSync(DATA, { recursive: true, force: true });
-  if (withMine && fs.existsSync(REAL)) fs.cpSync(REAL, DATA, { recursive: true });
-  else fs.mkdirSync(DATA, { recursive: true });
+  fs.mkdirSync(DATA, { recursive: true });
+}
+
+/** Imports `score` into the test data folder before the app starts, through
+ * the same store code as the app's import; answers the new piece's id. */
+export function importScore(score, title) {
+  const args = ["import", DATA, `${ROOT}/${score}`, ...(title ? ["--title", title] : [])];
+  return execFileSync(`${ROOT}/target/debug/segno-cli`, args, { encoding: "utf8" }).trim();
 }
 
 export const shot = (name) => w.shot(`${SHOTS}/${name}.png`);

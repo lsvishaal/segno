@@ -633,28 +633,31 @@ pub fn accept_offered(
     file_name: Option<&str>,
     segno: &mut Segno,
 ) -> Result<ImportedPiece, Refused> {
-    let id = crate::provided::identify(material);
-    // A bundled piece's bytes are known by its tag, not their fingerprint.
+    let version = segno_records::fingerprint(material);
+
+    // Re-offering the same bytes is not a second piece: the same file, a
+    // bundled piece's or one imported before, is found by its fingerprint.
     let known = crate::provided::PROVIDED
         .iter()
-        .find(|provided| crate::provided::identify(provided.source) == id)
-        .map_or_else(|| id.clone(), crate::provided::Provided::id);
-
-    // Re-offering the same bytes is not a second piece: `PieceId` is the
-    // lookup key `source_of` and `open_piece` use, and a duplicate under one
-    // id would make that lookup ambiguous rather than merely wasteful.
-    if let Some(already) = segno
-        .library()
-        .pieces()
-        .into_iter()
-        .find(|piece| *piece.id() == known)
-    {
+        .find(|provided| segno_records::fingerprint(provided.source) == version)
+        .map(crate::provided::Provided::id)
+        .or_else(|| segno.records().imported_as(&version));
+    if let Some(already) = known.and_then(|known| {
+        segno
+            .library()
+            .pieces()
+            .into_iter()
+            .find(|piece| *piece.id() == known)
+    }) {
         return Ok(ImportedPiece {
             piece: summarise(already, segno, &crate::history::sessions(segno.records())),
             lines: vec!["This piece is already in your library.".to_owned()],
             already: true,
         });
     }
+
+    // Given once, and kept whatever later happens to the file.
+    let id = segno.records().new_import_id(&version);
 
     let mut engraver = ImportEngraver(segno.engraving());
 

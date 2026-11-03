@@ -263,12 +263,13 @@ fn a_file_identical_to_a_bundled_piece_adds_nothing() {
     assert!(segno.records().imported().is_empty(), "nothing was stored");
 }
 
-// Identical files that got into the data folder under two names (copied by
-// hand, say) are one piece after a restart, and the spare copy is removed.
+// A record copied by hand into the data folder is a second card, and nothing
+// is removed at startup: a second copy is caught at import, and a startup
+// that deleted files could lose one (DECISIONS, 3 Nov).
 #[test]
 #[ignore = "needs a real libverovio; run `just provided-test`"]
-fn identical_stored_copies_collapse_at_startup() {
-    let root = temporary("collapse");
+fn a_hand_copied_record_is_listed_and_nothing_is_removed() {
+    let root = temporary("hand-copy");
     let before = segno(&root).library().count();
     let Some(canon) = personal_score("Canon_in_D.mxl") else {
         return;
@@ -276,15 +277,15 @@ fn identical_stored_copies_collapse_at_startup() {
     let imported = accept_offered(&canon, None, &mut segno(&root)).expect("supported");
     let scores = root.join("scores");
     std::fs::copy(
-        scores.join(format!("{}.musicxml", imported.piece.id)),
-        scores.join("hand-copied.musicxml"),
+        scores.join(format!("{}.json", imported.piece.id)),
+        scores.join("hand-copied.json"),
     )
-    .expect("copies the file");
+    .expect("copies the record");
 
     let restarted = segno(&root);
 
-    assert_eq!(restarted.library().count(), before + 1);
-    assert!(!scores.join("hand-copied.musicxml").exists());
+    assert_eq!(restarted.library().count(), before + 2);
+    assert!(scores.join("hand-copied.json").exists());
 }
 
 // The performer's two real Für Elise files are different music, so both are

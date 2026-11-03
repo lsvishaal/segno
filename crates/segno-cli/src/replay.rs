@@ -261,6 +261,36 @@ pub(crate) fn bars(score: &Path, data: &Path, piece: &str) -> Result<String, Str
     Ok(out)
 }
 
+/// Imports `score` into the data folder `data`, as the app's import keeps a
+/// piece (the same `segno-records` calls), and answers its new id. `title`
+/// is kept as a title the performer chose. For seeding a test's data folder
+/// without a file dialog; it doesn't check for a second copy, as the app does.
+pub(crate) fn import(data: &Path, score: &Path, title: Option<&str>) -> Result<String, String> {
+    let source = std::fs::read(score)
+        .map_err(|failure| format!("cannot read {}: {failure}", score.display()))?;
+    let engraved = engrave(score)?;
+    let details = engraved.details();
+    let file_name = score.file_name().map(|name| name.to_string_lossy());
+    let records = Records::under(data);
+    let id = records.new_import_id(&segno_records::fingerprint(&source));
+
+    records
+        .keep_piece(
+            &id,
+            details.title.as_deref().unwrap_or("Untitled"),
+            details.composer.as_deref(),
+            file_name.as_deref(),
+            &source,
+        )
+        .map_err(|failure| format!("cannot keep it: {failure:?}"))?;
+    if let Some(title) = title {
+        records
+            .rename_piece(&id, title)
+            .map_err(|failure| format!("cannot title it: {failure:?}"))?;
+    }
+    Ok(format!("{}\n", id.as_str()))
+}
+
 fn engrave(score: &Path) -> Result<EngravedScore, String> {
     let source = std::fs::read(score)
         .map_err(|failure| format!("cannot read {}: {failure}", score.display()))?;

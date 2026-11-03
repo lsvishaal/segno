@@ -17,6 +17,7 @@ segno-library = { path = "../segno-library" }
 segno-notation = { path = "../segno-notation" }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
+sha2 = "0.10"
 
 [dev-dependencies]
 tempfile = "3"

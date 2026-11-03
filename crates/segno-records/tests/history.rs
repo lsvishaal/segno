@@ -229,11 +229,21 @@ fn an_imported_score_is_copied_into_the_library_and_kept_apart_from_history() {
         )
         .expect("keeps the piece");
 
-    assert!(kept.source.starts_with(records.scores()));
-    assert!(!kept.source.starts_with(records.history()));
+    let kept_at = records
+        .versions()
+        .join(format!("{}.musicxml", kept.version));
     assert_eq!(
-        std::fs::read(&kept.source).expect("reads the score"),
+        kept.version,
+        segno_records::fingerprint(b"<score-partwise/>")
+    );
+    assert!(!kept_at.starts_with(records.history()));
+    assert_eq!(
+        std::fs::read(&kept_at).expect("reads the score"),
         b"<score-partwise/>"
+    );
+    assert_eq!(
+        records.source_of(&piece()).as_deref(),
+        Some(&b"<score-partwise/>"[..])
     );
 
     // What the performer's file was called survives a restart.
@@ -247,7 +257,7 @@ fn an_imported_score_is_copied_into_the_library_and_kept_apart_from_history() {
 
     // "in read-only form".
     assert!(
-        std::fs::metadata(&kept.source)
+        std::fs::metadata(&kept_at)
             .expect("reads the metadata")
             .permissions()
             .readonly()
@@ -412,4 +422,54 @@ fn tolerated_notes_are_not_mistakes_in_a_kept_attempt() {
     assert_eq!(summary.incorrect(), 0);
     assert_eq!(summary.unexpected(), 0);
     assert_eq!(summary.correct(), 3);
+}
+
+// A piece's name is given once, at import, and doesn't change with its file:
+// the same name after a restart, and a second import of the same bytes is
+// found rather than given a second name.
+#[test]
+fn an_import_keeps_the_name_it_was_given() {
+    let directory = tempfile::tempdir().expect("a temporary directory");
+    let records = Records::under(directory.path());
+    let minuet = include_bytes!("../../../app/src-tauri/library/minuet-in-g.musicxml");
+    let version = segno_records::fingerprint(minuet);
+
+    let id = records.new_import_id(&version);
+    assert_eq!(id.as_str(), format!("imp-{}", &version[..12]));
+    records
+        .keep_piece(&id, "Minuet in G Major", None, None, minuet)
+        .expect("keeps the piece");
+
+    let reopened = Records::under(directory.path());
+    assert_eq!(reopened.imported(), std::slice::from_ref(&id));
+    assert_eq!(reopened.imported_as(&version), Some(id.clone()));
+    // A second piece from these bytes, if asked for, gets a name of its own.
+    assert_ne!(reopened.new_import_id(&version), id);
+}
+
+// One version file however often the same bytes are kept, and a version is
+// read-only once kept.
+#[test]
+fn a_version_is_kept_once_and_read_only() {
+    let directory = tempfile::tempdir().expect("a temporary directory");
+    let records = Records::under(directory.path());
+    let prelude = include_bytes!("../../../app/src-tauri/library/prelude-in-c.musicxml");
+
+    let first = records.keep_version(prelude).expect("kept");
+    let second = records.keep_version(prelude).expect("kept again");
+
+    assert_eq!(first, second);
+    assert_eq!(
+        std::fs::read_dir(records.versions())
+            .expect("a folder")
+            .count(),
+        1
+    );
+    assert!(
+        std::fs::metadata(records.versions().join(format!("{first}.musicxml")))
+            .expect("there")
+            .permissions()
+            .readonly()
+    );
+    assert_eq!(records.version(&first).as_deref(), Some(&prelude[..]));
 }

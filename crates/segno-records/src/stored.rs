@@ -86,7 +86,11 @@ pub enum Ended {
 /// The version of the piece shape below. Separate from the session's: the
 /// two change for different reasons, and bumping one must not make an older
 /// version refuse the other.
-pub(crate) const PIECE_SCHEMA: u32 = 1;
+///
+/// - **2** (3 Nov): `version` (the score's fingerprint, in `versions/`)
+///   replaces `source` (a file beside the record). Records of 1 are not read:
+///   Segno's history started fresh at the rename.
+pub(crate) const PIECE_SCHEMA: u32 = 2;
 
 /// One practice session, as stored.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -184,8 +188,8 @@ pub(crate) struct StoredPiece {
     pub(crate) title: String,
     /// Who wrote it, where the source said.
     pub(crate) composer: Option<String>,
-    /// The file the score was read from, beside this record.
-    pub(crate) source: String,
+    /// The fingerprint of its current version, kept in `versions/`.
+    pub(crate) version: String,
     /// What the performer's own file was called when imported. Absent from
     /// records written before it was kept.
     #[serde(default, skip_serializing_if = "Option::is_none")]

@@ -2763,6 +2763,7 @@ dependencies = [
  "segno-notation",
  "serde",
  "serde_json",
+ "sha2",
  "tempfile",
 ]
 

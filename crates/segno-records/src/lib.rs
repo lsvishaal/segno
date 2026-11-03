@@ -14,4 +14,6 @@ mod store;
 mod stored;
 
 pub use settings::Settings;
-pub use store::{AttemptRecord, Ended, PieceRecord, Records, RecordsFailure, SessionRecord};
+pub use store::{
+    AttemptRecord, Ended, PieceRecord, Records, RecordsFailure, SessionRecord, fingerprint,
+};

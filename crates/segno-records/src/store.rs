@@ -13,6 +13,42 @@ use crate::stored::{
     read_performance, stored_performance,
 };
 
+/// The fingerprint of a score's bytes: the first 16 hex characters of their
+/// SHA-256. It names a *version* of a score and spots a second import of the
+/// same file; it is never a piece's identity, or any edit would orphan the
+/// piece's history (DECISIONS, 3 Nov).
+#[must_use]
+pub fn fingerprint(source: &[u8]) -> String {
+    use sha2::{Digest, Sha256};
+    use std::fmt::Write as _;
+
+    Sha256::digest(source)
+        .iter()
+        .take(8)
+        .fold(String::new(), |mut name, byte| {
+            // `write!` into a String cannot fail.
+            let _ = write!(name, "{byte:02x}");
+            name
+        })
+}
+
+/// Removes a file Segno kept read-only. Already gone is not an error.
+fn remove(path: &Path) -> Result<(), RecordsFailure> {
+    if let Ok(metadata) = fs::metadata(path) {
+        let mut permissions = metadata.permissions();
+        #[expect(
+            clippy::permissions_set_readonly_false,
+            reason = "about to delete the file, on the performer's behalf"
+        )]
+        permissions.set_readonly(false);
+        drop(fs::set_permissions(path, permissions));
+    }
+    match fs::remove_file(path) {
+        Err(failure) if failure.kind() != std::io::ErrorKind::NotFound => Err(failure.into()),
+        _ => Ok(()),
+    }
+}
+
 /// One session's worth of history, in the terms the application deals in.
 ///
 /// Deliberately not `segno_practice::PracticeSession`. That type carries a
@@ -66,8 +102,9 @@ pub struct PieceRecord {
     pub title: String,
     /// Who wrote it, where the source said.
     pub composer: Option<String>,
-    /// The score file, beside the record.
-    pub source: PathBuf,
+    /// The fingerprint of the score's current version, kept in
+    /// [`Records::versions`].
+    pub version: String,
     /// What the performer's own file was called, where known.
     pub file_name: Option<String>,
     /// Whether the performer renamed it: `title` is then theirs.
@@ -152,10 +189,77 @@ impl Records {
         self.root.join("history")
     }
 
-    /// Where imported scores live.
+    /// Where imported pieces are recorded: one `<id>.json` each.
     #[must_use]
     pub fn scores(&self) -> PathBuf {
         self.root.join("scores")
+    }
+
+    /// Where every version of every score played or imported is kept, named
+    /// by its [`fingerprint`]: written once, read-only, never changed, so a
+    /// session can always be replayed against the notes it was played on.
+    #[must_use]
+    pub fn versions(&self) -> PathBuf {
+        self.root.join("versions")
+    }
+
+    /// Keeps `source` as a version, if it isn't kept already, and answers its
+    /// fingerprint.
+    ///
+    /// # Errors
+    ///
+    /// [`RecordsFailure::Storage`] if it could not be written.
+    pub fn keep_version(&self, source: &[u8]) -> Result<String, RecordsFailure> {
+        let version = fingerprint(source);
+        let path = self.version_path(&version);
+        if !path.exists() {
+            fs::create_dir_all(self.versions())?;
+            let partial = path.with_extension("partial");
+            fs::write(&partial, source)?;
+            fs::rename(&partial, &path)?;
+            // Advisory: it keeps Segno from changing a version by accident.
+            if let Ok(metadata) = fs::metadata(&path) {
+                let mut permissions = metadata.permissions();
+                permissions.set_readonly(true);
+                drop(fs::set_permissions(&path, permissions));
+            }
+        }
+        Ok(version)
+    }
+
+    /// The score kept as `version`, if it is here.
+    #[must_use]
+    pub fn version(&self, version: &str) -> Option<Vec<u8>> {
+        fs::read(self.version_path(version)).ok()
+    }
+
+    /// A name for a piece being imported now, from its fingerprint: given
+    /// once and kept for good, whatever later happens to the file. Never one
+    /// already in use.
+    #[must_use]
+    pub fn new_import_id(&self, version: &str) -> PieceId {
+        let stem = format!("imp-{}", version.get(..12).unwrap_or(version));
+        (1..=u32::MAX)
+            .map(|n| {
+                if n == 1 {
+                    stem.clone()
+                } else {
+                    format!("{stem}-{n}")
+                }
+            })
+            .filter_map(|name| PieceId::new(&name))
+            .find(|id| !self.piece_path(id).exists())
+            .unwrap_or_else(|| unreachable!("an unused name exists"))
+    }
+
+    /// The imported piece whose current version is `version`, if any: how a
+    /// second import of the same file is spotted.
+    #[must_use]
+    pub fn imported_as(&self, version: &str) -> Option<PieceId> {
+        self.imported().into_iter().find(|id| {
+            self.piece_record(id)
+                .is_some_and(|record| record.version == version)
+        })
     }
 
     /// Keeps `session`, replacing any earlier version of it.
@@ -266,25 +370,13 @@ impl Records {
         file_name: Option<&str>,
         source: &[u8],
     ) -> Result<PieceRecord, RecordsFailure> {
-        let score = self.scores().join(format!("{}.musicxml", id.as_str()));
-
-        fs::create_dir_all(self.scores())?;
-        fs::write(&score, source)?;
-
-        // "in read-only form". Advisory rather than absolute; a
-        // performer with a text editor can still change it. What it prevents
-        // is Segno doing so by accident, which is the case the requirement is about.
-        if let Ok(metadata) = fs::metadata(&score) {
-            let mut permissions = metadata.permissions();
-            permissions.set_readonly(true);
-            drop(fs::set_permissions(&score, permissions));
-        }
+        let version = self.keep_version(source)?;
 
         let record = PieceRecord {
             id: id.clone(),
             title: title.to_owned(),
             composer: composer.map(str::to_owned),
-            source: score,
+            version: version.clone(),
             file_name: file_name.map(str::to_owned),
             renamed: false,
         };
@@ -294,12 +386,7 @@ impl Records {
             id: record.id.as_str().to_owned(),
             title: record.title.clone(),
             composer: record.composer.clone(),
-            source: record
-                .source
-                .file_name()
-                .unwrap_or_default()
-                .to_string_lossy()
-                .into_owned(),
+            version,
             file_name: record.file_name.clone(),
             renamed: false,
         };
@@ -311,6 +398,7 @@ impl Records {
             }
         })?;
 
+        fs::create_dir_all(self.scores())?;
         atomic::write(&self.piece_path(id), &written)?;
 
         Ok(record)
@@ -321,12 +409,15 @@ impl Records {
     pub fn piece_record(&self, id: &PieceId) -> Option<PieceRecord> {
         let stored: StoredPiece =
             serde_json::from_str(&fs::read_to_string(self.piece_path(id)).ok()?).ok()?;
+        if stored.schema != PIECE_SCHEMA {
+            return None;
+        }
 
         Some(PieceRecord {
             id: id.clone(),
             title: stored.title,
             composer: stored.composer,
-            source: self.scores().join(stored.source),
+            version: stored.version,
             file_name: stored.file_name,
             renamed: stored.renamed,
         })
@@ -372,7 +463,7 @@ impl Records {
             .map(|entry| entry.path())
             .filter(|path| {
                 path.extension()
-                    .is_some_and(|extension| extension == "musicxml")
+                    .is_some_and(|extension| extension == "json")
             })
             .filter_map(|path| PieceId::new(path.file_stem()?.to_str()?))
             .collect();
@@ -380,32 +471,21 @@ impl Records {
         ids
     }
 
-    /// Removes an imported score and its record, nothing else: practice
-    /// history is kept. Missing files are not an error.
+    /// Removes an imported piece's record, and its version unless another
+    /// piece or a kept session still needs it. Missing files are not an
+    /// error.
     ///
     /// # Errors
     ///
     /// [`RecordsFailure::Storage`] if a file that is there could not be removed.
     pub fn discard_score(&self, id: &PieceId) -> Result<(), RecordsFailure> {
-        for path in [
-            self.scores().join(format!("{}.musicxml", id.as_str())),
-            self.piece_path(id),
-        ] {
-            // Scores are kept read-only; that guards against edits, not removal.
-            if let Ok(metadata) = fs::metadata(&path) {
-                let mut permissions = metadata.permissions();
-                #[expect(
-                    clippy::permissions_set_readonly_false,
-                    reason = "about to delete the file, on the performer's behalf"
-                )]
-                permissions.set_readonly(false);
-                drop(fs::set_permissions(&path, permissions));
-            }
-            match fs::remove_file(&path) {
-                Err(failure) if failure.kind() != std::io::ErrorKind::NotFound => {
-                    return Err(failure.into());
-                }
-                _ => {}
+        let version = self.piece_record(id).map(|record| record.version);
+        remove(&self.piece_path(id))?;
+
+        if let Some(version) = version {
+            let needed = self.imported_as(&version).is_some();
+            if !needed {
+                remove(&self.version_path(&version))?;
             }
         }
         Ok(())
@@ -451,7 +531,11 @@ impl Records {
     /// into the library precisely so that the performer's own file may move.
     #[must_use]
     pub fn source_of(&self, id: &PieceId) -> Option<Vec<u8>> {
-        fs::read(self.scores().join(format!("{}.musicxml", id.as_str()))).ok()
+        self.version(&self.piece_record(id)?.version)
+    }
+
+    fn version_path(&self, version: &str) -> PathBuf {
+        self.versions().join(format!("{version}.musicxml"))
     }
 
     fn session_path(&self, id: &str) -> PathBuf {

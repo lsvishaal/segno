@@ -74,7 +74,9 @@ e2e *args: _require-verovio
     SEGNO_VEROVIO_LIB="{{verovio_lib}}" SEGNO_VEROVIO_DATA="{{verovio_data}}" \
         cargo run --quiet --package segno-cli -- expected app/src-tauri/library/prelude-in-c.musicxml > target/e2e/prelude.expected.json
     cargo build --quiet --package segno-midi --example vkbd
-    node scripts/e2e/run.mjs "${scenarios[@]}"
+    # Verovio for `segno-cli import` (a scenario's seed); the app itself is given none.
+    SEGNO_VEROVIO_LIB="{{verovio_lib}}" SEGNO_VEROVIO_DATA="{{verovio_data}}" \
+        node scripts/e2e/run.mjs "${scenarios[@]}"
 
 # alias for `run`
 [group('run')]

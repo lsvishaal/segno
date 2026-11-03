@@ -13,6 +13,9 @@
 //!
 //! **Replay** (`replay`, `expected`, `bars`): a real `MusicXML` file through
 //! the real practice and analysis path, with no keyboard. See [`replay`].
+//!
+//! **Import** (`import`): keeps a score in a data folder as the app's import
+//! does, so the e2e kit can start with an imported piece.
 
 mod replay;
 
@@ -27,7 +30,7 @@ use segno_domain::{MeasureNumber, Pitch, PitchSpelling, Step};
 use segno_feedback::Feedback;
 use segno_notation::{Measure, Note, Position, ReferencePerformance, Score};
 
-const USAGE: &str = "replay <score.musicxml> <events.json> [--from-bar <n> | --loop <a>-<b>] | expected <score.musicxml> | bars <score.musicxml> <data folder> <piece id>";
+const USAGE: &str = "replay <score.musicxml> <events.json> [--from-bar <n> | --loop <a>-<b>] | expected <score.musicxml> | bars <score.musicxml> <data folder> <piece id> | import <data folder> <score.musicxml> [--title <title>]";
 
 fn main() -> ExitCode {
     let arguments: Vec<String> = std::env::args().skip(1).collect();
@@ -61,7 +64,13 @@ fn main() -> ExitCode {
         [command, score, data, piece] if command == "bars" => {
             Some(replay::bars(Path::new(score), Path::new(data), piece))
         }
-        [command, ..] if ["replay", "expected", "bars"].contains(&command.as_str()) => {
+        [command, data, score] if command == "import" => {
+            Some(replay::import(Path::new(data), Path::new(score), None))
+        }
+        [command, data, score, flag, title] if command == "import" && flag == "--title" => Some(
+            replay::import(Path::new(data), Path::new(score), Some(title)),
+        ),
+        [command, ..] if ["replay", "expected", "bars", "import"].contains(&command.as_str()) => {
             Some(Err(format!("usage: segno-cli {USAGE}")))
         }
         _ => None,
