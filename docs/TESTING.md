@@ -51,7 +51,7 @@ layout, real files written by the running app, and timing.
 | `just provided-test` | — | 6 s |
 | `just engraving-test` | — | 1 s |
 | `just midi-test` | — | 2 s |
-| `just e2e` | ≤ 180 s | 162 s reusing the AppImage (31 Oct, with `progress`: three launches); 158 s after a front-end-only rebuild; up to 290 s when Rust changed (the release build is ~170 s of it) |
+| `just e2e` | ≤ 180 s | 164–199 s reusing the AppImage (3 Nov: 13 scenarios, 165 checks, 3 runs in a row); up to 330 s when the AppImage is rebuilt |
 
 **e2e conventions:**
 - Each scenario starts from a clean app and data folder; none depends on another.

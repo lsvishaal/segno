@@ -22,11 +22,13 @@ What works today:
   - five bundled pieces, on Beginner and Intermediate shelves
   - your own MusicXML / MXL imports (with clear refusals for MIDI, PDF and
     damaged files)
-  - rename and delete
+  - rename and delete; importing a new version of one of your pieces asks
+    whether to update it (keeping its history) or add it as new
   - a Continue card for the piece you played last
   - "last practised" and the weakest bars on each card
 - **Practice:**
-  - the cursor waits for the right notes (chords, ties, repeats, grace notes)
+  - the cursor waits for the right notes (chords, ties, repeats, grace notes,
+    a pickup before bar 1), with bar numbers as printed
   - start from any bar (click it)
   - loop a range of bars (Shift-click or L), with a clean-passes counter
   - restart (R)

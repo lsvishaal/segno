@@ -495,4 +495,9 @@ median while the practice thread checked the keyboard every 25 ms; **14–15 ms 
 The `library` row above (46 ms in debug) is mostly the trip across the webview
 boundary, not the work. Release binary: 9.2 MB stripped (was 13.9 MB).
 
+3 Nov (release AppImage, empty data folder): the library is on screen **1.3 s** after
+launch. The Progress page of a piece with an older score version (the Prelude):
+**~110 ms** the first time that version is engraved, **~1.5 ms** once it is cached
+(`tests/versions.rs`, 5 runs). The AppImage is 120 MB.
+
 Not measured yet: idle CPU.

@@ -10,8 +10,9 @@ attached. So each file has two statuses, recorded separately.
 ## Encoded by hand by Claude (Anthropic's model), for Segno when it was named Hogwash
 
 These three files were written by Claude, not by the owner. Their header
-comments still say "written for Hogwash": changing a file's bytes would
-change the piece's ID today.
+comments still say "written for Hogwash"; the owner asked for them to be left
+as written (3 Nov). A bundled piece's ID is its fixed tag, so an edit would now
+make a new version, not a new piece.
 
 | File | Work | Composer | Status of the music | Status of this file |
 |---|---|---|---|---|

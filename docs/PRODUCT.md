@@ -204,14 +204,14 @@ Carried over from the previous roadmap; each one is real but rare.
 - **A clef change mid-bar** takes effect from the next bar in score geometry
   (no bundled piece has one).
 - **Wrong-note mark's accidental** ignores accidentals earlier in the same bar.
-- **Re-importing an edited file** creates a new piece (new fingerprint); the
-  old history stays with the old version. Want: "replace file, keep history."
 - **Closing the window mid-attempt** loses the attempt (leaving the practice
   screen now saves it; the window close does not).
 - **A zip damaged inside an entry** (not cut short) could still reach Verovio
   and crash it; only the container's structure is checked.
-- **A real Für Elise with a pickup bar** hasn't been verified; test bar
-  numbering with a public-domain source (don't commit the test file).
+- **A pickup joined with a short last bar across a repeat** (the owner's Für
+  Elise repeats back into its pickup), **lettered bar numbers** ("12a", refused)
+  and **cadenzas** aren't handled yet (Parking lot, 3 Nov).
+- **Voice-and-piano scores**: every staff's notes are expected, the voice's too.
 - Promoted out of this list into milestones: the 517-line early stop (M1.4),
   the attempt that keeps running (M1.2), the unreachable-keys wait (M3.13),
   the octave-shift buttons (M3.14).

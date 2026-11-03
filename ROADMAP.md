@@ -73,7 +73,7 @@ First task after the checkpoint: the Verovio DLL spike (a `windows-latest` CI jo
 - [ ] **M4.11 · S** A short "please try this" card
 - [ ] **M4.12 · M** Send feedback + Copy diagnostics
 - [ ] **M0.3 · S** Swap the Prelude for the OpenWTC edition (D4); required before any distribution
-- [ ] **M4.13 · S** `just e2e` within its 180 s budget (196 s on 2 Nov)
+- [ ] **M4.13 · S** `just e2e` within its 180 s budget (196 s on 2 Nov; 164–199 s on 3 Nov with 13 scenarios)
 - [ ] **Dogfood gate:** the owner used the app ≥ 10 sessions over ≥ 2 weeks, and every
       `annoyances.md` entry is fixed, parked or rejected
 - [ ] **M4.9 · S** One outside pianist per OS tried it while being watched; their blockers fixed
