@@ -44,7 +44,7 @@ order below.
 - [ ] A clean first run works (empty data folder → library → a starter piece)
 - [ ] Tag `stable-base-1` pushed (not a release)
 - [ ] CI green on the tagged commit
-- [ ] **Phase 2.5 · M** Durable identity and history (DECISIONS 3 Nov): permanent piece IDs, sessions keep their score version, replay per version
+- [~] **Phase 2.5 · M** Durable identity and history (DECISIONS 3 Nov): permanent piece IDs, sessions keep their score version, replay per version — built and tested 3 Nov (commits 1–6); left: Q3 re-import choice, Q4 pickup test, CLI `bars` by tag
 - [ ] **S** Pickup-bar test on a public-domain Für Elise (WoO 59) with a verifiable licence (Q4, 3 Nov), with Phase 2.5
 - [-] Stable base B (demo history) and C (UI tour) — 3 Nov, deferred until after `stable-base-1`; B comes before the M-Test README and screenshots (M4.6, M3.20)
 
