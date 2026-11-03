@@ -24,6 +24,71 @@ replaced). A new decision is a log line, plus a status row if it has a D-number.
 | D13 | Where Listen's sound comes from | **Open** (reopened 24 Oct). "Built-in synth" is no longer on the Never list |
 | D14 | Updates | **Decided 3 Nov:** opt-in. First run asks once; yes = a daily check of the latest version number on GitHub and a one-click install (Tauri updater); "Check for updates" always in About; never silent. An M-Test gate |
 
+## Proposals (to discuss)
+
+The owner's proposals, 3 Nov evening, recorded as given. **Status of every entry:
+PROPOSED: not decided, not scheduled, do not build.** "Touches" names an existing
+decision or rule a proposal would change; it is not resolved here.
+
+**P1 · MIDI import.** Status: PROPOSED.
+- Need: many pieces adult learners want exist only as MIDI; MusicXML-only import limits reach.
+- Direction: convert MIDI → MusicXML locally with webmscore (proven early Oct, `docs/archive/MIDI-IMPORT.md`); the result is flagged in the UI "converted from MIDI; bar numbers may not match a printed copy".
+- Touches: D2 (webmscore makes the app GPL-3.0); "MIDI import deferred until after v1.0" (6 Oct) and PRODUCT pitfall 10; local-first (conversion stays offline); bar-accurate advice needs correct bars and rhythms.
+- Open questions: the GPL-3.0 switch (D2); bundle size; how hands are split onto staves; a converted piece later imported as real MusicXML (the Q3 flow).
+- Size: L. Depends on: a grading spike of 15 real MIDIs (classical, pop/film, game, Synthesia-style), each A playable / B minor fixes / C wrong rhythm or bars / D unusable; go only if ≥ 10 are A or B.
+- Schedule when: spike after `stable-base-1`; build only if the spike passes and D2 is decided.
+
+**P2 · Wayland Alt-Tab icon.** Status: PROPOSED.
+- Need: the generic Wayland icon shows in Alt-Tab and the task bar (KDE Plasma Wayland).
+- Direction: make the window's app_id match a desktop entry with the Segno icon; decide how the AppImage provides that entry.
+- Touches: writing a `.desktop` file into `~/.local/share/applications` changes the user's system: needs the owner's OK and an opt-in.
+- Open questions: root cause (app_id vs StartupWMClass vs missing entry); GNOME Wayland and X11.
+- Size: S. Depends on: nothing. Schedule when: first task of M-Design.
+
+**P3 · Launch experience (splash screen idea).** Status: PROPOSED.
+- Need: launch should feel immediate and branded.
+- Direction: measure cold start first (AppImage mount, WebKit, Verovio load, library scan). Preferred: the main window at once with a branded loading state; a separate splash window only if a long wait proves unavoidable.
+- Touches: the performance budgets in `docs/DESIGN.md`; reduced motion.
+- Open questions: targets (proposed: window visible ≤ 300 ms, library usable ≤ 1.5 s cold); Windows cold start (WebView2) once M-Win exists.
+- Size: S. Depends on: the measurement. Schedule when: M-Design.
+
+**P4 · Export PDF and MIDI (alongside MusicXML).** Status: PROPOSED.
+- Need: not yet stated by the owner.
+- Direction: undecided. Two features: (a) the score as PDF (Verovio SVG → PDF) or MIDI (Verovio's MIDI output); (b) the owner's performance (recorded notes, timing, velocity) as MIDI.
+- Touches: none known; bundled pieces' licences allow export.
+- Open questions: (a), (b) or both, and for what use (printing, a teacher, a DAW)?
+- Size: S–M. Depends on: the owner's answer. Schedule when: after the answer.
+
+**P5 · Smooth cursor.** Status: PROPOSED.
+- Need: the cursor jumps from note to note; it should glide.
+- Direction: animate between positions (≈ 80–120 ms, ease-out); a note arriving mid-glide jumps to the newest target at once; across a line or page break, fade or jump; reduced motion = instant.
+- Touches: the motion rules in `docs/DESIGN.md` (120–200 ms, no bounce); the 30 ms key → mark budget must hold for the start of movement.
+- Open questions: glide duration; whether live marks animate too.
+- Size: S–M. Depends on: nothing. Schedule when: M-Design.
+
+**P6 · Design refresh (oxblood, modern UI): a new milestone M-Design.** Status: PROPOSED.
+- Need: the UI is black and white with a green hover; it looks dated and unpolished.
+- Direction: a design system on a branch (e.g. `design/oxblood`): oxblood brand colour, refined type, spacing and surfaces, light and dark. The score stays paper-white; semantic colours stay (correct green, wrong red, weak amber, loop blue); the brand colour is never feedback. For review: the tokens plus `just shots` of every screen, reviewed in chat before anything merges.
+- Touches: oxblood (provisional, 2 Nov); "never encode meaning in colour alone"; WCAG AA; WebKitGTK and WebView2 performance (translucency and blur can be slow).
+- Open questions: what "liquid" means (Apple-style glass vs fluid motion and colour); dark mode in or out of the first pass.
+- Size: M–L. Depends on: P2, P3, P5 folded in. Schedule when: after the two spikes that follow `stable-base-1`; before Windows parity, so Windows is checked once against the final UI.
+
+**P7 · Library UX.** Status: PROPOSED.
+- Need: the library feels like a wall of cards.
+- Direction: Continue as the hero; Your pieces; starter repertoire by level; search and sort; clear empty states; sheet-music-cover cards; keeps "first piece playable in ≤ 3 clicks" (M4.3).
+- Touches: the three-screens rule; the friction rule.
+- Open questions: grouping by level vs composer vs recently played; how many pieces before search appears.
+- Size: M. Depends on: P6 (same branch), P8 (content). Schedule when: M-Design.
+
+**P8 · Bundled starter repertoire.** Status: PROPOSED.
+- Need: testers need good pieces on first launch; the current starters (written by Claude) are placeholders.
+- Direction: bundle 15–25 commonly played PD/CC0 pieces, beginner to intermediate, from sources with verifiable licences (e.g. OpenScore CC0, Mutopia), each with source URL, licence and editor in PROVENANCE and a permanent tag; some with pickups and repeats. Replaces the current starters.
+- Touches: absorbs M0.3 (the Prelude swap, D4) and D12; Never "an in-app store" and local-first (bundled, not downloaded); "only lawfully redistributable scores"; Q1 (3 Nov: keep the current starters until M3.18).
+- Open questions: the final list (Claude researches candidates with licences; the owner picks); AppImage size.
+- Size: M. Depends on: Phase 2.6 (pickups). Schedule when: in parallel with M-Design; required before M-Test.
+
+**Proposed order (PROPOSED):** `stable-base-1` → two spikes (Verovio on Windows; P1 MIDI grading) → M-Design (P2, P3, P5, P6, P7) with P8 in parallel → M-Win → P1 if the spike passes → the rest of M-Test. Touches: ROADMAP's milestone order (M-Win before M-Test today; no M-Design).
+
 ---
 
 ## The D-list as first written (6–24 Oct)

@@ -222,3 +222,11 @@ _One dated line per idea. Reviewed between milestones; survivors move into a mil
 - 2026-10-26 · Re-check level thresholds (0.5 s / 2 / 5 / 10) against the self-use week's data at the 1 Nov cut-check · 2 Nov: provisional until dogfood data exists (D10)
 - 2026-11-01 · Play on the computer keyboard when no MIDI keyboard is connected ("x is middle C"; a PianoBooster idea).
 - 2026-11-02 · Accent green #16a34a is close to correct-note green #2f6f4e; the oxblood change fixes it.
+- 2026-11-03 · P1 MIDI import → DECISIONS Proposals (to discuss)
+- 2026-11-03 · P2 Wayland Alt-Tab icon → DECISIONS Proposals (to discuss)
+- 2026-11-03 · P3 Launch experience (splash screen idea) → DECISIONS Proposals (to discuss)
+- 2026-11-03 · P4 Export PDF and MIDI → DECISIONS Proposals (to discuss)
+- 2026-11-03 · P5 Smooth cursor → DECISIONS Proposals (to discuss)
+- 2026-11-03 · P6 Design refresh (oxblood, modern UI), milestone M-Design → DECISIONS Proposals (to discuss)
+- 2026-11-03 · P7 Library UX → DECISIONS Proposals (to discuss)
+- 2026-11-03 · P8 Bundled starter repertoire → DECISIONS Proposals (to discuss)
