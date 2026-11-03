@@ -158,7 +158,6 @@ fn starting_puts_every_provided_piece_on_the_shelf() {
     assert_eq!(titles.len(), provided().len());
     assert!(titles.contains(&"Ode to Joy"), "got {titles:?}");
     assert!(titles.contains(&"Lightly Row"), "got {titles:?}");
-    assert!(titles.contains(&"A Little Chord Study"), "got {titles:?}");
     assert!(
         titles.contains(&"Für Elise (opening, simplified)"),
         "got {titles:?}"
@@ -237,32 +236,32 @@ fn every_piece_on_the_shelf_can_be_named_and_played() {
 
 // The pairing `commands::open_piece` relies on to build `Mark.notes`: each
 // drawn element, zipped against the same position's expected notes in
-// order. Checked against the chord study because a chord is where a
-// misalignment between the two sequences would actually show up — a
-// melody's positions are all length one, so a shift there would be
-// invisible.
+// order. Checked on the Minuet's first beat, D5 over a G3-B3-D4 chord,
+// because a chord is where a misalignment between the two sequences would
+// actually show up — a melody's positions are all length one, so a shift
+// there would be invisible.
 #[test]
 #[ignore = "needs a real libverovio; run `just provided-test`"]
 fn drawn_elements_pair_with_the_notes_written_at_the_same_position() {
     let mut engraver = engraver();
     let source = std::fs::read(
-        PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("library/a-little-chord-study.musicxml"),
+        PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("library/minuet-in-g.musicxml"),
     )
-    .expect("a-little-chord-study.musicxml ships with the application");
+    .expect("minuet-in-g.musicxml ships with the application");
 
     let drawn = engraver.engrave(&source).expect("engraves");
     let reference = segno_notation::ReferencePerformance::derived_from(drawn.score());
 
-    // Bar two's chord (the design, `PROVENANCE.md`): C4, E4, G4 together.
-    let chord = drawn
+    let first = drawn
         .placements()
-        .find(|(at, _)| at.position() == 4)
+        .find(|(at, _)| at.position() == 0)
         .map(|(_, placement)| placement)
-        .expect("the first chord was drawn");
+        .expect("the first beat was drawn");
 
-    let expected = reference.at(4).expect("position 4 is within the piece");
+    let expected = reference.at(0).expect("position 0 is within the piece");
+    assert_eq!(first.elements().len(), expected.notes().len());
 
-    let spelled: Vec<(String, i8)> = chord
+    let mut spelled: Vec<(String, i8)> = first
         .elements()
         .iter()
         .zip(expected.notes())
@@ -273,13 +272,15 @@ fn drawn_elements_pair_with_the_notes_written_at_the_same_position() {
             )
         })
         .collect();
+    spelled.sort();
 
     assert_eq!(
         spelled,
         vec![
-            ("C".to_owned(), 4),
-            ("E".to_owned(), 4),
-            ("G".to_owned(), 4),
+            ("B".to_owned(), 3),
+            ("D".to_owned(), 4),
+            ("D".to_owned(), 5),
+            ("G".to_owned(), 3),
         ]
     );
 }

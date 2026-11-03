@@ -50,7 +50,7 @@ pub fn level_of(id: &PieceId) -> Option<Level> {
 /// piece with a second staff, then two real published pieces (a Minuet with
 /// repeats, a Prelude full of held notes). `library/PROVENANCE.md` records
 /// where each one came from and under what licence.
-pub const PROVIDED: [Provided; 6] = [
+pub const PROVIDED: [Provided; 5] = [
     Provided {
         name: "lightly-row.musicxml",
         source: include_bytes!("../library/lightly-row.musicxml"),
@@ -59,11 +59,6 @@ pub const PROVIDED: [Provided; 6] = [
     Provided {
         name: "ode-to-joy.musicxml",
         source: include_bytes!("../library/ode-to-joy.musicxml"),
-        level: Level::Beginner,
-    },
-    Provided {
-        name: "a-little-chord-study.musicxml",
-        source: include_bytes!("../library/a-little-chord-study.musicxml"),
         level: Level::Beginner,
     },
     Provided {

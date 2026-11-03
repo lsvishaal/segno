@@ -7,20 +7,23 @@ Public-domain *music* is not the same thing as a public-domain *file*: a
 downloaded MusicXML carries whatever licence the person who typed it in
 attached. So each file has two statuses, recorded separately.
 
-## Encoded by hand for Hogwash
+## Encoded by hand by Claude (Anthropic's model), for Segno when it was named Hogwash
+
+These three files were written by Claude, not by the owner. Their header
+comments still say "written for Hogwash": changing a file's bytes would
+change the piece's ID today.
 
 | File | Work | Composer | Status of the music | Status of this file |
 |---|---|---|---|---|
-| `ode-to-joy.musicxml` | Ode to Joy (theme, Symphony No. 9) | Ludwig van Beethoven (d. 1827) | Public domain worldwide | Written for Hogwash, Apache-2.0 |
-| `lightly-row.musicxml` | Lightly Row | Traditional (German folk melody) | Public domain; no known author | Written for Hogwash, Apache-2.0 |
-| `a-little-chord-study.musicxml` | A Little Chord Study | Hogwash | Original exercise | Apache-2.0 |
-| `fur-elise.musicxml` | Für Elise (opening, simplified) | Ludwig van Beethoven (d. 1827) | Public domain worldwide | Written for Hogwash, Apache-2.0 |
+| `ode-to-joy.musicxml` | Ode to Joy (theme, Symphony No. 9) | Ludwig van Beethoven (d. 1827) | Public domain worldwide | Written by Claude, Apache-2.0 |
+| `lightly-row.musicxml` | Lightly Row | Traditional (German folk melody) | Public domain; no known author | Written by Claude, Apache-2.0 |
+| `fur-elise.musicxml` | Für Elise (opening, simplified) | Ludwig van Beethoven (d. 1827) | Public domain worldwide | Written by Claude, Apache-2.0 |
 
 **`fur-elise.musicxml` is a simplified arrangement, not a transcription of a
 published edition.** Its first two bars set the opening motif (E D♯ E D♯ E B D
 C) over a plain alternating A3/E3 bass, this project's own reduction; bars
 three and four are an original continuation, not the rest of Beethoven's
-piece. The arrangement and its rhythmic simplification are Hogwash's own.
+piece. The arrangement and its rhythmic simplification are Claude's, for this project.
 
 ## Downloaded from MuseScore
 
@@ -43,7 +46,6 @@ Each exercises something the practice loop has to get right.
 - **Lightly Row** — single notes, stepwise, four bars.
 - **Ode to Joy** — single notes with repeated pitches, where a cursor that
   advanced on the wrong thing would be caught.
-- **A Little Chord Study** — three triads: several notes at one position.
 - **Für Elise** — a second staff: right- and left-hand notes that sound
   together are one position.
 - **Minuet in G** — repeat signs (`|: 1–16 :| |: 17–32 :|`): the cursor

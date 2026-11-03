@@ -78,7 +78,7 @@
 **Library:**
 - Continue (the piece practised last: when, and its weakest bars)
 - Your pieces (imports, most recent first; "+ Add a piece")
-- Starter · Beginner (Lightly Row, Ode to Joy, A Little Chord Study, Für Elise
+- Starter · Beginner (Lightly Row, Ode to Joy, Für Elise
   simplified)
 - Starter · Intermediate (Minuet in G, Prelude in C)
 - Cards: composer in small caps, title in serif italic, size, "Last practised … ·

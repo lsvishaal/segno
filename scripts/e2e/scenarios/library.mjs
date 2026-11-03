@@ -24,7 +24,7 @@ const scoreIds = () => (fs.existsSync(`${DATA}/scores`) ? fs.readdirSync(`${DATA
 const sessionsOf = (id) => (fs.existsSync(HISTORY) ? fs.readdirSync(HISTORY).filter((f) => f.startsWith(`${id}-`)).length : 0);
 
 export default async function library() {
-  await w.until("return document.querySelectorAll('li h3').length >= 6", "the library", 30000);
+  await w.until("return document.querySelectorAll('li h3').length >= 5", "the library", 30000);
   await w.settle();
   await shot("library");
   const shelves = await w.run("return [...document.querySelectorAll('section[aria-label]')].map(s => s.getAttribute('aria-label'))");

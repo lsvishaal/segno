@@ -19,7 +19,7 @@ for your own machine.
 
 What works today:
 - **Library:**
-  - six bundled pieces, on Beginner and Intermediate shelves
+  - five bundled pieces, on Beginner and Intermediate shelves
   - your own MusicXML / MXL imports (with clear refusals for MIDI, PDF and
     damaged files)
   - rename and delete

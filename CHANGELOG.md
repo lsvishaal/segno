@@ -12,6 +12,7 @@ Everything so far, before the first preview (v0.1).
 - **Renamed to Segno.** The window, About and library say Segno; your practice lives in
   `~/.local/share/com.segno.practice` (move the old `com.hogwash.practice` folder there to keep
   your history).
+- **A Little Chord Study is no longer bundled:** five starter pieces remain.
 
 ### Added
 - **Settings are kept with your history:** marks, the remembered keyboard and

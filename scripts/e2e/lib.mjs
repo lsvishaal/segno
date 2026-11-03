@@ -80,7 +80,7 @@ export const newSessions = (before) => sessions().filter((s) => !before.some((b)
 export const minuet = JSON.parse(fs.readFileSync(`${DIR}/minuet.expected.json`, "utf8")).map((n) => n.pitch);
 
 export async function openPiece(title) {
-  await w.until("return document.querySelectorAll('li h3').length >= 6", "the library", 30000);
+  await w.until("return document.querySelectorAll('li h3').length >= 5", "the library", 30000);
   await w.settle();
   await w.run(
     "[...document.querySelectorAll('li button h3')].find(h=>h.textContent===arguments[0]).closest('button').click(); return 1",

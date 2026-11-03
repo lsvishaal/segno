@@ -93,7 +93,7 @@ Format: *open X → play Y → expect Z.* Store the latest ones at the bottom of
 
 Before each release, play through these by hand:
 1. Lightly Row (single line)
-2. A Little Chord Study (chords)
+2. Für Elise (two staves sounding together)
 3. Minuet in G (repeats, two hands) — with a loop across the repeat
 4. Prelude in C (68 ties) — start from bar 20
 5. One imported piece with a pickup bar

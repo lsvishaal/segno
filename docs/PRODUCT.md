@@ -168,7 +168,7 @@ are all about reading single notes, not about bars of a piece.
 Each needs a sourced, licence-checked file before it's added.
 
 **Beginner — single lines and first two-hand pieces**
-- Lightly Row (have) · Ode to Joy (have) · A Little Chord Study (have)
+- Lightly Row (have) · Ode to Joy (have)
 - Für Elise, simplified opening (have, hand-arranged)
 - Schumann — Melody, Op. 68 No. 1
 - Schumann — Soldier's March, Op. 68 No. 2
