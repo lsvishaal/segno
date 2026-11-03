@@ -22,7 +22,7 @@ replaced). A new decision is a log line, plus a status row if it has a D-number.
 | D11 | Clean pass in a loop | **Decided by implementation 22 Oct:** every position right, no wrong notes |
 | D12 | Bundled library for v1.0 | Recommended: 12–15 pieces across levels (M3.18) |
 | D13 | Where Listen's sound comes from | **Open** (reopened 24 Oct). "Built-in synth" is no longer on the Never list |
-| D14 | Updates | **Decided 3 Nov:** opt-in. First run asks once; yes = a daily check of the latest version number on GitHub and a one-click install (Tauri updater); "Check for updates" always in About; never silent. An M-Test gate |
+| D14 | Updates | **Decided 3 Nov:** opt-in. First run asks once; yes = a daily check of the latest version number on GitHub and a one-click install (Tauri updater); "Check for updates" always in About; never silent. An M-Test gate. The first-run question's wording isn't decided: the owner approves it when it's built |
 
 ## Proposals (to discuss)
 
@@ -82,7 +82,7 @@ decision or rule a proposal would change; it is not resolved here.
 
 **P8 · Bundled starter repertoire.** Status: PROPOSED.
 - Need: testers need good pieces on first launch; the current starters (written by Claude) are placeholders.
-- Direction: bundle 15–25 commonly played PD/CC0 pieces, beginner to intermediate, from sources with verifiable licences (e.g. OpenScore CC0, Mutopia), each with source URL, licence and editor in PROVENANCE and a permanent tag; some with pickups and repeats. Replaces the current starters.
+- Direction: bundle 15–25 commonly played PD/CC0 pieces, beginner to intermediate, from sources with verifiable licences (e.g. OpenScore CC0, Mutopia), each with source URL, licence and editor in PROVENANCE and a permanent tag; some with pickups and repeats; piano solo pieces (voice + piano scores expect the voice line; known limit). Replaces the current starters.
 - Touches: absorbs M0.3 (the Prelude swap, D4) and D12; Never "an in-app store" and local-first (bundled, not downloaded); "only lawfully redistributable scores"; Q1 (3 Nov: keep the current starters until M3.18).
 - Open questions: the final list (Claude researches candidates with licences; the owner picks); AppImage size.
 - Size: M. Depends on: Phase 2.6 (pickups). Schedule when: in parallel with M-Design; required before M-Test.
@@ -210,3 +210,7 @@ _Date · decision · why · what it replaced._
 - 2026-11-03 · E3: a lettered bar number ("12a") is refused: "This score numbers a bar 12a; Segno can't open scores with lettered bar numbers yet." Parking lot · no real file has one yet · open
 - 2026-11-03 · E4: a pickup joined with a short last bar across a repeat, and cadenza or free bars, are out of Phase 2.6 (Parking lot) until a real file appears; a short bar mid-piece already keeps its printed number · real files first · open
 - 2026-11-03 · Pickup detection and order: a first bar marked incomplete (Verovio `metcon="false"`, MusicXML `implicit="yes"`) is the pickup whatever its number; if a file numbers its pickup 1, Segno stops and reports rather than shift the printed numbers. Bar numbers shown are the printed ones; "previous" and "next" bar, merging neighbours and "one bar before" use written order. Bar 0 must count as a bar in the UI (no truthiness checks) · the printed score is what the performer looks at · number − 1 arithmetic and bar 1 defaults
+- 2026-11-03 (evening) · The Pickup is a first bar numbered 0. An incomplete first bar numbered 1 or higher is treated as a normal bar for now (Parking lot) · matches the code; every pickup in the real files sampled is numbered 0 · "a first bar marked incomplete is the pickup whatever its number" (3 Nov)
+- 2026-11-03 (evening) · `segno-cli bars` keeps its argument order: `<score.musicxml> <data folder> <piece id>` · the code; docs follow it · `bars <data folder> <piece id> [score]` (the Phase 2.5 plan)
+- 2026-11-03 (evening) · Test machines (decided in chat 3 Nov): Windows MIDI sign-off on the owner's dual-boot Windows install with the FP-10; a VM only for installer smoke tests, never MIDI sign-off; the Windows clean-machine test (M4.2) on the owner's second laptop, kept free of dev tools; the Linux clean-machine test on a fresh VM or live USB · real hardware for real MIDI timing; a machine that never had dev tools is closest to a tester's · "a real Windows PC", "a fresh user or VM"
+- 2026-11-03 (evening) · D14: the first-run question's wording is not decided; it's user-visible copy the owner approves when the updater is built · open
