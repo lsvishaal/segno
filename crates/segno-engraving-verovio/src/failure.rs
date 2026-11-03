@@ -19,10 +19,11 @@ pub(crate) enum TranslationFailure {
     /// The document parsed and contains no music.
     NoMusic,
 
-    /// A measure with no number, or numbered zero.
+    /// A measure numbered with letters or not at all, or 0 anywhere but
+    /// the first bar (the pickup).
     ///
-    /// The design numbers measures from one. Renumbering silently would put
-    /// every later finding one bar out.
+    /// Renumbering silently would put every later finding out of step with
+    /// the printed score.
     UnnumberedMeasure(String),
 
     /// A note whose letter or octave could not be read.
@@ -56,7 +57,7 @@ impl Display for TranslationFailure {
             Self::NoMusic => write!(formatter, "the file contains no music"),
             Self::UnnumberedMeasure(written) => write!(
                 formatter,
-                "a bar is numbered `{written}`, and bars are numbered from one"
+                "a bar is numbered `{written}`; only the first bar, a pickup, can be numbered 0"
             ),
             Self::UnreadableNote(detail) => write!(formatter, "a note could not be read: {detail}"),
             Self::UnsupportedAccidental(accidental) => write!(

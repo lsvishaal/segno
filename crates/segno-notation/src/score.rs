@@ -33,8 +33,9 @@ impl Score {
     /// - **No measures at all.** The design says a Score is "divided
     ///   completely into Measures"; a division into none is the absence of
     ///   notation.
-    /// - **Not starting at one.** The design — "Measures are numbered from
-    ///   one, following the convention performers use."
+    /// - **Not starting at one.** Measures are numbered from one, as
+    ///   performers count them, after an optional pickup (bar 0, the first
+    ///   bar; DECISIONS, 3 Nov).
     /// - **Numbers that repeat or descend.** The design — "Measures are
     ///   ordered, and their order does not change." A repeated number makes
     ///   "bar four" ambiguous, which defeats the reason Measures exist
@@ -45,8 +46,15 @@ impl Score {
     /// consecutive is not.
     #[must_use]
     pub fn new(measures: Vec<Measure>) -> Option<Self> {
+        // Bar 1, or a pickup before it.
         let first = measures.first()?;
-        if first.number() != MeasureNumber::FIRST {
+        let opening = measures
+            .iter()
+            .find(|measure| !measure.number().is_pickup())
+            .map(Measure::number);
+        if !(first.number() == MeasureNumber::FIRST
+            || (first.number().is_pickup() && opening == Some(MeasureNumber::FIRST)))
+        {
             return None;
         }
 

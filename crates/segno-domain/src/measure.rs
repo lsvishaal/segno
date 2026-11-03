@@ -1,34 +1,50 @@
 //! Where in the music something happened.
 
-use core::num::NonZeroU32;
-
-/// The number of a Measure as the Score writes it.
+/// The number of a Measure as the Score prints it.
 ///
-/// *"Measures are numbered from one, following the convention
-/// performers use."* That convention is carried by the type rather than left
-/// to call sites, because the failure it prevents is user-visible: Feedback
-/// exists to tell a performer **where** something happened, and
-/// "bar 0" is not a place they can look.
+/// Bars are numbered from one, as performers count them, except a **pickup**:
+/// the incomplete bar some pieces open with, which scores number 0. It is
+/// shown as "Pickup", never "bar 0" (DECISIONS, 3 Nov), so only
+/// [`MeasureNumber::PICKUP`] and [`MeasureNumber::printed`] can make one;
+/// [`MeasureNumber::new`] still refuses 0, so arithmetic that slips below
+/// bar 1 can't land on it by accident.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
-pub struct MeasureNumber(NonZeroU32);
+pub struct MeasureNumber(u32);
 
 impl MeasureNumber {
-    /// The first measure of any Score.
-    pub const FIRST: Self = Self(NonZeroU32::MIN);
+    /// The first measure after any pickup.
+    pub const FIRST: Self = Self(1);
 
-    /// Returns the measure numbered `number`, or `None` if it is zero.
+    /// The pickup: an incomplete first bar, printed as bar 0.
+    pub const PICKUP: Self = Self(0);
+
+    /// Returns the measure numbered `number`, or `None` if it is zero (a
+    /// pickup is made only on purpose: [`MeasureNumber::printed`]).
     #[must_use]
     pub const fn new(number: u32) -> Option<Self> {
-        match NonZeroU32::new(number) {
-            Some(number) => Some(Self(number)),
-            None => None,
+        if number == 0 {
+            None
+        } else {
+            Some(Self(number))
         }
     }
 
-    /// The number as a performer would say it.
+    /// The measure a score prints as `number`: 0 is the pickup.
+    #[must_use]
+    pub const fn printed(number: u32) -> Self {
+        Self(number)
+    }
+
+    /// The number as printed; 0 for the pickup.
     #[must_use]
     pub const fn get(self) -> u32 {
-        self.0.get()
+        self.0
+    }
+
+    /// Whether this is the pickup.
+    #[must_use]
+    pub const fn is_pickup(self) -> bool {
+        self.0 == 0
     }
 }
 
@@ -94,8 +110,12 @@ mod tests {
     }
 
     #[test]
-    fn there_is_no_measure_zero() {
+    fn bar_zero_is_only_ever_the_pickup_made_on_purpose() {
         assert!(MeasureNumber::new(0).is_none());
+        assert_eq!(MeasureNumber::printed(0), MeasureNumber::PICKUP);
+        assert!(MeasureNumber::PICKUP.is_pickup());
+        assert!(!MeasureNumber::FIRST.is_pickup());
+        assert!(MeasureNumber::PICKUP < MeasureNumber::FIRST);
     }
 
     #[test]

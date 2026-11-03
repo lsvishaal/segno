@@ -93,6 +93,10 @@ pub(crate) fn read(mei: &str) -> Result<ReadMei, TranslationFailure> {
         .filter(|node| node.has_tag_name("measure"))
     {
         let number = measure_number(measure)?;
+        // 0 is the pickup, which only a first bar can be.
+        if number.is_pickup() && !measures.is_empty() {
+            return Err(TranslationFailure::UnnumberedMeasure("0".to_owned()));
+        }
         measures.push(number);
         if let Some(id) = identifier(measure) {
             measure_ids.insert(id.to_owned(), number);
@@ -272,7 +276,7 @@ fn measure_number(measure: Node<'_, '_>) -> Result<MeasureNumber, TranslationFai
     written
         .parse::<u32>()
         .ok()
-        .and_then(MeasureNumber::new)
+        .map(MeasureNumber::printed)
         .ok_or_else(|| TranslationFailure::UnnumberedMeasure(written.to_owned()))
 }
 
@@ -376,8 +380,9 @@ fn semitones(accidental: &str) -> Result<i8, TranslationFailure> {
 
 #[cfg(test)]
 mod tests {
-    use segno_domain::Step;
+    use segno_domain::{MeasureNumber, Step};
 
+    use crate::failure::TranslationFailure;
     use crate::mei::read;
 
     /// Real Verovio output for `tests/fixtures/two-bars.musicxml`, captured
@@ -629,17 +634,47 @@ mod tests {
         assert!(read.note("no-such-note").is_none());
     }
 
-    // measures are numbered from one. A document numbering from
-    // zero is not something to quietly renumber.
+    // A pickup is printed as bar 0 and is the first bar (DECISIONS, 3 Nov).
     #[test]
-    fn a_measure_numbered_zero_is_refused() {
+    fn a_first_bar_numbered_zero_is_the_pickup() {
+        let read = read(
+            r#"<mei xmlns="http://www.music-encoding.org/ns/mei"><music><body><mdiv><score>
+               <section><measure xml:id="p" n="0" metcon="false"/><measure xml:id="m" n="1"/></section>
+               </score></mdiv></body></music></mei>"#,
+        )
+        .expect("readable");
+
+        assert_eq!(
+            read.measures(),
+            [MeasureNumber::PICKUP, MeasureNumber::FIRST]
+        );
+    }
+
+    // Anywhere else, 0 isn't a printed bar; silently keeping it would put
+    // findings at a place the performer can't find.
+    #[test]
+    fn a_later_bar_numbered_zero_is_refused() {
         let refused = read(
             r#"<mei xmlns="http://www.music-encoding.org/ns/mei"><music><body><mdiv><score>
-               <section><measure xml:id="m" n="0"/></section>
+               <section><measure xml:id="m" n="1"/><measure xml:id="z" n="0"/></section>
                </score></mdiv></body></music></mei>"#,
         );
 
         assert!(refused.is_err());
+    }
+
+    // Lettered numbers ("12a", MuseScore's "X1") are refused for now (E3).
+    #[test]
+    fn a_lettered_bar_number_is_refused() {
+        let refused = read(
+            r#"<mei xmlns="http://www.music-encoding.org/ns/mei"><music><body><mdiv><score>
+               <section><measure xml:id="m" n="12a"/></section>
+               </score></mdiv></body></music></mei>"#,
+        );
+
+        assert!(
+            matches!(refused, Err(TranslationFailure::UnnumberedMeasure(written)) if written == "12a")
+        );
     }
 
     // Quarter-tone accidentals exist in MEI and cannot be represented as a

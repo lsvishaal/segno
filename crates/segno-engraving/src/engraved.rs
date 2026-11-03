@@ -299,6 +299,13 @@ pub enum EngravingFailure {
 
     /// The engraving came out incoherent. An adapter defect.
     Malformed(MalformedEngraving),
+
+    /// A bar is numbered with letters ("12a", or "X1" as `MuseScore` writes), which bar
+    /// numbers can't carry yet (DECISIONS, 3 Nov, E3).
+    LetteredBar {
+        /// The number as written.
+        written: String,
+    },
 }
 
 impl From<MalformedEngraving> for EngravingFailure {

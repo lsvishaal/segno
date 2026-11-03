@@ -307,10 +307,10 @@ fn two_real_fur_elise_files_are_two_pieces() {
     let easy =
         accept_offered(&easy_source, Some("Fur_Elise_Easy.mxl"), &mut segno).expect("supported");
 
-    // Its pickup bar is numbered 0, which is refused until pickup bars are
-    // supported; flip this when they are.
-    assert!(full.is_err_and(|refusal| refusal.contains("numbered `0`")));
-    assert_eq!(segno.library().count(), before + 1);
+    // Its pickup bar is numbered 0: a pickup, kept as printed (Phase 2.6).
+    let full = full.expect("a pickup is supported");
+    assert_eq!(full.piece.title, "Für Elise");
+    assert_eq!(segno.library().count(), before + 2);
     assert_eq!(easy.piece.title, "Fur Elise");
     assert_eq!(easy.piece.composer, None);
     assert_eq!(easy.piece.file_name.as_deref(), Some("Fur_Elise_Easy.mxl"));

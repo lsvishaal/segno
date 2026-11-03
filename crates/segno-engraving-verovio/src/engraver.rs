@@ -233,8 +233,17 @@ fn refused(error: ToolkitError) -> EngravingFailure {
 }
 
 fn unreadable(failure: &TranslationFailure) -> EngravingFailure {
-    EngravingFailure::Unreadable {
-        detail: failure.to_string(),
+    match failure {
+        TranslationFailure::UnnumberedMeasure(written)
+            if !written.is_empty() && written.parse::<u32>().is_err() =>
+        {
+            EngravingFailure::LetteredBar {
+                written: written.clone(),
+            }
+        }
+        _ => EngravingFailure::Unreadable {
+            detail: failure.to_string(),
+        },
     }
 }
 

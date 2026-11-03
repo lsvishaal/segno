@@ -126,6 +126,21 @@ impl UnsupportedInput {
         }
     }
 
+    /// A bar is numbered with letters ("12a"), which Segno can't carry yet
+    /// (DECISIONS, 3 Nov, E3). The whole message is the owner's sentence, so
+    /// there is no separate route.
+    #[must_use]
+    pub fn lettered_bar(format: OfferedFormat, written: &str) -> Self {
+        Self {
+            format,
+            reason: format!(
+                "This score numbers a bar {written}; Segno can't open scores with lettered bar numbers yet."
+            ),
+            route: String::new(),
+            blames_the_material: true,
+        }
+    }
+
     /// The engraver could not be used, which is nothing to do with the file.
     ///
     /// Kept distinct because the useful sentence is entirely different.

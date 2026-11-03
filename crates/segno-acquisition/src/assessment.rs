@@ -103,6 +103,10 @@ pub fn assess(
             Outcome::NotAccepted(UnsupportedInput::engine_unavailable(format, &detail))
         }
 
+        Err(EngravingFailure::LetteredBar { written }) => {
+            Outcome::NotAccepted(UnsupportedInput::lettered_bar(format, &written))
+        }
+
         Err(EngravingFailure::Malformed(malformed)) => Outcome::NotAccepted(
             UnsupportedInput::engine_unavailable(format, &format!("{malformed:?}")),
         ),

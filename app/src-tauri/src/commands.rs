@@ -769,7 +769,11 @@ fn assessed(
     let mut engraver = ImportEngraver(segno.engraving());
     match segno_acquisition::assess(material, id, file_name, &mut engraver) {
         segno_acquisition::Outcome::NotAccepted(refused) => {
-            Err(format!("{}\n\n{}", refused.reason(), refused.route()))
+            Err([refused.reason(), refused.route()]
+                .into_iter()
+                .filter(|part| !part.is_empty())
+                .collect::<Vec<_>>()
+                .join("\n\n"))
         }
         segno_acquisition::Outcome::Accepted { piece, report } => Ok((*piece, report.lines())),
     }
