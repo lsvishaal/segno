@@ -1,12 +1,23 @@
 // With "Marks while playing" off: a correct note's green flash, noteheads
 // too, and it always fades, even at tempo.
 import * as w from "../wd.mjs";
-import { check, minuet, startPractising, flashed, kb, shot } from "../lib.mjs";
+import { check, minuet, openPiece, chooseKeyboard, clickButton, waitForButton, flashed, kb, shot } from "../lib.mjs";
+
+const MARKS = 'document.querySelector(\'button[aria-label="Marks while playing"]\')';
 
 export default async function flash() {
-  // Read when the practice screen opens.
-  await w.run("localStorage.setItem('hogwash.marks', 'off'); return 1");
-  await startPractising();
+  // Marks off through the settings panel, as a performer would.
+  await openPiece("Minuet in G Major");
+  await w.run("document.querySelector('button[aria-label=\"Settings\"]').click(); return 1");
+  await w.until(`return !!${MARKS}`, "the marks toggle", 5000);
+  await w.run(`${MARKS}.click(); return 1`);
+  await w.settle();
+  check("Marks while playing is off", (await w.run(`return ${MARKS}.getAttribute('aria-pressed')`)) === "false");
+  await w.press("Escape");
+  await w.settle();
+  await chooseKeyboard();
+  await clickButton("Start");
+  await waitForButton("Stop");
 
   for (const n of minuet.slice(0, 4)) kb(`on ${n} 80`, "wait 15", `off ${n}`);
   await w.sleep(250);
