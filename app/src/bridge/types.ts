@@ -203,6 +203,8 @@ export interface ProgressView {
   readonly title: string;
   readonly composer: string | null;
   readonly bars: number;
+  /** Every bar's printed number in written order; a pickup is 0, first. */
+  readonly measures: readonly number[];
   /** Newest first; a bar not played that session has no cell. */
   readonly sessions: readonly {
     readonly startedMs: number;

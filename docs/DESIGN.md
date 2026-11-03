@@ -304,7 +304,8 @@ The **Progress page** (M2.10; levels and words from `app/src-tauri/src/history.r
   through, a wrong note 1 time in 3" with "⟲ Practise bars 5–7" (from one bar
   before, clamped at bar 1). Judged bars at level ≥ 1, worst first, neighbours
   merged. None: "Every bar is secure in your recent sessions." and "Play it through".
-- **The piece, bar by bar:** one box per bar, 8 to a row like a page of music, each
+- **The piece, bar by bar:** one box per bar as printed, 8 to a row like a page of music
+  (a pickup is the first box, "Pickup"), each
   showing its number and a word for its level now: Secure (pale green) · Small slips
   · Uneven · Shaky · Needs work (`--color-pause` at 22 / 42 / 66 / 92%). Played once:
   a dotted border and "Not enough yet". Not played: blank, the number muted. A legend

@@ -36,6 +36,7 @@ const MINUET: ProgressView = {
   title: "Minuet in G Major",
   composer: "Christian Petzold",
   bars: 8,
+  measures: [1, 2, 3, 4, 5, 6, 7, 8],
   sessions: [
     { startedMs: day(30), playedUs: 40_000_000, bars: [cell(5, 0), cell(6, 2, 6_200_000, 1)] },
     { startedMs: day(29), playedUs: 35_000_000, bars: [cell(5, 0), cell(6, 3, 12_400_000, 2), cell(7, 1)] },
@@ -150,6 +151,27 @@ describe("the Progress page", () => {
     expect(panel.textContent).toContain("Played once so far.");
     expect(panel.textContent).toContain("Play this bar on another day to see a line.");
     expect(panel.querySelector("[data-line-graph]")).toBeNull();
+  });
+
+  it("shows a pickup as Pickup, never bar 0, and practises it from there", async () => {
+    const onPractise = await show({
+      ...MINUET,
+      bars: 9,
+      measures: [0, 1, 2, 3, 4, 5, 6, 7, 8],
+      now: [{ measure: 0, level: 3 }, ...MINUET.now],
+      workOnNext: [{ first: 0, last: 1, from: 0, to: 1, facts: "about 2.0 s of hesitation each time through" }],
+      details: [detail(0, "Now: about 2.0 s of hesitation each time through."), ...MINUET.details],
+    });
+
+    const first = document.querySelector("[data-piece-map] button")!;
+    expect(first.getAttribute("data-bar")).toBe("0");
+    expect(first.textContent).toContain("Pickup");
+    expect(first.getAttribute("aria-label")).toBe("Pickup: Shaky");
+    expect(document.querySelector("[data-work-on-next]")!.textContent).toContain("Pickup–bar 1");
+    expect(document.querySelector("[data-bar-detail]")!.textContent).toContain("Pickup over time");
+    expect(document.body.textContent).not.toMatch(/bar 0\b/i);
+    fireEvent.click(screen.getAllByRole("button", { name: "⟲ Practise pickup–bar 1" })[0]!);
+    expect(onPractise).toHaveBeenCalledWith({ from: 0, to: 1 });
   });
 
   it("for a piece never played: one line and Practise, no map", async () => {

@@ -141,8 +141,11 @@ pub struct ProgressView {
     pub id: String,
     pub title: String,
     pub composer: Option<String>,
-    /// How many bars the piece has: the grid's columns.
+    /// How many bars the piece has, a pickup included.
     pub bars: usize,
+    /// Every bar's printed number, in written order: the map's boxes (a
+    /// pickup is 0, first).
+    pub measures: Vec<u32>,
     /// Newest first: the sessions on today's bar structure.
     pub sessions: Vec<SessionBars>,
     /// Every session, whatever version it was played on.
@@ -293,12 +296,18 @@ impl Progress {
         piece: &segno_library::Piece,
         last_practised_ms: Option<u64>,
     ) -> ProgressView {
-        let bars = piece.score().measures().len();
+        let measures: Vec<MeasureNumber> = piece
+            .score()
+            .measures()
+            .iter()
+            .map(segno_notation::Measure::number)
+            .collect();
         ProgressView {
             id: piece.id().as_str().to_owned(),
             title: piece.title().to_owned(),
             composer: piece.composer().map(str::to_owned),
-            bars,
+            bars: measures.len(),
+            measures: measures.iter().map(|measure| measure.get()).collect(),
             sessions: self.sessions.iter().rev().cloned().collect(),
             practised: self.sessions.len() + self.earlier,
             played_us: self
@@ -318,18 +327,18 @@ impl Progress {
                 })
                 .collect(),
             work_on_next: self.work_on_next(piece.reference()),
-            details: (1..=u32::try_from(bars).unwrap_or(u32::MAX))
-                .filter_map(|measure| {
-                    let bar = MeasureNumber::new(measure)?;
+            details: measures
+                .iter()
+                .map(|&bar| {
                     let (from, to) = practise_range(piece.reference(), bar, bar);
-                    Some(Detail {
-                        measure,
+                    Detail {
+                        measure: bar.get(),
                         line: self
-                            .detail(measure)
+                            .detail(bar.get())
                             .unwrap_or_else(|| "Not played yet.".to_owned()),
                         from: from.get(),
                         to: to.get(),
-                    })
+                    }
                 })
                 .collect(),
         }

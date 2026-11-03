@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { progress, type ProgressView } from "../bridge";
 import { LineGraph } from "../components/LineGraph";
 import { practisedWhen } from "./Library";
-import { barLabel, barsInline, barsLabel } from "../bars";
+import { barLabel, barsInline, barsLabel, PICKUP } from "../bars";
 
 /** Where a Practise button on this page loops; null plays from bar 1, no loop. */
 export type PractiseRange = { readonly from: number; readonly to: number } | null;
@@ -236,7 +236,7 @@ function PieceMap({
 }) {
   const [selected, setSelected] = useState<number | null>(view.workOnNext[0]?.first ?? null);
   const nowOf = new Map(view.now.map((bar) => [bar.measure, bar.level]));
-  const bars = Array.from({ length: view.bars }, (_, index) => index + 1);
+  const bars = view.measures;
 
   return (
     <section className="mt-10" aria-label="The piece, bar by bar">
@@ -253,7 +253,7 @@ function PieceMap({
               data-bar={measure}
               data-level={level === undefined ? "" : String(level)}
               aria-pressed={isSelected}
-              aria-label={`Bar ${measure}: ${word}`}
+              aria-label={`${barLabel(measure)}: ${word}`}
               onClick={() => setSelected(measure)}
               style={level === undefined || level === null ? undefined : { background: FILL[level] }}
               className={`flex h-16 cursor-pointer flex-col items-start justify-between rounded-lg px-2.5 py-2 text-left transition-shadow hover:shadow-sm focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent ${
@@ -261,7 +261,7 @@ function PieceMap({
               } ${isSelected ? "outline-2 outline-offset-2 outline-ink" : ""}`}
             >
               <span className={`text-lg leading-none font-medium tabular-nums ${level === undefined ? "text-ink-muted" : ""}`}>
-                {measure}
+                {measure === PICKUP ? "Pickup" : measure}
               </span>
               {level !== undefined && <span className="text-[11px] leading-tight">{word}</span>}
             </button>
