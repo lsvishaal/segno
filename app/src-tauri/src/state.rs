@@ -64,7 +64,7 @@ impl Segno {
                     let details = engraved.details();
 
                     pieces.push(Piece::new(
-                        identify(provided.source),
+                        provided.id(),
                         details.title.as_deref().unwrap_or_default(),
                         details.composer.clone(),
                         engraved.score().clone(),
@@ -207,9 +207,7 @@ impl Segno {
     /// is where that stays true.
     #[must_use]
     pub fn source_of(&self, id: &PieceId) -> Option<Vec<u8>> {
-        PROVIDED
-            .iter()
-            .find(|provided| identify(provided.source) == *id)
+        crate::provided::provided(id)
             .map(|provided| provided.source.to_vec())
             .or_else(|| self.records.source_of(id))
     }
@@ -413,7 +411,7 @@ mod tests {
         let minuet = crate::provided::PROVIDED
             .iter()
             .find(|piece| piece.name == "minuet-in-g.musicxml")
-            .map(|piece| crate::provided::identify(piece.source))
+            .map(crate::provided::Provided::id)
             .expect("the Minuet is provided");
         let mut played = segno_capture::ObservedPerformance::new();
         played.record(segno_domain::Pitch::new(74).expect("D5"));

@@ -634,6 +634,11 @@ pub fn accept_offered(
     segno: &mut Segno,
 ) -> Result<ImportedPiece, Refused> {
     let id = crate::provided::identify(material);
+    // A bundled piece's bytes are known by its tag, not their fingerprint.
+    let known = crate::provided::PROVIDED
+        .iter()
+        .find(|provided| crate::provided::identify(provided.source) == id)
+        .map_or_else(|| id.clone(), crate::provided::Provided::id);
 
     // Re-offering the same bytes is not a second piece: `PieceId` is the
     // lookup key `source_of` and `open_piece` use, and a duplicate under one
@@ -642,7 +647,7 @@ pub fn accept_offered(
         .library()
         .pieces()
         .into_iter()
-        .find(|piece| *piece.id() == id)
+        .find(|piece| *piece.id() == known)
     {
         return Ok(ImportedPiece {
             piece: summarise(already, segno, &crate::history::sessions(segno.records())),

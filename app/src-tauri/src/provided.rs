@@ -17,6 +17,10 @@ use sha2::{Digest, Sha256};
 /// One piece that ships with Segno.
 #[derive(Debug, Clone, Copy)]
 pub struct Provided {
+    /// Its permanent name, and so its [`PieceId`]: fixed for good, whatever
+    /// later happens to the file's bytes (DECISIONS, 3 Nov). Never reuse or
+    /// rename one; history is filed under it.
+    pub tag: &'static str,
     /// What the file is called, for diagnostics.
     pub name: &'static str,
     /// The `MusicXML` itself.
@@ -38,10 +42,21 @@ pub enum Level {
 /// The level of the provided piece called `id`; `None` for anything imported.
 #[must_use]
 pub fn level_of(id: &PieceId) -> Option<Level> {
-    PROVIDED
-        .iter()
-        .find(|provided| &identify(provided.source) == id)
-        .map(|provided| provided.level)
+    provided(id).map(|provided| provided.level)
+}
+
+/// The provided piece called `id`, if it is one.
+#[must_use]
+pub fn provided(id: &PieceId) -> Option<&'static Provided> {
+    PROVIDED.iter().find(|provided| provided.tag == id.as_str())
+}
+
+impl Provided {
+    /// Its permanent [`PieceId`].
+    #[must_use]
+    pub fn id(&self) -> PieceId {
+        PieceId::new(self.tag).unwrap_or_else(|| unreachable!("tags are tested to be usable names"))
+    }
 }
 
 /// Everything in `library/`, in the order a first-time performer meets it.
@@ -52,50 +67,41 @@ pub fn level_of(id: &PieceId) -> Option<Level> {
 /// where each one came from and under what licence.
 pub const PROVIDED: [Provided; 5] = [
     Provided {
+        tag: "lightly-row",
         name: "lightly-row.musicxml",
         source: include_bytes!("../library/lightly-row.musicxml"),
         level: Level::Beginner,
     },
     Provided {
+        tag: "ode-to-joy",
         name: "ode-to-joy.musicxml",
         source: include_bytes!("../library/ode-to-joy.musicxml"),
         level: Level::Beginner,
     },
     Provided {
+        tag: "fur-elise",
         name: "fur-elise.musicxml",
         source: include_bytes!("../library/fur-elise.musicxml"),
         level: Level::Beginner,
     },
     Provided {
+        tag: "minuet-in-g",
         name: "minuet-in-g.musicxml",
         source: include_bytes!("../library/minuet-in-g.musicxml"),
         level: Level::Intermediate,
     },
     Provided {
+        tag: "prelude-in-c",
         name: "prelude-in-c.musicxml",
         source: include_bytes!("../library/prelude-in-c.musicxml"),
         level: Level::Intermediate,
     },
 ];
 
-/// The durable name for a piece with these bytes.
-///
-/// # Why the content, and not the title or a counter
-///
-/// The design left what a [`PieceId`] is made of to storage, and this is
-/// storage's answer. Hashing the source gives three properties that matter
-/// and are hard to get otherwise:
-///
-/// - **Idempotent.** Importing the same file twice yields the same Piece
-///   rather than a duplicate.
-/// - **Stable across machines and restarts**, so a Practice Record written on
-///   one still names the right piece on another.
-/// - **Independent of metadata.** A retitled score is the same score; two
-///   different arrangements sharing a title are not the same piece.
-///
-/// Truncated to 16 hex characters. That is 64 bits — far more than enough
-/// when the population is one person's sheet music, and short enough to read
-/// in a filename.
+/// The fingerprint of these bytes: the first 16 hex characters of their
+/// SHA-256. Names a *version* of a score and spots a duplicate import. It is
+/// not a provided piece's identity (that is its `tag`), because then any edit
+/// to a score would orphan its history (DECISIONS, 3 Nov).
 #[must_use]
 pub fn identify(source: &[u8]) -> PieceId {
     let digest = Sha256::digest(source);
@@ -117,19 +123,17 @@ pub fn identify(source: &[u8]) -> PieceId {
 
 #[cfg(test)]
 mod tests {
-    use crate::provided::{Level, PROVIDED, identify, level_of};
+    use segno_domain::PieceId;
+
+    use crate::provided::{Level, PROVIDED, identify, level_of, provided};
 
     #[test]
     fn each_provided_piece_is_on_a_shelf_and_imports_are_not() {
         for piece in PROVIDED {
-            assert_eq!(
-                level_of(&identify(piece.source)),
-                Some(piece.level),
-                "{}",
-                piece.name
-            );
+            assert_eq!(level_of(&piece.id()), Some(piece.level), "{}", piece.name);
         }
         assert_eq!(level_of(&identify(b"<score-partwise/>")), None);
+        assert_eq!(level_of(&identify(PROVIDED[0].source)), None);
         let minuet = PROVIDED
             .iter()
             .find(|piece| piece.name == "minuet-in-g.musicxml");
@@ -182,31 +186,64 @@ mod tests {
         );
     }
 
-    // The identifier becomes a filename, and PieceId refuses anything
-    // path-shaped. Hexadecimal always satisfies that; the test is here so a
-    // future change of encoding has to notice.
+    // A tag becomes a filename, and PieceId refuses anything path-shaped.
     #[test]
-    fn an_identifier_is_usable_as_a_name() {
+    fn every_tag_is_a_usable_name() {
         for piece in PROVIDED {
-            let id = identify(piece.source);
-
-            assert_eq!(id.as_str().len(), 16);
-            assert!(id.as_str().chars().all(|c| c.is_ascii_hexdigit()));
+            assert_eq!(
+                PieceId::new(piece.tag).map(|id| id.as_str().to_owned()),
+                Some(piece.tag.to_owned())
+            );
         }
     }
 
-    // Distinct pieces, distinct names. A collision here would
-    // silently merge two pieces in the Library.
+    // Distinct pieces, distinct names. A collision here would silently merge
+    // two pieces' history.
     #[test]
     fn the_provided_pieces_are_all_distinct() {
-        let mut names: Vec<String> = PROVIDED
+        let mut tags: Vec<&str> = PROVIDED.iter().map(|piece| piece.tag).collect();
+        tags.sort_unstable();
+        tags.dedup();
+        assert_eq!(tags.len(), PROVIDED.len());
+
+        let mut prints: Vec<PieceId> = PROVIDED
             .iter()
-            .map(|piece| identify(piece.source).as_str().to_owned())
+            .map(|piece| identify(piece.source))
             .collect();
+        prints.sort();
+        prints.dedup();
+        assert_eq!(prints.len(), PROVIDED.len());
+    }
 
-        names.sort();
-        names.dedup();
+    // The point of a tag: changing one byte of a bundled score changes its
+    // fingerprint but not which piece it is.
+    #[test]
+    fn editing_a_bundled_score_keeps_its_name() {
+        let minuet = provided(&PieceId::new("minuet-in-g").expect("a name")).expect("bundled");
+        let mut edited = minuet.source.to_vec();
+        let at = edited
+            .iter()
+            .position(|byte| *byte == b'D')
+            .expect("a D somewhere");
+        edited[at] = b'E';
 
-        assert_eq!(names.len(), PROVIDED.len());
+        assert_ne!(identify(&edited), identify(minuet.source));
+        assert_eq!(minuet.id().as_str(), "minuet-in-g");
+    }
+
+    // These are permanent: history is filed under them.
+    #[test]
+    fn the_tags_never_change() {
+        let tags: Vec<&str> = PROVIDED.iter().map(|piece| piece.tag).collect();
+        assert_eq!(
+            tags,
+            [
+                "lightly-row",
+                "ode-to-joy",
+                "fur-elise",
+                "minuet-in-g",
+                "prelude-in-c"
+            ]
+        );
     }
 }
