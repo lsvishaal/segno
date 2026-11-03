@@ -36,12 +36,12 @@ order below.
 ## Milestones
 
 ### M-Base — checkpoint `stable-base-1`
-- [ ] Named Segno everywhere (D8): code, app, docs, CI, the GitHub repo
-- [ ] Docs match code; the dead-reference grep is empty (absorbs M4.5)
-- [ ] All test tiers green (`just check-all`)
-- [ ] `just e2e` green 3× in a row
-- [ ] A fresh clone builds and passes `just ci`
-- [ ] A clean first run works (empty data folder → library → a starter piece)
+- [x] Named Segno everywhere (D8): code, app, docs, CI, the GitHub repo — 3 Nov
+- [x] Docs match code; the dead-reference grep is empty (absorbs M4.5) — 3 Nov
+- [x] All test tiers green (`just check-all`) — 3 Nov
+- [x] `just e2e` green 3× in a row — 3 Nov (329, 199, 164 s; 165 checks; none skipped)
+- [x] A fresh clone builds and passes `just ci` — 3 Nov (231 s from cold)
+- [x] A clean first run works (empty data folder → library → a starter piece) — 3 Nov (library in 1.1–1.3 s)
 - [ ] Tag `stable-base-1` pushed (not a release)
 - [ ] CI green on the tagged commit
 - [x] **Phase 2.5 · M** Durable identity and history (DECISIONS 3 Nov): permanent piece IDs, sessions keep their score version, replay per version — built and tested 3 Nov (commits 1–6); Q3 re-import choice and CLI `bars` per version done 3 Nov (7a, 7b); Q4 moved to Phase 2.6
