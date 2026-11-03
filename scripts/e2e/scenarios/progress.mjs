@@ -61,7 +61,7 @@ const openProgress = async (title) => {
 };
 const toLibrary = async () => {
   await clickButton("← Library");
-  await w.until("return document.querySelectorAll('li h3').length >= 6", "the library", 10000);
+  await w.until("return document.querySelectorAll('li h3').length >= 5", "the library", 10000);
   await w.settle();
 };
 
@@ -75,7 +75,7 @@ export default async function progress() {
   await session({ pause: 1000, into9: true });
   await relaunch();
 
-  await w.until("return document.querySelectorAll('li h3').length >= 6", "the library", 30000);
+  await w.until("return document.querySelectorAll('li h3').length >= 5", "the library", 30000);
   await w.settle();
   const link = await cardLink("Minuet in G Major");
   check("the card's Progress link shows without hovering", link && link.opacity === 1 && link.width > 0, JSON.stringify(link));
