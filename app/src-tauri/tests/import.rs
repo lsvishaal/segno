@@ -11,7 +11,7 @@
 
 use std::path::PathBuf;
 
-use segno_app_lib::commands::{accept_offered, forget, retitle};
+use segno_app_lib::commands::{accept_offered, forget, resolve_offered, retitle};
 
 /// A fresh directory for one test. Emptied first: imported files are kept
 /// read-only, so a previous run's copy would refuse to be written again.
@@ -431,4 +431,114 @@ fn a_deleted_piece_and_its_history_are_gone_after_a_restart() {
     let restarted = segno(&root);
     assert_eq!(restarted.library().count(), before);
     assert_eq!(restarted.records().sessions_of(&canon_id), 0);
+}
+
+/// The Minuet's real file with the first note of bar `measure` changed to
+/// `step` (a different letter): the same title and composer, other notes.
+fn minuet_edited(measure: u32, step: u8) -> Vec<u8> {
+    let mut source = library_file("minuet-in-g.musicxml");
+    let text = String::from_utf8(source.clone()).expect("text");
+    let bar = text
+        .find(&format!("<measure number=\"{measure}\""))
+        .expect("the bar");
+    let at = bar + text[bar..].find("<step>").expect("a note") + "<step>".len();
+    assert_ne!(source.get(at), Some(&step), "an edit that changes nothing");
+    *source.get_mut(at).expect("the letter") = step;
+    source
+}
+
+// A file with the same title and composer as one of your imports asks
+// before anything is kept; "Update" keeps the piece's name and history and
+// makes the file its version, "Add as a new piece" gives it a name of its
+// own. A match with a bundled piece asks nothing (DECISIONS, 3 Nov, Q3).
+#[test]
+#[ignore = "needs a real libverovio; run `just provided-test`"]
+fn a_new_version_of_one_of_your_pieces_asks_update_or_new() {
+    let root = temporary("update");
+    let mut segno = segno(&root);
+    let before = segno.library().count();
+
+    // Same title and composer as the bundled Minuet: just a new piece.
+    let first = minuet_edited(6, b'G');
+    let mine = accept_offered(&first, Some("minuet-mine.musicxml"), &mut segno).expect("supported");
+    assert!(!mine.asks && !mine.already);
+    assert_eq!(segno.library().count(), before + 1);
+    let id = segno_domain::PieceId::new(&mine.piece.id).expect("usable");
+    segno
+        .records()
+        .keep(&segno_records::SessionRecord {
+            id: format!("{}-1", id.as_str()),
+            piece: id.clone(),
+            version: segno_records::fingerprint(&first),
+            rules: segno_analysis::RULES,
+            started: "1".to_owned(),
+            closed: true,
+            attempts: Vec::new(),
+        })
+        .expect("keeps a session");
+
+    // Now the same title and composer as that import: asked, nothing kept.
+    let second = minuet_edited(7, b'E');
+    let asked =
+        accept_offered(&second, Some("minuet-mine-v2.musicxml"), &mut segno).expect("supported");
+    assert!(asked.asks);
+    assert_eq!(asked.piece.id, mine.piece.id);
+    assert_eq!(
+        segno.library().count(),
+        before + 1,
+        "nothing added while asking"
+    );
+    assert_eq!(
+        segno
+            .records()
+            .imported_as(&segno_records::fingerprint(&second)),
+        None
+    );
+
+    let updated = resolve_offered(Some(true), &mut segno)
+        .expect("updates")
+        .expect("a piece");
+    assert_eq!(updated.piece.id, mine.piece.id, "the same piece");
+    assert_eq!(segno.library().count(), before + 1);
+    assert_eq!(segno.records().sessions_of(&id), 1, "its history kept");
+    assert_eq!(
+        segno.source_of(&id),
+        Some(second.clone()),
+        "the new file is its version"
+    );
+    assert_eq!(
+        segno
+            .records()
+            .piece_record(&id)
+            .and_then(|record| record.file_name),
+        Some("minuet-mine-v2.musicxml".to_owned())
+    );
+
+    // Asked again, and this time a new piece.
+    let third = minuet_edited(8, b'C');
+    assert!(
+        accept_offered(&third, None, &mut segno)
+            .expect("supported")
+            .asks
+    );
+    let added = resolve_offered(Some(false), &mut segno)
+        .expect("adds")
+        .expect("a piece");
+    assert_ne!(added.piece.id, mine.piece.id);
+    assert_eq!(segno.library().count(), before + 2);
+
+    // Esc: nothing kept, nothing held.
+    let fourth = minuet_edited(9, b'F');
+    assert!(
+        accept_offered(&fourth, None, &mut segno)
+            .expect("supported")
+            .asks
+    );
+    assert!(resolve_offered(None, &mut segno).expect("drops").is_none());
+    assert!(
+        resolve_offered(Some(true), &mut segno)
+            .expect("nothing held")
+            .is_none()
+    );
+    assert_eq!(segno.library().count(), before + 2);
 }

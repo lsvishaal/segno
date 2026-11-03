@@ -101,6 +101,8 @@ export function LibraryScreen({
   importing,
   importError,
   onDismissError,
+  asking = null,
+  onAnswer = () => undefined,
   now = Date.now(),
 }: {
   readonly pieces: readonly PieceSummary[];
@@ -113,6 +115,10 @@ export function LibraryScreen({
   readonly importing: boolean;
   readonly importError: string | null;
   readonly onDismissError: () => void;
+  /** An import matching one of your pieces by title and composer: that piece. */
+  readonly asking?: PieceSummary | null;
+  /** Update it (true), add a new piece (false), or drop the file (null). */
+  readonly onAnswer?: (update: boolean | null) => void;
   /** The time "2 days ago" counts from. */
   readonly now?: number;
 }) {
@@ -223,6 +229,37 @@ export function LibraryScreen({
           </motion.button>
         }
       >
+        {asking && (
+          <div
+            role="alertdialog"
+            aria-label={`Update ${asking.title}?`}
+            onKeyDown={(event) => {
+              if (event.key === "Escape") onAnswer(null);
+            }}
+            className="panel mt-4 rounded-lg px-4 py-3 text-sm"
+          >
+            <p className="text-ink">
+              <span className="font-serif">“{asking.title}”</span> is already in your library.
+            </p>
+            <div className="mt-3 flex flex-wrap gap-2">
+              <button
+                type="button"
+                autoFocus
+                onClick={() => onAnswer(true)}
+                className="cursor-pointer rounded-full bg-ink px-3 py-1 text-xs font-medium text-paper transition hover:opacity-90 focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-accent"
+              >
+                Update {asking.title} (keeps your history)
+              </button>
+              <button
+                type="button"
+                onClick={() => onAnswer(false)}
+                className="cursor-pointer rounded-full px-3 py-1 text-xs font-medium text-ink-muted transition hover:text-ink focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-accent"
+              >
+                Add as a new piece
+              </button>
+            </div>
+          </div>
+        )}
         {importError && (
           <div className="panel mt-4 flex items-start justify-between gap-4 rounded-lg px-4 py-3 text-sm whitespace-pre-line text-ink-muted">
             <p>{importError}</p>

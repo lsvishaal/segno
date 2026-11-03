@@ -13,6 +13,8 @@ Everything so far, before the first preview (v0.1).
   `~/.local/share/com.segno.practice`. History and settings from before the rename aren't
   carried over.
 - **A Little Chord Study is no longer bundled:** five starter pieces remain.
+- **Importing a new version of one of your pieces** (same title and composer) asks:
+  "Update <title> (keeps your history)" or "Add as a new piece".
 - **History survives score changes:** each session is judged against the version of the
   score it was played on, so an edited score never changes past results. When a piece's
   bars change, its Progress page says "This piece was updated on …" and shows bar by bar

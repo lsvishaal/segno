@@ -54,6 +54,12 @@ Launch → play the Minuet, as the code works now:
 - Library → **Add a piece** → file dialog → it opens straight into practice.
 - Or drag the file onto the window.
 - Duplicate → *"Already in your library"* and opens it (exists today).
+- Same title and composer as one of *your* imports (a new version of it) → a panel
+  above Your pieces: *"“Canon in D” is already in your library."* with **Update
+  Canon in D (keeps your history)** (focused, the default) and **Add as a new
+  piece**; Esc adds nothing. Update keeps the piece's name, title and history and
+  makes the file its version (notice *"Updated"*). A match with a bundled piece
+  asks nothing: it's a new piece.
 
 **Flow E — Keyboard unplugged mid-practice (budget: 0 clicks)**
 - Banner: *"FP-10 disconnected. Plug it back in to keep going — your

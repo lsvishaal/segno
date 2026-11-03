@@ -135,6 +135,11 @@ export interface ImportedPiece {
   readonly lines: readonly string[];
   /** Identical to a piece already in the library; nothing was added. */
   readonly already: boolean;
+  /**
+   * Same title and composer as one of your own pieces (`piece`): nothing was
+   * added yet; `resolveImport` updates that piece or adds a new one.
+   */
+  readonly asks: boolean;
 }
 
 /** A MIDI instrument the performer could play. */

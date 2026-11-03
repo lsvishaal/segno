@@ -201,6 +201,15 @@ export function importMusicXml(): Promise<ImportedPiece | null> {
   return invoke<ImportedPiece | null>("import_musicxml");
 }
 
+/**
+ * Settles an import that asked: `true` makes the file the new version of the
+ * piece it matched (its history kept), `false` adds it as a new piece, `null`
+ * drops it. Resolves the piece added or updated, or `null`.
+ */
+export function resolveImport(update: boolean | null): Promise<ImportedPiece | null> {
+  return invoke<ImportedPiece | null>("resolve_import", { update });
+}
+
 /** The MIDI output devices currently available, for routing Thru. */
 export function outputPorts(): Promise<OutputPortSummary[]> {
   return invoke<OutputPortSummary[]>("output_ports");

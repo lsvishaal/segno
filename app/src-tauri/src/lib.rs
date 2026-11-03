@@ -100,6 +100,7 @@ pub fn run() -> Result<(), tauri::Error> {
             commands::loop_target,
             commands::export_musicxml,
             commands::import_musicxml,
+            commands::resolve_import,
             commands::rename_piece,
             commands::history_count,
             commands::progress,

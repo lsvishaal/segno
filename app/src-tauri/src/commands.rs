@@ -219,6 +219,22 @@ pub fn forget(segno: &mut Segno, id: &str) -> Result<usize, Refused> {
     Ok(forgotten)
 }
 
+/// Settles an import that asked: `update` true makes the file the new
+/// version of the piece it matched, false adds it as a new piece, null drops
+/// it.
+///
+/// # Errors
+///
+/// As [`resolve_offered`].
+#[tauri::command]
+pub fn resolve_import(
+    update: Option<bool>,
+    state: State<'_, Shared>,
+) -> Result<Option<ImportedPiece>, Refused> {
+    let mut segno = state.inner().0.lock().map_err(|_| POISONED.to_owned())?;
+    resolve_offered(update, &mut segno)
+}
+
 /// A Piece, as the library screen needs it.
 #[derive(Debug, Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -552,6 +568,10 @@ pub struct ImportedPiece {
     /// The file was identical to a piece already in the library, bundled or
     /// imported: nothing was added, and `piece` is that one.
     pub already: bool,
+    /// The file's title and composer match one of the performer's own
+    /// imports, `piece`: nothing was added yet; [`resolve_import`] adds it,
+    /// as an update of that piece or as a new one (DECISIONS, 3 Nov, Q3).
+    pub asks: bool,
 }
 
 /// Adapts [`Engraving`]'s channel handle to the [`Engraver`] port
@@ -651,34 +671,146 @@ pub fn accept_offered(
             piece: summarise(already, segno, &crate::history::sessions(segno.records())),
             lines: vec!["This piece is already in your library.".to_owned()],
             already: true,
+            asks: false,
         });
     }
 
     // Given once, and kept whatever later happens to the file.
     let id = segno.records().new_import_id(&version);
+    let (piece, lines) = assessed(material, id.clone(), file_name, segno)?;
 
+    // The same title and composer as one of the performer's own pieces: a
+    // new version of it, perhaps. Asked, not guessed. A bundled piece can't
+    // be updated, so a match there is simply a new piece.
+    let matches = segno.library().pieces().into_iter().find(|mine| {
+        segno.records().piece_record(mine.id()).is_some()
+            && mine.title() == piece.title()
+            && mine.composer() == piece.composer()
+    });
+    if let Some(mine) = matches {
+        let summary = summarise(mine, segno, &crate::history::sessions(segno.records()));
+        segno.hold(crate::state::Offered {
+            material: material.to_vec(),
+            file_name: file_name.map(str::to_owned),
+            matches: mine.id().clone(),
+        });
+        return Ok(ImportedPiece {
+            piece: summary,
+            lines: Vec::new(),
+            already: false,
+            asks: true,
+        });
+    }
+
+    keep_assessed(material, file_name, id, piece, lines, segno)
+}
+
+/// Settles a file [`accept_offered`] held for a choice: `Some(true)` makes it
+/// the new version of the piece it matched (its history kept), `Some(false)`
+/// adds it as a new piece, `None` drops it. `None` back if nothing was added.
+///
+/// # Errors
+///
+/// As [`accept_offered`], or if the matched piece's record can't be updated.
+pub fn resolve_offered(
+    update: Option<bool>,
+    segno: &mut Segno,
+) -> Result<Option<ImportedPiece>, Refused> {
+    let Some(offered) = segno.take_held() else {
+        return Ok(None);
+    };
+    let file_name = offered.file_name.as_deref();
+    match update {
+        None => Ok(None),
+        Some(false) => keep_new(&offered.material, file_name, segno).map(Some),
+        Some(true) => {
+            let id = offered.matches;
+            let (piece, report) = assessed(&offered.material, id.clone(), file_name, segno)?;
+            segno
+                .records()
+                .update_piece(&id, &offered.material, file_name)
+                .map_err(|failure| format!("Could not update that piece: {failure:?}"))?;
+            // A title the performer chose stays theirs.
+            let title = segno
+                .library()
+                .pieces()
+                .into_iter()
+                .find(|mine| *mine.id() == id)
+                .map(|mine| mine.title().to_owned());
+            segno.remove_piece(&id);
+            segno.accept_piece(piece);
+            if let Some(title) = title {
+                segno.retitle_piece(&id, &title);
+            }
+            let updated = segno
+                .library()
+                .pieces()
+                .into_iter()
+                .find(|mine| *mine.id() == id)
+                .map(|mine| summarise(mine, segno, &crate::history::sessions(segno.records())))
+                .ok_or_else(|| "The updated piece went missing.".to_owned())?;
+            Ok(Some(ImportedPiece {
+                piece: updated,
+                lines: report,
+                already: false,
+                asks: false,
+            }))
+        }
+    }
+}
+
+/// `material` read as a piece called `id`, or the refusal, verbatim.
+fn assessed(
+    material: &[u8],
+    id: segno_domain::PieceId,
+    file_name: Option<&str>,
+    segno: &Segno,
+) -> Result<(segno_library::Piece, Vec<String>), Refused> {
     let mut engraver = ImportEngraver(segno.engraving());
-
-    match segno_acquisition::assess(material, id.clone(), file_name, &mut engraver) {
+    match segno_acquisition::assess(material, id, file_name, &mut engraver) {
         segno_acquisition::Outcome::NotAccepted(refused) => {
             Err(format!("{}\n\n{}", refused.reason(), refused.route()))
         }
-        segno_acquisition::Outcome::Accepted { piece, report } => {
-            segno
-                .records()
-                .keep_piece(&id, piece.title(), piece.composer(), file_name, material)
-                .map_err(|failure| format!("Could not keep that piece: {failure:?}"))?;
-
-            let summary = summarise(&piece, segno, &[]);
-            segno.accept_piece(*piece);
-
-            Ok(ImportedPiece {
-                piece: summary,
-                lines: report.lines(),
-                already: false,
-            })
-        }
+        segno_acquisition::Outcome::Accepted { piece, report } => Ok((*piece, report.lines())),
     }
+}
+
+/// Keeps `material` as a new piece with a name of its own.
+fn keep_new(
+    material: &[u8],
+    file_name: Option<&str>,
+    segno: &mut Segno,
+) -> Result<ImportedPiece, Refused> {
+    let id = segno
+        .records()
+        .new_import_id(&segno_records::fingerprint(material));
+    let (piece, lines) = assessed(material, id.clone(), file_name, segno)?;
+    keep_assessed(material, file_name, id, piece, lines, segno)
+}
+
+/// Keeps a piece already read as `id`.
+fn keep_assessed(
+    material: &[u8],
+    file_name: Option<&str>,
+    id: segno_domain::PieceId,
+    piece: segno_library::Piece,
+    lines: Vec<String>,
+    segno: &mut Segno,
+) -> Result<ImportedPiece, Refused> {
+    segno
+        .records()
+        .keep_piece(&id, piece.title(), piece.composer(), file_name, material)
+        .map_err(|failure| format!("Could not keep that piece: {failure:?}"))?;
+
+    let summary = summarise(&piece, segno, &[]);
+    segno.accept_piece(piece);
+
+    Ok(ImportedPiece {
+        piece: summary,
+        lines,
+        already: false,
+        asks: false,
+    })
 }
 
 /// A Piece, as the library screen needs it — the same shape [`library`]

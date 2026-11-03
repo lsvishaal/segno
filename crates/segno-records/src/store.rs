@@ -450,6 +450,45 @@ impl Records {
     /// (bundled pieces have none), or [`RecordsFailure::Storage`] if it
     /// could not be written.
     pub fn rename_piece(&self, id: &PieceId, title: &str) -> Result<(), RecordsFailure> {
+        self.change_piece(id, |stored| {
+            title.clone_into(&mut stored.title);
+            stored.renamed = true;
+        })
+    }
+
+    /// Makes `source` the current version of an imported piece: same name,
+    /// same title and history; earlier sessions keep the version they were
+    /// played on (DECISIONS, 3 Nov, Q3).
+    ///
+    /// # Errors
+    ///
+    /// As [`Records::rename_piece`].
+    pub fn update_piece(
+        &self,
+        id: &PieceId,
+        source: &[u8],
+        file_name: Option<&str>,
+    ) -> Result<(), RecordsFailure> {
+        if self.piece_record(id).is_none() {
+            return Err(RecordsFailure::Unreadable {
+                path: self.piece_path(id),
+                detail: "no imported piece by that name".to_owned(),
+            });
+        }
+        let version = self.keep_version(source)?;
+        self.change_piece(id, |stored| {
+            stored.version = version;
+            if let Some(file_name) = file_name {
+                stored.file_name = Some(file_name.to_owned());
+            }
+        })
+    }
+
+    fn change_piece(
+        &self,
+        id: &PieceId,
+        change: impl FnOnce(&mut StoredPiece),
+    ) -> Result<(), RecordsFailure> {
         let path = self.piece_path(id);
         let unreadable = |detail: String| RecordsFailure::Unreadable {
             path: path.clone(),
@@ -458,8 +497,7 @@ impl Records {
 
         let mut stored: StoredPiece = serde_json::from_str(&fs::read_to_string(&path)?)
             .map_err(|failure| unreadable(failure.to_string()))?;
-        title.clone_into(&mut stored.title);
-        stored.renamed = true;
+        change(&mut stored);
 
         let written = serde_json::to_string_pretty(&stored)
             .map_err(|failure| unreadable(failure.to_string()))?;

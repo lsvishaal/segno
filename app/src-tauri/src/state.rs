@@ -37,6 +37,18 @@ pub struct Segno {
     /// Older versions of scores, engraved once each when a piece's history
     /// first needs them (`None`: that version can't be read).
     versions: Mutex<BTreeMap<String, Option<Arc<ReferencePerformance>>>>,
+    /// A file offered for import that matches one of the performer's own
+    /// pieces, waiting for "Update" or "Add as a new piece".
+    pending: Option<Offered>,
+}
+
+/// A file offered for import, held while the performer chooses.
+#[derive(Debug, Clone)]
+pub struct Offered {
+    pub material: Vec<u8>,
+    pub file_name: Option<String>,
+    /// The imported piece it matches by title and composer.
+    pub matches: PieceId,
 }
 
 impl Segno {
@@ -157,7 +169,18 @@ impl Segno {
             records,
             practice,
             versions: Mutex::default(),
+            pending: None,
         })
+    }
+
+    /// Holds a file offered for import until the performer chooses.
+    pub fn hold(&mut self, offered: Offered) {
+        self.pending = Some(offered);
+    }
+
+    /// The file held for a choice, taken out.
+    pub fn take_held(&mut self) -> Option<Offered> {
+        self.pending.take()
     }
 
     /// The fingerprint of `id`'s score as it is now.

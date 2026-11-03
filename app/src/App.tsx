@@ -8,6 +8,7 @@ import {
   historyCount,
   importMusicXml,
   library,
+  resolveImport,
   openPiece,
   renamePiece,
   startupFailure,
@@ -66,14 +67,18 @@ type Screen =
 const NOTICE_MS = 4000;
 
 /**
- * The shelf after an import: the new piece added once, and nothing added
- * for a file identical to one already there.
+ * The shelf after an import: the new piece added once, an updated one
+ * replaced where it was, and nothing added for a file identical to one
+ * already there or one still waiting for "Update" or "Add as a new piece".
  */
 export function afterImport(
   pieces: readonly PieceSummary[],
   imported: ImportedPiece,
 ): readonly PieceSummary[] {
-  if (imported.already || pieces.some((piece) => piece.id === imported.piece.id)) return pieces;
+  if (imported.already || imported.asks) return pieces;
+  if (pieces.some((piece) => piece.id === imported.piece.id)) {
+    return pieces.map((piece) => (piece.id === imported.piece.id ? imported.piece : piece));
+  }
   return [...pieces, imported.piece];
 }
 
@@ -81,6 +86,8 @@ export function App() {
   const [screen, setScreen] = useState<Screen>({ kind: "starting" });
   const [importing, setImporting] = useState(false);
   const [importError, setImportError] = useState<string | null>(null);
+  // An import whose title and composer match one of your pieces: which one.
+  const [asking, setAsking] = useState<PieceSummary | null>(null);
   // A short word about something that just happened ("Already in your library").
   const [notice, setNotice] = useState<string | null>(null);
 
@@ -175,6 +182,7 @@ export function App() {
             setNotice("Already in your library");
             open(imported.piece.id);
           }
+          if (imported.asks) setAsking(imported.piece);
         }
       } catch (error) {
         setImportError(String(error));
@@ -183,6 +191,25 @@ export function App() {
       }
     })();
   }, [open]);
+
+  // "Update …" (true), "Add as a new piece" (false) or Esc (null).
+  const answer = useCallback((update: boolean | null) => {
+    setAsking(null);
+    void (async () => {
+      try {
+        const imported = await resolveImport(update);
+        if (!imported) return;
+        setScreen((current) =>
+          current.kind === "library"
+            ? { kind: "library", pieces: afterImport(current.pieces, imported) }
+            : current,
+        );
+        if (update) setNotice("Updated");
+      } catch (error) {
+        setImportError(String(error));
+      }
+    })();
+  }, []);
 
   // A refusal goes back to the card being edited, which shows it there.
   const rename = useCallback(async (id: string, title: string): Promise<string | null> => {
@@ -254,6 +281,8 @@ export function App() {
                     importing={importing}
                     importError={importError}
                     onDismissError={dismissImportError}
+                    asking={asking}
+                    onAnswer={answer}
                   />
                 </Transitioned>
               );

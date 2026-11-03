@@ -8,18 +8,27 @@ const MINUET: PieceSummary = { id: "minuet", title: "Minuet in G Major", compose
 
 describe("the shelf after an import", () => {
   it("gains a new piece", () => {
-    expect(afterImport([MINUET], { piece: CANON, lines: [], already: false })).toEqual([MINUET, CANON]);
+    expect(afterImport([MINUET], { piece: CANON, lines: [], already: false, asks: false })).toEqual([MINUET, CANON]);
   });
 
   it("is unchanged when the file was already there, however often it is imported", () => {
-    let shelf = afterImport([MINUET], { piece: CANON, lines: [], already: false });
-    shelf = afterImport(shelf, { piece: CANON, lines: [], already: true });
-    shelf = afterImport(shelf, { piece: CANON, lines: [], already: true });
+    let shelf = afterImport([MINUET], { piece: CANON, lines: [], already: false, asks: false });
+    shelf = afterImport(shelf, { piece: CANON, lines: [], already: true, asks: false });
+    shelf = afterImport(shelf, { piece: CANON, lines: [], already: true, asks: false });
 
     expect(shelf).toEqual([MINUET, CANON]);
   });
 
   it("never lists a piece twice, even if told it is new", () => {
-    expect(afterImport([MINUET, CANON], { piece: CANON, lines: [], already: false })).toEqual([MINUET, CANON]);
+    expect(afterImport([MINUET, CANON], { piece: CANON, lines: [], already: false, asks: false })).toEqual([MINUET, CANON]);
+  });
+
+  it("is unchanged while an import waits for Update or Add as a new piece", () => {
+    expect(afterImport([MINUET, CANON], { piece: CANON, lines: [], already: false, asks: true })).toEqual([MINUET, CANON]);
+  });
+
+  it("replaces an updated piece where it was", () => {
+    const updated = { ...CANON, notes: 1610 };
+    expect(afterImport([CANON, MINUET], { piece: updated, lines: [], already: false, asks: false })).toEqual([updated, MINUET]);
   });
 });

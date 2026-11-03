@@ -37,6 +37,26 @@ function renderScreen(overrides: Partial<Parameters<typeof LibraryScreen>[0]> = 
 }
 
 describe("LibraryScreen import", () => {
+  it("asks Update or Add as a new piece when an import matches one of yours, Update first", () => {
+    const onAnswer = vi.fn();
+    const canon = { ...PIECES[0]!, id: "imp-1", title: "Canon in D", imported: true };
+    renderScreen({ pieces: [...PIECES, canon], asking: canon, onAnswer });
+
+    const update = screen.getByRole("button", { name: "Update Canon in D (keeps your history)" });
+    expect(update).toHaveFocus();
+    fireEvent.click(update);
+    expect(onAnswer).toHaveBeenLastCalledWith(true);
+    fireEvent.click(screen.getByRole("button", { name: "Add as a new piece" }));
+    expect(onAnswer).toHaveBeenLastCalledWith(false);
+    fireEvent.keyDown(update, { key: "Escape" });
+    expect(onAnswer).toHaveBeenLastCalledWith(null);
+  });
+
+  it("asks nothing otherwise", () => {
+    renderScreen();
+    expect(screen.queryByRole("alertdialog")).toBeNull();
+  });
+
   it("calls onImport when the import button is clicked", () => {
     const { onImport } = renderScreen();
 
