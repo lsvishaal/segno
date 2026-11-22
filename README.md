@@ -9,6 +9,8 @@ Open a piece and the cursor waits until you play the right notes. Segno keeps
 every note you play, tells you after each run what went wrong, where and how to
 practise it, and remembers which bars give you trouble over time.
 
+![Results after a run of the Minuet in G: "work on these" cards cut out of the score, each saying what happened, why, and how to practise it](docs/images/results.png)
+
 ## Status
 
 **A working preview, not yet released.** It runs on Linux. The first tester
@@ -47,6 +49,25 @@ What works today:
     losing old sessions
   - a Progress page per piece: what to work on next (with a loop button),
     every session bar by bar, and how each bar has changed
+
+## Screenshots
+
+**Practice.** The cursor waits for the right notes. Correct notes turn green, and
+a wrong key shows as a red mark where it was played.
+
+![Practising the Minuet in G with a wrong note marked on the score](docs/images/practice-wrong-note.png)
+
+**Progress.** What to work on next, and every bar of the piece coloured by how
+it's going.
+
+![Progress page for the Minuet in G: practise-next list and a bar-by-bar map](docs/images/progress-minuet.png)
+
+**Library.** Bundled pieces on Beginner and Intermediate shelves, plus your own
+imports.
+
+![Library with imported and bundled pieces](docs/images/library.png)
+
+These are taken from the real app by the e2e suite (`just shots`), not mocked.
 
 ## Principles
 
